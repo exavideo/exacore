@@ -66,7 +66,7 @@ class RawFrameUnpacker {
         /* TODO: provide routines for each desired output format here! */
         void YCbCr422p(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
             check(do_YCbCr422p);
-            do_YCbCr422p(f->w( ), f->h( ), f->data( ), Y, Cb, Cr);
+            do_YCbCr422p(f->size( ), f->data( ), Y, Cb, Cr);
         }
     protected:
         void check(void *ptr) {
@@ -81,8 +81,8 @@ class RawFrameUnpacker {
          * This part is likely implemented in SSE3 assembly.
          */
 
-        /* do_YCbCr422p(w, h, packed_data, y, cb, cr */
-        void (*do_YCbCr422p)(coord_t, coord_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+        /* do_YCbCr422p(in_size, packed_data, y, cb, cr */
+        void (*do_YCbCr422p)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
 
 #endif
