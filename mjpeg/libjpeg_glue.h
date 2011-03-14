@@ -16,34 +16,24 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _OPENREPLAY_MJPEG_CODEC_H
-#define _OPENREPLAY_MJPEG_CODEC_H
 
-#include "types.h"
+#ifndef _OPENREPLAY_LIBJPEG_GLUE_H
+#define _OPENREPLAY_LIBJPEG_GLUE_H
+
 #include "jpeglib.h"
+#include <stdint.h>
 
-class Mjpeg422Encoder {
-    public:
-        Mjpeg422Encoder(coord_t w_, coord_t h_, 
-                size_t max_frame_size = 524288);
-        void encode(RawFrame *f);
-        void *get_data(void);
-        size_t get_data_size(void);
-        ~Mjpeg422Encoder( );
-    protected:
-        void libjpeg_init( );
-
-        coord_t w, h;
-        uint8_t *y_plane, *cb_plane, *cr_plane;
-        uint8_t *jpeg_data;
-
-        size_t jpeg_alloc_size, jpeg_finished_size;       
-
-        struct jpeg_compress_struct cinfo;
-        struct jpeg_error_mgr jerr;
-
-        JSAMPARRAY jsimage[3];
-        JSAMPARRAY y_scans, cb_scans, cr_scans;
-};
+/* 
+ * Some simple routines to set up libjpeg to compress to and decompress from
+ * memory blobs, and to get it to throw C++ exceptions.
+ */
+GLOBAL(void) jpeg_mem_src(j_decompress_ptr cinfo, void *data, size_t len); 
+/* 
+ * Here len is a pointer to a variable that initially contains the full size 
+ * of the data memory region. After compression is done it will contain the
+ * number of bytes written to the data buffer.
+ */
+GLOBAL(void) jpeg_mem_dest(j_compress_ptr cinfo, void *data, size_t *len);
+struct jpeg_error_mgr *jpeg_throw_on_error(struct jpeg_error_mgr *error_mgr);
 
 #endif
