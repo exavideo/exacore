@@ -16,9 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "jpeglib.h"
+ 
+#include "libjpeg_glue.h"
 #include <stdexcept>
+#include "jerror.h"
+#include "xmalloc.h"
 
 typedef struct {
     struct jpeg_source_mgr pub;
@@ -37,7 +39,9 @@ METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo) {
 }
 
 METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
-    if (cinfo->src->bytes_in_buffer < num_bytes) {
+    if (num_bytes < 0) {
+        ERREXIT(cinfo, JERR_INPUT_EMPTY);
+    } else if (cinfo->src->bytes_in_buffer < num_bytes) {
         ERREXIT(cinfo, JERR_INPUT_EMPTY);
     } else {
         cinfo->src->next_input_byte += num_bytes;
@@ -52,8 +56,9 @@ METHODDEF(void) term_source(j_decompress_ptr cinfo) {
 GLOBAL(void) jpeg_mem_src(j_decompress_ptr cinfo, void *data, size_t len) {
     if (cinfo->src == NULL) {
         cinfo->src = (struct jpeg_source_mgr *)
-            malloc(sizeof(struct jpeg_source_mgr));
-
+            xmalloc(sizeof(struct jpeg_source_mgr), 
+                "jpeg_mem_src", "jpeg_source_mgr"
+            );
     }
         
     /* just give it the damn pointer */
@@ -96,7 +101,9 @@ GLOBAL(void) jpeg_mem_dest(j_compress_ptr cinfo, void *data, size_t *len) {
 
     if (cinfo->dest == NULL) {
         cinfo->dest = (struct jpeg_destination_mgr *)
-            malloc(sizeof(mem_destination_mgr));
+            xmalloc(sizeof(mem_destination_mgr),
+                "jpeg_mem_dest", "mem_destination_mgr"
+            );
     }
 
     dest = (mem_destination_mgr *)cinfo->dest;

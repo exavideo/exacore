@@ -19,6 +19,9 @@
 #ifndef _OPENREPLAY_XMALLOC_H
 #define _OPENREPLAY_XMALLOC_H
 
-void *xmalloc(size_t sz, char *module, char *what);
+#include <stdint.h>
+#include <stdlib.h>
+
+void *xmalloc(size_t sz, const char *module, const char *what);
 
 #endif

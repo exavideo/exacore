@@ -19,6 +19,7 @@
 #include "posix_util.h"
 #include <unistd.h>
 #include <errno.h>
+#include <stdint.h>
 
 ssize_t read_all(int fd, void *data, size_t size) {
     ssize_t nread;

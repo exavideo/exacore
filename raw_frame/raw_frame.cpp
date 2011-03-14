@@ -18,6 +18,9 @@
  */
 #include "raw_frame.h"
 #include <stdexcept>
+#include "xmalloc.h"
+#include <assert.h>
+#include "unpack_uyvy.h"
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
@@ -47,7 +50,7 @@ RawFrame::~RawFrame( ) {
     delete unpack;
 }
 
-size_t RawFrame::minpitch( ) {
+size_t RawFrame::minpitch( ) const {
     switch (_pixel_format) {
         case RGB8:
         case YUV8:
@@ -70,9 +73,9 @@ size_t RawFrame::minpitch( ) {
 void RawFrame::alloc( ) { 
     assert(_w > 0);
     assert(_h > 0);
-    assert(_pitch > minpitch( ));
+    assert(_pitch >= minpitch( ));
 
-    _data = malloc(_h * _pitch);
+    _data = (uint8_t *)xmalloc(_h * _pitch, "RawFrame", "_data");
     if (_data == NULL) {
         throw std::runtime_error("RawFrame allocation failed");
     }
@@ -81,6 +84,9 @@ void RawFrame::alloc( ) {
 void RawFrame::make_unpacker(void) {
     switch (_pixel_format) {
         /* specific handlers go here */
+        case UYVY8:
+            unpack = new UYVYUnpacker(this);
+            break;
 
         default:
             unpack = new RawFrameUnpacker(this);

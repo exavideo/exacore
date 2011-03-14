@@ -16,16 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#define _GNU_SOURCE /* for asprintf( ) */
 #include "xmalloc.h"
 #include <stdlib.h>
+#include <stdio.h> 
+#include <stdexcept>
 
-void *xmalloc(size_t sz, char *module, char *what) {
+void *xmalloc(size_t sz, const char *module, const char *what) {
     char *msg;
     void *ret;
 
     ret = malloc(sz);
     if (ret == NULL) {
-        msg = asprintf("xmalloc: %s failed to allocate %s", module, what);
+        asprintf(&msg, "xmalloc: %s failed to allocate %s", module, what);
         throw std::runtime_error(msg);
         /* FIXME LEAK this leaks asprintf's result */
     } else {

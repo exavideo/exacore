@@ -20,6 +20,7 @@
 #ifndef _OPENREPLAY_LIBJPEG_GLUE_H
 #define _OPENREPLAY_LIBJPEG_GLUE_H
 
+#include <stdio.h>
 #include "jpeglib.h"
 #include <stdint.h>
 

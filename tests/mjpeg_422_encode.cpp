@@ -18,13 +18,14 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "mjpeg_codec.h"
 #include "raw_frame.h"
 #include "posix_util.h"
 
 int main(int argc, char **argv) {
     /* Read 1080p UYVY422 frames on stdin. Dump M-JPEG stream on stdout. */
-    RawFrame frame(1920, 1080, UYVY8);
+    RawFrame frame(1920, 1080, RawFrame::UYVY8);
     Mjpeg422Encoder enc(1920, 1080);
     ssize_t ret;
 

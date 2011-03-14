@@ -27,7 +27,7 @@ void convert_c_uyvy_YCbCr422p(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *
 class UYVYUnpacker : public RawFrameUnpacker {
     public:
         UYVYUnpacker(RawFrame *f) : RawFrameUnpacker(f) {
-            do_YCbCr422p = uyvy_YCbCr422p;
+            do_YCbCr422p = convert_c_uyvy_YCbCr422p;
         }
 };
 

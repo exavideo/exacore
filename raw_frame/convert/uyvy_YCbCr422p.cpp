@@ -18,6 +18,7 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 
 void convert_c_uyvy_YCbCr422p(size_t n, uint8_t *src, uint8_t *Y, 
         uint8_t *Cb, uint8_t *Cr) {

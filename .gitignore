@@ -1,3 +1,6 @@
 .*.swp
 *.o
+test_files/*
+*.d
+tests/mjpeg_422_encode
 

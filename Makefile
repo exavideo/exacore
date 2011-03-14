@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-g -O3 -march=k8 -W -Wall
+CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO
 LDFLAGS=-g -O3 -march=k8
 
 SUBDIR_INCLUDES = \
@@ -23,12 +23,11 @@ test_mjpeg_422_encode_OBJECTS = \
 	$(common_OBJECTS) \
 	$(mjpeg_OBJECTS) \
 	$(raw_frame_OBJECTS) \
-	mjpeg/libjpeg_glue.o \
-	mjpeg/mjpeg_encode.o \
+	tests/mjpeg_422_encode.o
 
-all_DEPS = `find . -iname '*.d'`
+all_DEPS = $(shell find . -iname '*.d')
 
-#-include $(all_DEPS)
+-include $(all_DEPS)
 
 tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg

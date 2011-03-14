@@ -20,6 +20,7 @@
 #define _OPENREPLAY_RAW_FRAME_H
     
 #include "types.h"
+#include <stdexcept>
 
 class RawFrameUnpacker;
 
@@ -33,16 +34,17 @@ class RawFrame {
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
         uint8_t *data( ) { return _data; }
         
-        const coord_t w( ) const { return _w; }
-        const coord_t h( ) const { return _h; }
+        coord_t w( ) const { return _w; }
+        coord_t h( ) const { return _h; }
         /* This is "scanline pitch" or the size in bytes of one scanline */
-        const size_t pitch( ) const { return _pitch; }
+        size_t pitch( ) const { return _pitch; }
         /* This is the size of a whole frame */
-        const size_t size( ) const { return _pitch * _h; }
+        size_t size( ) const { return _pitch * _h; }
+        PixelFormat pixel_format( ) const { return _pixel_format; }
 
 #ifdef RAWFRAME_POSIX_IO
-        void read_from_fd(int fd);
-        void write_to_fd(int fd);
+        ssize_t read_from_fd(int fd);
+        ssize_t write_to_fd(int fd);
 #endif
 
         RawFrameUnpacker *unpack;
@@ -51,11 +53,14 @@ class RawFrame {
         coord_t _w, _h;
         size_t _pitch;
         uint8_t *_data;
+        PixelFormat _pixel_format;
 
         size_t minpitch( ) const;
         void alloc( );
         void make_unpacker( );
 };
+
+#define CHECK(x) check((void *)(x))
 
 class RawFrameUnpacker {
     public:
@@ -65,7 +70,7 @@ class RawFrameUnpacker {
     
         /* TODO: provide routines for each desired output format here! */
         void YCbCr422p(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
-            check(do_YCbCr422p);
+            CHECK(do_YCbCr422p);
             do_YCbCr422p(f->size( ), f->data( ), Y, Cb, Cr);
         }
     protected:
@@ -84,5 +89,7 @@ class RawFrameUnpacker {
         /* do_YCbCr422p(in_size, packed_data, y, cb, cr */
         void (*do_YCbCr422p)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
+
+#undef CHECK
 
 #endif

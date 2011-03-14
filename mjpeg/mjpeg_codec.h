@@ -20,15 +20,17 @@
 #define _OPENREPLAY_MJPEG_CODEC_H
 
 #include "types.h"
+#include <stdio.h>
 #include "jpeglib.h"
+#include "raw_frame.h"
 
 class Mjpeg422Encoder {
     public:
         Mjpeg422Encoder(coord_t w_, coord_t h_, 
                 size_t max_frame_size = 524288);
         void encode(RawFrame *f);
-        void *get_data(void);
-        size_t get_data_size(void);
+        void *get_data(void) { return jpeg_data; }
+        size_t get_data_size(void) { return jpeg_finished_size; }
         ~Mjpeg422Encoder( );
     protected:
         void libjpeg_init( );
@@ -42,7 +44,6 @@ class Mjpeg422Encoder {
         struct jpeg_compress_struct cinfo;
         struct jpeg_error_mgr jerr;
 
-        JSAMPARRAY jsimage[3];
         JSAMPARRAY y_scans, cb_scans, cr_scans;
 };
 

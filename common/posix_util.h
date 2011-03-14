@@ -19,6 +19,9 @@
 #ifndef _OPENREPLAY_POSIX_UTIL_H
 #define _OPENREPLAY_POSIX_UTIL_H
 
+
+#include <sys/types.h>
+
 /* 
  * These read or write all of the data possible from/to the given fd.
  * Return values:
@@ -27,6 +30,6 @@
  * -1: An error was encountered. Check errno.
  */
 ssize_t read_all(int fd, void *data, size_t size);
-ssize_t write_all(int fd, void *data, size_t size);
+ssize_t write_all(int fd, const void *data, size_t size);
 
 #endif

@@ -19,6 +19,9 @@
 
 #include "mjpeg_codec.h"
 #include "libjpeg_glue.h"
+#include "xmalloc.h"
+#include <string.h>
+#include <assert.h>
 
 Mjpeg422Encoder::Mjpeg422Encoder(coord_t w_, coord_t h_, 
         size_t max_frame_size) {
@@ -26,20 +29,23 @@ Mjpeg422Encoder::Mjpeg422Encoder(coord_t w_, coord_t h_,
     h = h_;
     jpeg_alloc_size = max_frame_size;
 
-    jpeg_data = xmalloc(jpeg_alloc_size, "Mjpeg422Encoder", "jpeg_data");
-    y_plane = xmalloc(2 * w * h, "Mjpeg422Encoder", "YCbCr planes");
+    jpeg_data = (uint8_t *)
+        xmalloc(jpeg_alloc_size, "Mjpeg422Encoder", "jpeg_data");
+
+    y_plane = (uint8_t *)
+        xmalloc(2 * w * h, "Mjpeg422Encoder", "YCbCr planes");
+
     /* put the Cb and Cr planes in the same memory chunk as the y plane */
     cb_plane = y_plane + w * h;
     cr_plane = cb_plane + w * h / 2;
     
     /* allocate arrays of pointers to feed to libjpeg */
-    y_scans = xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "y_scans");
-    cb_scans = xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "cb_scans");
-    cr_scans = xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "cr_scans");
-
-    jsimage[0] = y_scans;
-    jsimage[1] = cb_scans;
-    jsimage[2] = cr_scans;
+    y_scans = (JSAMPARRAY)
+        xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "y_scans");
+    cb_scans = (JSAMPARRAY)
+        xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "cb_scans");
+    cr_scans = (JSAMPARRAY)
+        xmalloc(sizeof(JSAMPROW) * h, "Mjpeg422Encoder", "cr_scans");
 
     for (int i = 0; i < h; i++) {
         y_scans[i] = (JSAMPROW) (y_plane + i * w);
@@ -48,6 +54,8 @@ Mjpeg422Encoder::Mjpeg422Encoder(coord_t w_, coord_t h_,
     }
 
     libjpeg_init( );
+
+    jpeg_finished_size = 0;
 }
 
 Mjpeg422Encoder::~Mjpeg422Encoder( ) {
@@ -63,9 +71,7 @@ Mjpeg422Encoder::~Mjpeg422Encoder( ) {
 void Mjpeg422Encoder::libjpeg_init( ) {
     memset(&cinfo, 0, sizeof(cinfo));
 
-    cinfo.err = jpeg_std_error(&jerr);
-
-    jerr.error_exit = throw_encode_exception;
+    cinfo.err = jpeg_throw_on_error(&jerr);
     jpeg_create_compress(&cinfo);
 
     /* test if things properly match the DCT size */
@@ -75,7 +81,7 @@ void Mjpeg422Encoder::libjpeg_init( ) {
     cinfo.image_width = w;
     cinfo.image_height = h;
 
-    cinfo.image_components = 3;
+    cinfo.input_components = 3;
     jpeg_set_defaults(&cinfo);
     jpeg_set_colorspace(&cinfo, JCS_YCbCr);
 
@@ -83,35 +89,37 @@ void Mjpeg422Encoder::libjpeg_init( ) {
     cinfo.dct_method = JDCT_FASTEST;
 
     /* Y */
-    cinfo.comp_info[0].v_samp_factor = 2;
+    cinfo.comp_info[0].v_samp_factor = 1;
     cinfo.comp_info[0].h_samp_factor = 2;
     /* Cb */
-    cinfo.comp_info[1].v_samp_factor = 2;
+    cinfo.comp_info[1].v_samp_factor = 1;
     cinfo.comp_info[1].h_samp_factor = 1;
     /* Cr */
-    cinfo.comp_info[2].v_samp_factor = 2;
+    cinfo.comp_info[2].v_samp_factor = 1;
     cinfo.comp_info[2].h_samp_factor = 1;
 }
 
 void Mjpeg422Encoder::encode(RawFrame *f) {
     size_t jpeg_size = jpeg_alloc_size;
 
-    JSAMPIMAGE planes[3];
-    JSAMPARRAY y[16], cb[16], cr[16];
+    JDIMENSION scanlines_consumed = 0;
 
+    JSAMPARRAY planes[3];
 
-    planes[0] = y;
-    planes[1] = cb;
-    planes[2] = cr;
-
-    f->unpack->YCbCr422p(y_frame, cb_plane, cr_plane);    
+    f->unpack->YCbCr422p(y_plane, cb_plane, cr_plane);    
    
     jpeg_mem_dest(&cinfo, jpeg_data, &jpeg_size);
     jpeg_start_compress(&cinfo, TRUE);
-    jpeg_write_raw_data(&cinfo, jsimage, h);
-    jpeg_finish_compress(&cinfo);
 
-    /* done? that seemed too easy... */
+    while (scanlines_consumed < h) {
+        planes[0] = y_scans + scanlines_consumed;
+        planes[1] = cb_scans + scanlines_consumed;
+        planes[2] = cr_scans + scanlines_consumed;
+        scanlines_consumed += jpeg_write_raw_data(&cinfo, planes, 
+                h - scanlines_consumed);
+    }
+
+    jpeg_finish_compress(&cinfo);
 
     jpeg_finished_size = jpeg_size;
 }
