@@ -17,28 +17,24 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "output_adapter.h"
-#include "raw_frame.h"
-#include "pipe.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef _CONDITION_H
+#define _CONDITION_H
 
-int main( ) {
-    RawFrame *frame;
-    OutputAdapter *oadp;
-    uint8_t x;
+#include "mutex.h"
+#include <pthread.h>
 
-    oadp = create_decklink_output_adapter(0, 0);
+class Condition {
+    public:
+        Condition( );
+        ~Condition( );
 
-    for (;;) {
-        for (x = 16; x < 224; x++) {
-            frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-            memset(frame->data( ), x, frame->size( ));
-            if (oadp->input_pipe( ).put(frame) < 0) {
-                fprintf(stderr, "could not write frame to output");
-                exit(1);
-            }
-        }
-    }
-}
+        void wait(Mutex &mut);
+        void signal( );
+        void broadcast( );
+
+    protected:
+        pthread_cond_t cond;
+};
+
+#endif
+

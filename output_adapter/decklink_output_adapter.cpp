@@ -45,7 +45,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         DeckLinkOutputAdapter(unsigned int card_index = 0, 
                 unsigned int norm_ = 0) : deckLink(NULL), 
                 deckLinkOutput(NULL), frame_counter(0),
-                last_frame(NULL) {
+                last_frame(NULL), in_pipe(4) {
 
             norm = norm_;
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
@@ -218,7 +218,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             frame_counter++;
 
             if (last_frame != input) {
-                fprintf(stderr, "Deleting frame\n");
                 delete last_frame;
                 last_frame = input;
             }

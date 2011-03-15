@@ -42,6 +42,10 @@ output_adapter_OBJECTS = \
 	output_adapter/decklink_output_adapter.o \
 	$(DECKLINK_SDK_PATH)/DeckLinkAPIDispatch.o \
 
+thread_OBJECTS = \
+	thread/mutex.o \
+	thread/condition.o \
+
 # This is a basic template for building an executable.
 # Define the objects (or subdirectories) it needs.
 # Then add the build rule, and place it into all_TARGETS.
@@ -60,6 +64,7 @@ test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \
 	$(output_adapter_OBJECTS) \
+	$(thread_OBJECTS) \
 	tests/decklink_output_random.o
 
 tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)

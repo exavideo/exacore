@@ -25,12 +25,14 @@
 #include <poll.h>
 #include <stdio.h>
 #include <stdexcept>
+#include <assert.h>
 
 #include "posix_util.h"
+#include "mutex.h"
+#include "condition.h"
 
 /*
  * A channel for communicating objects between threads.
- * Based on a Unix pipe.
  * 
  * Methods:
  *
@@ -51,81 +53,139 @@
 template <class T>
 class Pipe {
     public:
-        Pipe( ) { 
-            int pfds[2];
+        Pipe(unsigned int buf_len_) { 
+            buf_len = buf_len_;
+            read_ptr = 0;
+            write_ptr = 0;
 
-            if (pipe(pfds) != 0) {
-                perror("pipe");
-                throw std::runtime_error("pipe failed");
-            }
+            buf = new T[buf_len];
 
-            read_fd = pfds[0];
-            write_fd = pfds[1];
+            read_done = false;
+            write_done = false;
         }
 
         int get(T& obj) {
-            ssize_t ret = read_all(read_fd, (void *)&obj, sizeof(T));
-            if (ret < 0) {
-                perror("pipe read");
-                throw std::runtime_error("pipe read failed");
+            { MutexLock lock(mut);
+                while (empty( )) {
+                    if (write_done) {
+                        return 0;
+                    } else {
+                        pipe_not_empty.wait(mut);
+                    }
+                }
+
+                /* get object out and adjust state */
+                obj = buf[read_ptr];
+                read_ptr = advance(read_ptr);
+
+                /* signal not full */
+                pipe_not_full.signal( );
+                return 1;
             }
-            return ret;
         }
 
         int put(const T& obj) {
-            ssize_t ret = write_all(write_fd, (const void *)&obj, sizeof(T));
-            if (ret < 0) {
-                if (errno == EPIPE) {
-                    return 0; /* pipe was closed */
-                } else {
-                    perror("pipe write");
-                    throw std::runtime_error("pipe write failed");
+            { MutexLock lock(mut);
+                if (read_done) {
+                    return 0;
                 }
+
+                while (full( )) {
+                    if (read_done) {
+                        return 0;
+                    } else {
+                        pipe_not_full.wait(mut);
+                    }
+                }
+
+                /* put object in and adjust state */
+                buf[write_ptr] = obj;
+                write_ptr = advance(write_ptr);
+
+                /* signal not empty */
+                pipe_not_empty.signal( );
+                return 1;
             }
-            return ret;
         }
 
         void done_reading(void) {
-            if (close(read_fd) != 0) {
-                perror("pipe read end close");
-                throw std::runtime_error("pipe read-end close failed");
+            { MutexLock lock(mut);
+                read_done = true;
+                /* signal "not full" so producer does not deadlock */
             }
         }
 
         void done_writing(void) {
-            if (close(write_fd) != 0) {
-                perror("pipe write end close");
-                throw std::runtime_error("pipe write-end close failed");
+            { MutexLock lock(mut);
+                write_done = true;
+                /* signal "not empty" so consumer does not deadlock */
             }
         }
 
         bool data_ready(void) {
-            struct pollfd pfd;
-            int ret;
+            bool ret;
 
-            pfd.fd = read_fd;
-            pfd.events = POLLIN;
-
-            ret = poll(&pfd, 1, 0);
-
-            if (ret < 0) {
-                perror("poll");
-                throw std::runtime_error("poll failed");
+            { MutexLock lock(mut);
+                if (write_ptr != read_ptr) {
+                    ret = true;
+                } else {
+                    ret = false;
+                }
             }
-            
-            if (pfd.revents & POLLIN || pfd.revents & POLLHUP) {
+
+            return ret;
+        }
+
+        
+
+        ~Pipe( ) { 
+            delete [] buf;
+        }
+
+    protected:
+        /* Return the position one past "i". */
+        unsigned int advance(unsigned int i) {
+            assert(i < buf_len);
+
+            if (i == buf_len - 1) {
+                return 0;
+            } else {
+                return i + 1;
+            }
+        }
+
+        /* WARNING!  These assume the mutex is already locked. */
+        bool empty(void) {
+            if (read_ptr == write_ptr) {
+                return true;
+            } else { 
+                return false;
+            }
+        }
+
+
+        bool full(void) {
+            if (advance(write_ptr) == read_ptr) {
                 return true;
             } else {
                 return false;
             }
         }
 
-        ~Pipe( ) { 
+        /* 
+         * read_ptr points to the first full slot. 
+         * write_ptr points to the next writable slot.
+         * special case: empty when read_ptr == write_ptr.
+         * That means that full is when write_ptr == read_ptr - 1.
+         * And in that condition, there is a bubble.
+         */
+        unsigned int buf_len, read_ptr, write_ptr;
 
-        }
+        T *buf;
+        Mutex mut;
+        Condition pipe_not_full, pipe_not_empty;
 
-    protected:
-        int write_fd, read_fd;
+        bool read_done, write_done;
 };
 
 #endif
