@@ -26,6 +26,8 @@
 void CbYCrY8422_YCbCr8P422_default(size_t, uint8_t *, uint8_t *, 
         uint8_t *, uint8_t *);
 
+void CbYCrY8422_CbYCrY8422_default(size_t, uint8_t *, uint8_t *);
+
 extern "C" {
     void CbYCrY8422_YCbCr8P422_sse3(size_t, uint8_t *, uint8_t *, 
             uint8_t *, uint8_t *);
@@ -37,6 +39,7 @@ extern "C" {
 class CbYCrY8422Unpacker : public RawFrameUnpacker {
     public:
         CbYCrY8422Unpacker(RawFrame *f) : RawFrameUnpacker(f) {
+            /* CPU dispatched routines */
             if (cpu_ssse3_available( )) {
                 do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_ssse3;
             } else if (cpu_sse3_available( )) {
@@ -44,6 +47,9 @@ class CbYCrY8422Unpacker : public RawFrameUnpacker {
             } else {
                 do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
             }
+            
+            /* Non CPU-dispatched routines */
+            do_CbYCrY8422 = CbYCrY8422_CbYCrY8422_default;
         }
 };
 

@@ -76,6 +76,12 @@ class RawFrameUnpacker {
             CHECK(do_YCbCr8P422);
             do_YCbCr8P422(f->size( ), f->data( ), Y, Cb, Cr);
         }
+
+        void CbYCrY8422(uint8_t *data) {
+            CHECK(do_CbYCrY8422);
+            do_CbYCrY8422(f->size( ), f->data( ), data);
+        }
+
     protected:
         void check(void *ptr) {
             if (ptr == NULL) {
@@ -91,6 +97,7 @@ class RawFrameUnpacker {
 
         /* do_YCbCr422p(in_size, packed_data, y, cb, cr */
         void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+        void (*do_CbYCrY8422)(size_t, uint8_t *, uint8_t *);
 };
 
 #undef CHECK
