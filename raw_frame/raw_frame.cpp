@@ -20,7 +20,7 @@
 #include <stdexcept>
 #include "xmalloc.h"
 #include <assert.h>
-#include "unpack_uyvy.h"
+#include "unpack_CbYCrY8422.h"
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
@@ -53,15 +53,15 @@ RawFrame::~RawFrame( ) {
 size_t RawFrame::minpitch( ) const {
     switch (_pixel_format) {
         case RGB8:
-        case YUV8:
+        case YCbCr8:
             return 3 * _w;
 
-        case UYVY8:
+        case CbYCrY8422:
             return 2 * _w;
 
-        case RGBA8:
-        case BGRA8:
-        case YUVA8:
+        case RGBAn8:
+        case BGRAn8:
+        case YCbCrAn8:
             return 4 * _w;
 
         default:
@@ -84,8 +84,8 @@ void RawFrame::alloc( ) {
 void RawFrame::make_unpacker(void) {
     switch (_pixel_format) {
         /* specific handlers go here */
-        case UYVY8:
-            unpack = new UYVYUnpacker(this);
+        case CbYCrY8422:
+            unpack = new CbYCrY8422Unpacker(this);
             break;
 
         default:

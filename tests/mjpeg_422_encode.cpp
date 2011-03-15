@@ -19,15 +19,23 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "mjpeg_codec.h"
 #include "raw_frame.h"
 #include "posix_util.h"
+#include "cpu_dispatch.h"
 
 int main(int argc, char **argv) {
+    if (argc > 1 && strcmp(argv[1], "-n") == 0) {
+        cpu_force_no_simd( );
+    }
+
     /* Read 1080p UYVY422 frames on stdin. Dump M-JPEG stream on stdout. */
-    RawFrame frame(1920, 1080, RawFrame::UYVY8);
+    RawFrame frame(1920, 1080, RawFrame::CbYCrY8422);
     Mjpeg422Encoder enc(1920, 1080);
     ssize_t ret;
+
 
     for (;;) {
         ret = frame.read_from_fd(STDIN_FILENO);

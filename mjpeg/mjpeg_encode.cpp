@@ -106,7 +106,7 @@ void Mjpeg422Encoder::encode(RawFrame *f) {
 
     JSAMPARRAY planes[3];
 
-    f->unpack->YCbCr422p(y_plane, cb_plane, cr_plane);    
+    f->unpack->YCbCr8P422(y_plane, cb_plane, cr_plane);    
    
     jpeg_mem_dest(&cinfo, jpeg_data, &jpeg_size);
     jpeg_start_compress(&cinfo, TRUE);

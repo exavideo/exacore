@@ -21,13 +21,29 @@
 #define _OPENREPLAY_UNPACK_UYVY_H
 
 #include "raw_frame.h"
+#include "cpu_dispatch.h"
 
-void convert_c_uyvy_YCbCr422p(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+void CbYCrY8422_YCbCr8P422_default(size_t, uint8_t *, uint8_t *, 
+        uint8_t *, uint8_t *);
 
-class UYVYUnpacker : public RawFrameUnpacker {
+extern "C" {
+    void CbYCrY8422_YCbCr8P422_sse3(size_t, uint8_t *, uint8_t *, 
+            uint8_t *, uint8_t *);
+    void CbYCrY8422_YCbCr8P422_ssse3(size_t, uint8_t *, uint8_t *, 
+            uint8_t *, uint8_t *);
+}
+
+
+class CbYCrY8422Unpacker : public RawFrameUnpacker {
     public:
-        UYVYUnpacker(RawFrame *f) : RawFrameUnpacker(f) {
-            do_YCbCr422p = convert_c_uyvy_YCbCr422p;
+        CbYCrY8422Unpacker(RawFrame *f) : RawFrameUnpacker(f) {
+            if (cpu_ssse3_available( )) {
+                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_ssse3;
+            } else if (cpu_sse3_available( )) {
+                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_sse3;
+            } else {
+                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
+            }
         }
 };
 

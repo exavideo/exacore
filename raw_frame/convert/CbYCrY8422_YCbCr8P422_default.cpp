@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-void convert_c_uyvy_YCbCr422p(size_t n, uint8_t *src, uint8_t *Y, 
+void CbYCrY8422_YCbCr8P422_default(size_t n, uint8_t *src, uint8_t *Y, 
         uint8_t *Cb, uint8_t *Cr) {
 
     /* U = Cb, V = Cr */

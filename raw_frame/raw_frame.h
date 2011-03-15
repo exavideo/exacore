@@ -26,7 +26,10 @@ class RawFrameUnpacker;
 
 class RawFrame {
     public:
-        enum PixelFormat { RGB8, YUV8, UYVY8, RGBA8, BGRA8, YUVA8 };
+        enum PixelFormat { 
+            RGB8, YCbCr8, CbYCrY8422, 
+            RGBAn8, BGRAn8, YCbCrAn8 
+        };
         RawFrame(coord_t w, coord_t h, PixelFormat pf);
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
         ~RawFrame( );
@@ -65,13 +68,13 @@ class RawFrame {
 class RawFrameUnpacker {
     public:
         RawFrameUnpacker(RawFrame *f_) : f(f_) { 
-            do_YCbCr422p = NULL;
+            do_YCbCr8P422 = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
-        void YCbCr422p(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
-            CHECK(do_YCbCr422p);
-            do_YCbCr422p(f->size( ), f->data( ), Y, Cb, Cr);
+        void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
+            CHECK(do_YCbCr8P422);
+            do_YCbCr8P422(f->size( ), f->data( ), Y, Cb, Cr);
         }
     protected:
         void check(void *ptr) {
@@ -87,7 +90,7 @@ class RawFrameUnpacker {
          */
 
         /* do_YCbCr422p(in_size, packed_data, y, cb, cr */
-        void (*do_YCbCr422p)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+        void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
 
 #undef CHECK
