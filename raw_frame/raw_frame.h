@@ -110,7 +110,7 @@ class RawFrameDrawOps {
             do_alpha_blend = NULL;
         }
 
-        void alpha_blend(coord_t x, coord_t y, RawFrame *key, 
+        void alpha_key(coord_t x, coord_t y, RawFrame *key, 
                 uint8_t galpha) {
             CHECK(do_alpha_blend);
             do_alpha_blend(f, key, x, y, galpha);
