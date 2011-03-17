@@ -21,6 +21,7 @@
 #include "xmalloc.h"
 #include <assert.h>
 #include "unpack_CbYCrY8422.h"
+#include "draw_CbYCrY8422.h"
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
@@ -29,6 +30,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _pitch = minpitch( );
     alloc( );
     make_unpacker( );
+    make_draw_ops( );
 }
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
@@ -43,11 +45,13 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
     }
     alloc( );
     make_unpacker( );
+    make_draw_ops( );
 }
 
 RawFrame::~RawFrame( ) {
     free(_data);
     delete unpack;
+    delete draw;
 }
 
 size_t RawFrame::minpitch( ) const {
@@ -90,6 +94,19 @@ void RawFrame::make_unpacker(void) {
 
         default:
             unpack = new RawFrameUnpacker(this);
+            break;
+    }
+}
+
+void RawFrame::make_draw_ops(void) {
+    switch (_pixel_format) {
+        /* specific handlers go here */
+        case CbYCrY8422:
+            draw = new CbYCrY8422DrawOps(this);
+            break;
+
+        default:
+            draw = new RawFrameDrawOps(this);
             break;
     }
 }

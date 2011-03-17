@@ -26,19 +26,20 @@
 
 int main( ) {
     RawFrame *frame;
+    InputAdapter *iadp;
     OutputAdapter *oadp;
     uint8_t x;
 
-    oadp = create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422);
+    iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
+    oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
 
     for (;;) {
-        for (x = 16; x < 224; x++) {
-            frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-            memset(frame->data( ), x, frame->size( ));
-            if (oadp->input_pipe( ).put(frame) < 0) {
-                fprintf(stderr, "could not write frame to output");
-                exit(1);
-            }
+        if (iadp->output_pipe( ).get(frame) == 0) {
+            break;
+        }
+        if (oadp->input_pipe( ).put(frame) == 0) {
+            break;
         }
     }
 }
+

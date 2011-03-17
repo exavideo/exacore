@@ -17,28 +17,16 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "decklink.h"
-#include "raw_frame.h"
-#include "pipe.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef _OPENREPLAY_DECKLINK_H
+#define _OPENREPLAY_DECKLINK_H
 
-int main( ) {
-    RawFrame *frame;
-    OutputAdapter *oadp;
-    uint8_t x;
+#include "adapter.h"
 
-    oadp = create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422);
+OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
+        unsigned int decklink_norm, RawFrame::PixelFormat pf);
 
-    for (;;) {
-        for (x = 16; x < 224; x++) {
-            frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-            memset(frame->data( ), x, frame->size( ));
-            if (oadp->input_pipe( ).put(frame) < 0) {
-                fprintf(stderr, "could not write frame to output");
-                exit(1);
-            }
-        }
-    }
-}
+InputAdapter *create_decklink_input_adapter(unsigned int card_index,
+        unsigned int decklink_norm, unsigned int decklink_input,
+        RawFrame::PixelFormat pf);
+
+#endif

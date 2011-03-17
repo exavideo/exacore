@@ -23,6 +23,7 @@
 #include <stdexcept>
 
 class RawFrameUnpacker;
+class RawFrameDrawOps;
 
 class RawFrame {
     public:
@@ -51,6 +52,7 @@ class RawFrame {
 #endif
 
         RawFrameUnpacker *unpack;
+        RawFrameDrawOps *draw;
 
     protected:
         coord_t _w, _h;
@@ -61,6 +63,7 @@ class RawFrame {
         size_t minpitch( ) const;
         void alloc( );
         void make_unpacker( );
+        void make_draw_ops( );
 };
 
 #define CHECK(x) check((void *)(x))
@@ -96,8 +99,34 @@ class RawFrameUnpacker {
          */
 
         /* do_YCbCr422p(in_size, packed_data, y, cb, cr */
-        void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+        void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
+                uint8_t *, uint8_t *);
         void (*do_CbYCrY8422)(size_t, uint8_t *, uint8_t *);
+};
+
+class RawFrameDrawOps {
+    public:
+        RawFrameDrawOps(RawFrame *f_) : f(f_) { 
+            do_alpha_blend = NULL;
+        }
+
+        void alpha_blend(coord_t x, coord_t y, RawFrame *key, 
+                uint8_t galpha) {
+            CHECK(do_alpha_blend);
+            do_alpha_blend(f, key, x, y, galpha);
+        }
+    protected:
+        void check(void *ptr) {
+            if (ptr == NULL) {
+                throw std::runtime_error("Conversion not supported");
+            }
+        }
+
+        void (*do_alpha_blend)(RawFrame *bkgd, RawFrame *key, 
+                coord_t x, coord_t y, uint8_t galpha);
+
+        RawFrame *f;
+
 };
 
 #undef CHECK

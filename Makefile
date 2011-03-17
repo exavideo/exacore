@@ -19,7 +19,7 @@ SUBDIR_INCLUDES = \
 	-I common/ \
 	-I raw_frame/ \
 	-I thread/ \
-	-I output_adapter/ \
+	-I drivers/ \
 
 common_OBJECTS = \
 	common/xmalloc.o \
@@ -36,10 +36,11 @@ raw_frame_OBJECTS = \
 	raw_frame/convert/CbYCrY8422_YCbCr8P422_sse3.o \
 	raw_frame/convert/CbYCrY8422_YCbCr8P422_ssse3.o \
 	raw_frame/convert/CbYCrY8422_CbYCrY8422_default.o \
+	raw_frame/draw/CbYCrY8422_alpha_key.o \
 
 # The DeckLink API include here is very Evil. FIXME
-output_adapter_OBJECTS = \
-	output_adapter/decklink_output_adapter.o \
+decklink_driver_OBJECTS = \
+	drivers/decklink.o \
 	$(DECKLINK_SDK_PATH)/DeckLinkAPIDispatch.o \
 
 thread_OBJECTS = \
@@ -63,7 +64,7 @@ all_TARGETS += tests/mjpeg_422_encode
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \
-	$(output_adapter_OBJECTS) \
+	$(decklink_driver_OBJECTS) \
 	$(thread_OBJECTS) \
 	tests/decklink_output_random.o
 
@@ -71,6 +72,30 @@ tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
 
 all_TARGETS += tests/decklink_output_random    
+
+test_decklink_copy_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(decklink_driver_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_copy.o
+
+tests/decklink_copy: $(test_decklink_copy_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
+all_TARGETS += tests/decklink_copy    
+
+test_decklink_key_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(decklink_driver_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_key.o
+
+tests/decklink_key: $(test_decklink_key_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
+all_TARGETS += tests/decklink_key    
 
 # All generic boilerplate from here on down...
 

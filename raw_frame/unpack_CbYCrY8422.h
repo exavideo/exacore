@@ -17,8 +17,8 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _OPENREPLAY_UNPACK_UYVY_H
-#define _OPENREPLAY_UNPACK_UYVY_H
+#ifndef _OPENREPLAY_UNPACK_CBYCRY8422_H
+#define _OPENREPLAY_UNPACK_CBYCRY8422_H
 
 #include "raw_frame.h"
 #include "cpu_dispatch.h"

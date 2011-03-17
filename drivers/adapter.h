@@ -26,9 +26,13 @@
 class OutputAdapter {
     public:
         virtual Pipe<RawFrame *> &input_pipe( ) = 0;
+        virtual ~OutputAdapter( ) { }
 };
 
-OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
-        unsigned int decklink_norm);
+class InputAdapter {
+    public:
+        virtual Pipe<RawFrame *> &output_pipe( ) = 0;
+        virtual ~InputAdapter( ) { }
+};
 
 #endif
