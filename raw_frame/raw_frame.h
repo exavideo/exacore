@@ -33,7 +33,7 @@ class RawFrame {
         };
         RawFrame(coord_t w, coord_t h, PixelFormat pf);
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
-        ~RawFrame( );
+        virtual ~RawFrame( );
 
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
         uint8_t *data( ) { return _data; }

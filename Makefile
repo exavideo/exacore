@@ -20,82 +20,10 @@ SUBDIR_INCLUDES = \
 	-I raw_frame/ \
 	-I thread/ \
 	-I drivers/ \
+	-I graphics/ \
 
-common_OBJECTS = \
-	common/xmalloc.o \
-	common/posix_util.o \
-	common/cpu_dispatch.o \
-
-mjpeg_OBJECTS = \
-	mjpeg/libjpeg_glue.o \
-	mjpeg/mjpeg_encode.o \
-
-raw_frame_OBJECTS = \
-	raw_frame/raw_frame.o \
-	raw_frame/convert/CbYCrY8422_YCbCr8P422_default.o \
-	raw_frame/convert/CbYCrY8422_YCbCr8P422_sse3.o \
-	raw_frame/convert/CbYCrY8422_YCbCr8P422_ssse3.o \
-	raw_frame/convert/CbYCrY8422_CbYCrY8422_default.o \
-	raw_frame/draw/CbYCrY8422_alpha_key.o \
-
-# The DeckLink API include here is very Evil. FIXME
-decklink_driver_OBJECTS = \
-	drivers/decklink.o \
-	$(DECKLINK_SDK_PATH)/DeckLinkAPIDispatch.o \
-
-thread_OBJECTS = \
-	thread/mutex.o \
-	thread/condition.o \
-
-# This is a basic template for building an executable.
-# Define the objects (or subdirectories) it needs.
-# Then add the build rule, and place it into all_TARGETS.
-test_mjpeg_422_encode_OBJECTS = \
-	$(common_OBJECTS) \
-	$(mjpeg_OBJECTS) \
-	$(raw_frame_OBJECTS) \
-	tests/mjpeg_422_encode.o
-
-tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
-
-all_TARGETS += tests/mjpeg_422_encode    
-
-test_decklink_output_random_OBJECTS = \
-	$(common_OBJECTS) \
-	$(raw_frame_OBJECTS) \
-	$(decklink_driver_OBJECTS) \
-	$(thread_OBJECTS) \
-	tests/decklink_output_random.o
-
-tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
-
-all_TARGETS += tests/decklink_output_random    
-
-test_decklink_copy_OBJECTS = \
-	$(common_OBJECTS) \
-	$(raw_frame_OBJECTS) \
-	$(decklink_driver_OBJECTS) \
-	$(thread_OBJECTS) \
-	tests/decklink_copy.o
-
-tests/decklink_copy: $(test_decklink_copy_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
-
-all_TARGETS += tests/decklink_copy    
-
-test_decklink_key_OBJECTS = \
-	$(common_OBJECTS) \
-	$(raw_frame_OBJECTS) \
-	$(decklink_driver_OBJECTS) \
-	$(thread_OBJECTS) \
-	tests/decklink_key.o
-
-tests/decklink_key: $(test_decklink_key_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
-
-all_TARGETS += tests/decklink_key    
+include $(shell find . -iname 'subdir.mk')
+include $(shell find . -iname 'targets.mk')
 
 # All generic boilerplate from here on down...
 
@@ -120,6 +48,6 @@ do_all_targets: $(all_TARGETS)
 
 clean:
 	find . -iname '*.o' | xargs rm
-	rm $(all_TARGETS)
+	rm -f $(all_TARGETS)
 
 .PHONY: all do_all_targets clean
