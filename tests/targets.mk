@@ -58,3 +58,16 @@ tests/test_rsvg_frame: $(test_rsvg_frame_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/test_rsvg_frame    
+
+test_svg_key_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(graphics_OBJECTS) \
+    $(drivers_decklink_OBJECTS) \
+    $(thread_OBJECTS) \
+	tests/svg_key.o
+
+tests/svg_key: $(test_svg_key_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
+
+all_TARGETS += tests/svg_key    
