@@ -3,7 +3,7 @@
 # 32-bit is not supported for the time being!
 
 CXX=g++
-CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO
+CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO
 LDFLAGS=-g -O3 -march=k8
 ASM=yasm -f elf64 -g dwarf2
 

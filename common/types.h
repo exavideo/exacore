@@ -23,4 +23,6 @@
 
 typedef uint16_t coord_t;
 
+#define UNUSED(x) ((void) x)
+
 #endif

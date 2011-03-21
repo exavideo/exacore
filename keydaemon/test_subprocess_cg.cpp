@@ -22,8 +22,11 @@
 
 int main(int argc, char **argv) {
     int i;
-    RawFrame *out;
+    RawFrame *out = NULL;
     SvgSubprocessCharacterGenerator cg("scoreboard/scoreboard_cg.rb");
+
+    UNUSED(argc);
+    UNUSED(argv);
 
     for (i = 0; i < 30; i++) {
         if (cg.output_pipe( ).get(out) == 0) {

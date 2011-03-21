@@ -32,7 +32,7 @@ int main( ) {
     InputAdapter *iadp;
     OutputAdapter *oadp;
     RawFrame *key, *frame;
-    uint8_t galpha;
+    uint8_t galpha = 0;
 
     /* slurp input */
     while (read_pos < MAX_SVG) {
@@ -57,7 +57,7 @@ int main( ) {
         }
 
         /* render SVG */
-        RawFrame *key = RsvgFrame::render_svg(svg_buf, read_pos);
+        key = RsvgFrame::render_svg(svg_buf, read_pos);
     
         /* crude dissolve in */
         if (galpha < 255) {

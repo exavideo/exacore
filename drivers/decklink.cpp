@@ -158,6 +158,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         /* stubs */
         virtual HRESULT QueryInterface(REFIID iid, void **lpv) {
+            UNUSED(iid);
+            UNUSED(lpv);
             return E_FAIL;
         }
 
@@ -345,6 +347,8 @@ class DeckLinkInputAdapter : public InputAdapter,
         }
 
         virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv) { 
+            UNUSED(iid);
+            UNUSED(ppv);
             return E_NOINTERFACE; 
         }
 
@@ -361,6 +365,10 @@ class DeckLinkInputAdapter : public InputAdapter,
                 IDeckLinkDisplayMode *mode,
                 BMDDetectedVideoInputFormatFlags flags) {
 
+            UNUSED(events);
+            UNUSED(mode);
+            UNUSED(flags);
+
             fprintf(stderr, "DeckLink: input format changed?\n");
             return S_OK;
         }
@@ -370,6 +378,8 @@ class DeckLinkInputAdapter : public InputAdapter,
             
             RawFrame *out;
             void *data;
+
+            UNUSED(audio_in);
 
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {

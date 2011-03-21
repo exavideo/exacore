@@ -28,7 +28,6 @@ int main( ) {
     RawFrame *frame;
     InputAdapter *iadp;
     OutputAdapter *oadp;
-    uint8_t x;
 
     iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
     oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);

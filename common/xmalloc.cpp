@@ -17,7 +17,6 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE /* for asprintf( ) */
 #include "xmalloc.h"
 #include <stdlib.h>
 #include <stdio.h> 

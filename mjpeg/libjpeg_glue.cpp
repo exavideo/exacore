@@ -17,6 +17,7 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
  
+#include "types.h"
 #include "libjpeg_glue.h"
 #include <stdexcept>
 #include "jerror.h"
@@ -30,6 +31,7 @@ typedef struct {
 // and it doesn't get along with my coding style well.
 METHODDEF(void) init_source(j_decompress_ptr cinfo) {
     /* do nothing - it's ready to go already */
+    UNUSED(cinfo);
 }
 
 METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo) {
@@ -41,7 +43,7 @@ METHODDEF(boolean) fill_input_buffer(j_decompress_ptr cinfo) {
 METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
     if (num_bytes < 0) {
         ERREXIT(cinfo, JERR_INPUT_EMPTY);
-    } else if (cinfo->src->bytes_in_buffer < num_bytes) {
+    } else if (cinfo->src->bytes_in_buffer < (unsigned long) num_bytes) {
         ERREXIT(cinfo, JERR_INPUT_EMPTY);
     } else {
         cinfo->src->next_input_byte += num_bytes;
@@ -51,6 +53,7 @@ METHODDEF(void) skip_input_data(j_decompress_ptr cinfo, long num_bytes) {
 
 METHODDEF(void) term_source(j_decompress_ptr cinfo) {
     /* caller responsible for the memory so don't worry about it */
+    UNUSED(cinfo);
 }
 
 GLOBAL(void) jpeg_mem_src(j_decompress_ptr cinfo, void *data, size_t len) {

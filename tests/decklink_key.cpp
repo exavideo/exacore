@@ -28,8 +28,7 @@ int main( ) {
     RawFrame *frame = NULL;
     InputAdapter *iadp;
     OutputAdapter *oadp;
-    uint8_t x;
-    uint8_t galpha;
+    uint8_t galpha = 0;
 
     RawFrame key(168, 70, RawFrame::RGBAn8);
     //RawFrame key(640, 200, RawFrame::RGBAn8);

@@ -32,6 +32,9 @@ int main(int argc, char **argv) {
     InputAdapter *iadp;
     OutputAdapter *oadp;
 
+    UNUSED(argc);
+    UNUSED(argv);
+
     /* initialize the various keyers */
         /* load some configuration, parse command line args or something */
 

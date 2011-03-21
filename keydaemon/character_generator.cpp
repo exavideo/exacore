@@ -25,6 +25,7 @@ CharacterGenerator::CharacterGenerator( ) : Thread( ), _output_pipe(2) {
 
 CharacterGenerator::CharacterGenerator(int dummy) : Thread( ), _output_pipe(2) {
     /* don't start the thread */
+    UNUSED(dummy);
 }
 
 CharacterGenerator::~CharacterGenerator( ) {
