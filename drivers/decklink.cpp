@@ -235,6 +235,14 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
+            if (config->SetInt(bmdDeckLinkConfigLowLatencyVideoOutput, true)
+                    != S_OK) {
+
+                fprintf(stderr, "DeckLink output: warning: "
+                        "cannot enable low-latency mode\n"
+                );
+            }
+                    
             /* throw outputs at wall, see what sticks :) */
             #if 0
             config->SetInt(bmdDeckLinkConfigVideoOutputConnection,
