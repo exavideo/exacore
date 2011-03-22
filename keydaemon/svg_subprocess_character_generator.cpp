@@ -48,7 +48,6 @@ SvgSubprocessCharacterGenerator::~SvgSubprocessCharacterGenerator( ) {
 void SvgSubprocessCharacterGenerator::request( ) {
     const char *dummy = "";
 
-    fprintf(stderr, "writing request\n"); /* DEBUG */
     if (write_all(send_fd, dummy, 1) != 1) {
         throw std::runtime_error("dead subprocess?");
     }
@@ -57,7 +56,6 @@ void SvgSubprocessCharacterGenerator::request( ) {
 size_t SvgSubprocessCharacterGenerator::read_length( ) {
     unsigned int ret;
 
-    fprintf(stderr, "reading length\n"); /* DEBUG */
     if (read_all(recv_fd, &ret, sizeof(ret)) != 1) {
         fprintf(stderr, "it's dead??\n");
         throw std::runtime_error("dead subprocess?");
@@ -67,7 +65,6 @@ size_t SvgSubprocessCharacterGenerator::read_length( ) {
 }
 
 char *SvgSubprocessCharacterGenerator::read_svg(size_t length) {
-    fprintf(stderr, "reading %d bytes of SVG\n", (int) length); /* DEBUG */
     char *ret = (char *) malloc(length);
 
     if (ret == NULL) {
@@ -119,7 +116,6 @@ void SvgSubprocessCharacterGenerator::do_fork( ) {
 
         send_fd = send_pipe[1];
         recv_fd = recv_pipe[0];
-        fprintf(stderr, "process forked\n"); /* DEBUG */
     }
 }
 

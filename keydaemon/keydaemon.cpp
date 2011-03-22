@@ -39,8 +39,10 @@ int main(int argc, char **argv) {
         /* load some configuration, parse command line args or something */
 
     /* FIXME this is ugly hardcoding */
-    cgs.push_back(new SvgSubprocessCharacterGenerator
-            ("scoreboard/scoreboard_cg.rb"));
+    CharacterGenerator *scoreboard = 
+            new SvgSubprocessCharacterGenerator("scoreboard/scoreboard_cg.rb");
+    scoreboard->set_position(50, 50);
+    cgs.push_back(scoreboard);
 
 
     /* start input and output adapters */
