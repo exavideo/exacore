@@ -35,7 +35,7 @@ module Animate
     end
 
     class Blink < Animation
-        attr_accessor :default, :blink
+        attr_accessor :default, :blink, :blink_period
 
         def initialize
             super

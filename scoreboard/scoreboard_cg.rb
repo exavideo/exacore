@@ -103,10 +103,7 @@ class HockeyState < BaseState
         @home_score_text_color = "#ffffff"
         @away_score_text_color = "#ffffff"
 
-        @delayed_penalty = false
-        @delayed_penalty_opacity = 0.9
         @flag_team = nil
-        @arb_text = nil
 
         @clock_opacity = 1.0
         @clock_xofs = 0
@@ -116,6 +113,13 @@ class HockeyState < BaseState
         @scores_yofs = 0
         @bug_opacity = 1.0
 
+        @text_up = false
+        @text_opacity = 0
+        @text_bgcolor = "#dfd800"
+        @text_fgcolor = "#000000"
+        @text_line = ''
+        @global_xofs = 0
+        @global_yofs = 0
 
         # Commands we can accept
         @commands = {
@@ -141,14 +145,12 @@ class HockeyState < BaseState
                 true
             },
 
-            'delayed_penalty' => Proc.new {
-                @delayed_penalty = true
-                @delayed_penalty_opacity = 0
-                anim = Animate::Linear.new(0.0, 0.9, 30)
-                anim.action do |value| 
-                    @delayed_penalty_opacity = value
-                end
-                @anim_mgr.start_animation(anim)
+            'text_up' => Proc.new { |bgcolor, fgcolor, *args| 
+                text_up(bgcolor, fgcolor, args.join(' '))
+            },
+
+            'text_down' => Proc.new {
+                text_down
             },
 
             'dissolve_in' => Proc.new {
@@ -163,6 +165,51 @@ class HockeyState < BaseState
 
     def commands
         @commands
+    end
+
+    def text_up(bgcolor, fgcolor, text)
+        @text_bgcolor = bgcolor
+        @text_fgcolor = fgcolor
+        @text_line = text
+
+        # don't repeat animation if text already up
+        unless @text_up
+            slide_down = Animate::Linear.new(0, 47.3833, 10)
+            slide_down.action do |value|
+                @global_yofs = value
+            end
+
+            # chain a dissolve-in off the slide-down
+            slide_down.on_done do
+                dissolve_in = Animate::Linear.new(0, 1, 10)
+                dissolve_in.action do |value|
+                    @text_opacity = value
+                end
+                @anim_mgr.start_animation(dissolve_in)
+            end
+            
+            @anim_mgr.start_animation(slide_down)
+
+            @text_up = true
+
+        end
+    end
+
+    def text_down    
+        if @text_up
+            dissolve_out = Animate::Linear.new(1, 0, 10)
+            dissolve_out.action { |value| @text_opacity = value }
+
+            # chain the slide-up off the dissolve-out
+            dissolve_out.on_done do
+                slide_up = Animate::Linear.new(47.3833, 0, 10)
+                slide_up.action { |value| @global_yofs = value }
+                @anim_mgr.start_animation(slide_up)
+                @text_up = false
+            end
+
+            @anim_mgr.start_animation(dissolve_out)
+        end
     end
 
     def start_dissolve_out
@@ -264,7 +311,6 @@ class HockeyState < BaseState
     attr_reader :home_team, :home_score, :away_team, :away_score 
     attr_reader :flag_team
     attr_reader :period
-    attr_reader :delayed_penalty, :delayed_penalty_opacity, :full_strength, :arb_text
     attr_reader :home_score_text_color, :away_score_text_color
     attr_reader :home_score_background_color, :away_score_background_color
 
@@ -272,10 +318,14 @@ class HockeyState < BaseState
     attr_reader :scores_opacity, :scores_xofs, :scores_yofs
     attr_reader :bug_opacity
 
+    attr_reader :global_xofs, :global_yofs
+    attr_reader :text_opacity, :text_bgcolor, :text_fgcolor, :text_line
+
     def make_blinker
         b = Animate::Blink.new
         b.blink = "#ff0000"
         b.default = "#666666"
+        b.blink_period = 6
         b
     end
 
@@ -318,7 +368,7 @@ template = File.open('test_files/scoreboard.svg.erb', 'r') do |f|
 end
 
 Thread.new do
-    ls = TCPServer.new('localhost', 30005)
+    ls = TCPServer.new('0.0.0.0', 30005)
     loop do
         Thread.new(ls.accept) do |client|
             STDERR.print "accepted connection from ", client.peeraddr[2], "\n"
@@ -332,7 +382,9 @@ Thread.new do
                     STDERR.puts cmd
                     
                     result = begin
-                        state.do_command(cmd)
+                        Thread.exclusive do
+                            state.do_command(cmd)
+                        end
                     rescue => e
                         STDERR.puts e.inspect
                         STDERR.puts e.backtrace.join("\n")
