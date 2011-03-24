@@ -85,12 +85,20 @@ class HockeyState < BaseState
         @game_clock = GameClock.new(20 * 60 * 10)
         @period = 1
 
+        @home_dropdown_offset = 0
+        @away_dropdown_offset = 0
+
         # we need a good looking score for testing :)
         @home_team = "RPI"
         @home_score = 1
-        @away_team = "UNION"
+        @away_team = "COL"
         @away_score = 0
 
+        @home_text = nil
+        @away_text = nil
+        @home_power_play = false
+        @away_power_play = false
+        
         @anim_mgr = Animate::Manager.new
 
         @home_bgcolor = "#ff0000"
@@ -145,12 +153,16 @@ class HockeyState < BaseState
                 true
             },
 
-            'text_up' => Proc.new { |bgcolor, fgcolor, *args| 
-                text_up(bgcolor, fgcolor, args.join(' '))
+            'home_down' => Proc.new {
+                home_dropdown_in             
             },
 
-            'text_down' => Proc.new {
-                text_down
+            'home_up' => Proc.new {
+                home_dropdown_out
+            },
+
+            'home_text' => Proc.new { |*args|
+                @home_text = args.join(' ')
             },
 
             'dissolve_in' => Proc.new {
@@ -166,51 +178,23 @@ class HockeyState < BaseState
     def commands
         @commands
     end
-
-    def text_up(bgcolor, fgcolor, text)
-        @text_bgcolor = bgcolor
-        @text_fgcolor = fgcolor
-        @text_line = text
-
-        # don't repeat animation if text already up
-        unless @text_up
-            slide_down = Animate::Linear.new(0, 47.3833, 10)
-            slide_down.action do |value|
-                @global_yofs = value
-            end
-
-            # chain a dissolve-in off the slide-down
-            slide_down.on_done do
-                dissolve_in = Animate::Linear.new(0, 1, 10)
-                dissolve_in.action do |value|
-                    @text_opacity = value
-                end
-                @anim_mgr.start_animation(dissolve_in)
-            end
-            
-            @anim_mgr.start_animation(slide_down)
-
-            @text_up = true
-
+    
+    def home_dropdown_in
+        slide_down = Animate::Linear.new(-37, 0, 10)
+        slide_down.action do |value|
+            @home_dropdown_offset = value
         end
+        @anim_mgr.start_animation(slide_down)
     end
 
-    def text_down    
-        if @text_up
-            dissolve_out = Animate::Linear.new(1, 0, 10)
-            dissolve_out.action { |value| @text_opacity = value }
-
-            # chain the slide-up off the dissolve-out
-            dissolve_out.on_done do
-                slide_up = Animate::Linear.new(47.3833, 0, 10)
-                slide_up.action { |value| @global_yofs = value }
-                @anim_mgr.start_animation(slide_up)
-                @text_up = false
-            end
-
-            @anim_mgr.start_animation(dissolve_out)
+    def home_dropdown_out
+        slide_up = Animate::Linear.new(0, -37, 10)
+        slide_up.action do |value|
+            @home_dropdown_offset = value
         end
+        @anim_mgr.start_animation(slide_up)
     end
+
 
     def start_dissolve_out
         scores_slide = Animate::Linear.new(0, 100, 30)
@@ -321,6 +305,10 @@ class HockeyState < BaseState
     attr_reader :global_xofs, :global_yofs
     attr_reader :text_opacity, :text_bgcolor, :text_fgcolor, :text_line
 
+    attr_reader :home_text, :away_text
+    attr_reader :home_power_play, :away_power_play
+    attr_reader :home_dropdown_offset, :away_dropdown_offset
+
     def make_blinker
         b = Animate::Blink.new
         b.blink = "#ff0000"
@@ -359,11 +347,18 @@ class HockeyState < BaseState
         ret
     end
 
+    def home_power_play_time
+        '2:00'
+    end
+
+    def away_power_play_time
+        '2:00'
+    end
 end
 
 state = HockeyState.new
 
-template = File.open('test_files/scoreboard.svg.erb', 'r') do |f|
+template = File.open('test_files/kemper_scoreboard.svg.erb', 'r') do |f|
     ERB.new(f.read( ))
 end
 
