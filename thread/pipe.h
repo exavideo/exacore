@@ -58,7 +58,11 @@ class Pipe {
             read_ptr = 0;
             write_ptr = 0;
 
-            buf = new T[buf_len];
+            buf = new T*[buf_len];
+
+            for (unsigned int i = 0; i < buf_len; ++i) {
+                buf[i] = NULL;
+            }
 
             read_done = false;
             write_done = false;
@@ -75,7 +79,11 @@ class Pipe {
                 }
 
                 /* get object out and adjust state */
-                obj = buf[read_ptr];
+                assert(buf[read_ptr] != NULL);
+                obj = *(buf[read_ptr]);
+                delete buf[read_ptr];
+                buf[read_ptr] = NULL;
+
                 read_ptr = advance(read_ptr);
 
                 /* signal not full */
@@ -99,7 +107,9 @@ class Pipe {
                 }
 
                 /* put object in and adjust state */
-                buf[write_ptr] = obj;
+                assert(buf[write_ptr] == NULL);
+                buf[write_ptr] = new T(obj);
+
                 write_ptr = advance(write_ptr);
 
                 /* signal not empty */
@@ -136,9 +146,12 @@ class Pipe {
             return ret;
         }
 
-        
-
         ~Pipe( ) { 
+            for (unsigned int i = 0; i < buf_len; i++) {
+                if (buf[i] != NULL) {
+                    delete buf[i];
+                }
+            }
             delete [] buf;
         }
 
@@ -181,7 +194,7 @@ class Pipe {
          */
         unsigned int buf_len, read_ptr, write_ptr;
 
-        T *buf;
+        T **buf;
         Mutex mut;
         Condition pipe_not_full, pipe_not_empty;
 
