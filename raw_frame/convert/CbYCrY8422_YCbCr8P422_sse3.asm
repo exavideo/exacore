@@ -46,18 +46,18 @@ CbYCrY8422_YCbCr8P422_sse3:
     movdqa xmm10, xmm9
     movdqa xmm11, xmm9
 
-    pand xmm0, [Y_mask]         ; xmm0 = [ y y y y y y y y]
-    pand xmm3, [Y_mask]
-    pand xmm6, [Y_mask]
-    pand xmm9, [Y_mask]
-    pand xmm1, [Cb_mask]        ; xmm1 = [u   u   u   u   ]
-    pand xmm4, [Cb_mask]
-    pand xmm7, [Cb_mask]
-    pand xmm10, [Cb_mask]
-    pand xmm2, [Cr_mask]        ; xmm2 = [  v   v   v   v ]
-    pand xmm5, [Cr_mask]
-    pand xmm8, [Cr_mask]
-    pand xmm11, [Cr_mask]
+    pand xmm0, [Y_mask wrt rip]         ; xmm0 = [ y y y y y y y y]
+    pand xmm3, [Y_mask wrt rip]
+    pand xmm6, [Y_mask wrt rip]
+    pand xmm9, [Y_mask wrt rip]
+    pand xmm1, [Cb_mask wrt rip]        ; xmm1 = [u   u   u   u   ]
+    pand xmm4, [Cb_mask wrt rip]
+    pand xmm7, [Cb_mask wrt rip]
+    pand xmm10, [Cb_mask wrt rip]
+    pand xmm2, [Cr_mask wrt rip]        ; xmm2 = [  v   v   v   v ]
+    pand xmm5, [Cr_mask wrt rip]
+    pand xmm8, [Cr_mask wrt rip]
+    pand xmm11, [Cr_mask wrt rip]
 
     psrlw xmm0, 8               ; xmm0 = [y y y y y y y y ]
     psrlw xmm3, 8
@@ -94,7 +94,7 @@ CbYCrY8422_YCbCr8P422_sse3:
 
     ret
 
-section data align=16
+align 16
 Y_mask:
     times 8 db 0x00, 0xff
 Cb_mask:

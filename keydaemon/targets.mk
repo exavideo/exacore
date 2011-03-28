@@ -27,3 +27,16 @@ keydaemon/keydaemon: $(keydaemon_OBJECTS)
 
 all_TARGETS += keydaemon/keydaemon
 
+keyer_lib_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+    $(graphics_OBJECTS) \
+    $(thread_OBJECTS) \
+    $(drivers_decklink_OBJECTS) \
+    keydaemon/character_generator.o \
+    keydaemon/svg_subprocess_character_generator.o \
+
+keydaemon/libkeyerfuncs.a: $(keyer_lib_OBJECTS)
+	ar rcs $@ $^
+
+all_TARGETS += keydaemon/libkeyerfuncs.a

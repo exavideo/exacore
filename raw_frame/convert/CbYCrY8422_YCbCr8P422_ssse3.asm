@@ -36,9 +36,9 @@ CbYCrY8422_YCbCr8P422_ssse3:
     movdqa xmm1, xmm0
     movdqa xmm2, xmm0
 
-    pshufb xmm0, [Y_shuffle] ; xmm0 = [yyyyyyyy        ]
-    pshufb xmm1, [U_shuffle] ; xmm1 = [uuuu            ]
-    pshufb xmm2, [V_shuffle] ; xmm2 = [vvvv            ]
+    pshufb xmm0, [Y_shuffle wrt rip] ; xmm0 = [yyyyyyyy        ]
+    pshufb xmm1, [U_shuffle wrt rip] ; xmm1 = [uuuu            ]
+    pshufb xmm2, [V_shuffle wrt rip] ; xmm2 = [vvvv            ]
 
     movq [rdx], xmm0
     movd [rcx], xmm1
@@ -53,7 +53,8 @@ CbYCrY8422_YCbCr8P422_ssse3:
 
     ret
 
-section data align=16
+align 16
+
 Y_shuffle:
     db 0x01, 0x03, 0x05, 0x07, 0x09, 0x0b, 0x0d, 0x0f
     db 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
