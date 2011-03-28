@@ -33,9 +33,25 @@ using namespace Rice;
 
 class Keyer {
     protected:
-        std::vector<CharacterGenerator *> cgs;
-        InputAdapter *iadp;
-        OutputAdapter *oadp;
+        std::vector<Data_Object<CharacterGenerator> *> cgs;
+        Data_Object<InputAdapter> *iadp;
+        Data_Object<OutputAdapter> *oadp;
+
+        void do_mark(void) {
+            int i;
+
+            for (i = 0; i < cgs.size( ); i++) {
+                cgs[i]->mark( );
+            }
+
+            if (iadp != NULL) {
+                iadp->mark( );
+            }
+            
+            if (oadp != NULL) {
+                oadp->mark( );
+            }
+        }
 
     public:
         Keyer( ) {
@@ -44,44 +60,33 @@ class Keyer {
         }
 
         ~Keyer( ) {
+            int i;
+
             delete iadp;
             delete oadp;
-            for (unsigned int i = 0; i < cgs.size( ); i++) {
+            for (i = 0; i < cgs.size( ); i++) {
                 delete cgs[i];
             }
         }
 
-        void input(InputAdapter *iadp_) {
+        void input(Object iadp_) {
             if (iadp != NULL) {
                 throw std::runtime_error("cannot define multiple inputs");
             }
-            if (iadp_ == NULL) {
-                throw std::runtime_error("cannot use a NULL input adapter");
-            }
             
-            rb_gc_register_address((VALUE *)iadp_);
-            iadp = iadp_;
+            iadp = new Data_Object<InputAdapter>(iadp_);
         }
 
-        void output(OutputAdapter *oadp_) {
+        void output(Object oadp_) {
             if (oadp != NULL) {
                 throw std::runtime_error("cannot define multiple outputs");
             }
-            if (oadp_ == NULL) {
-                throw std::runtime_error("cannot use a NULL output adapter");
-            }
 
-            rb_gc_register_address((VALUE *)oadp_);
-            oadp = oadp_;
+            oadp = new Data_Object<OutputAdapter>(oadp_);
         }
 
-        void cg(CharacterGenerator *cg) {
-            if (cg == NULL) {
-                throw std::runtime_error("cannot use a NULL character generator");
-            }
-
-            rb_gc_register_address((VALUE *)cg);
-            cgs.push_back(cg);
+        void cg(Object cg) {
+            cgs.push_back(new Data_Object<CharacterGenerator>(cg));
         }
 
         void run( ) {
@@ -104,13 +109,13 @@ class Keyer {
             /* main loop */
             for (;;) {
                 /* get incoming frame */
-                if (iadp->output_pipe( ).get(frame) == 0) {
+                if ((*iadp)->output_pipe( ).get(frame) == 0) {
                     throw std::runtime_error("dead input adapter");
                 }
 
                 /* get overlay from each CG */
                 for (unsigned int i = 0; i < cgs.size( ); i++) {
-                    CharacterGenerator *cg = cgs[i];
+                    Data_Object<CharacterGenerator> cg = *(cgs[i]);
 
                     if (cg->output_pipe( ).get(cgout) == 0) {
                         throw std::runtime_error("dead character generator");
@@ -127,7 +132,7 @@ class Keyer {
                 }
 
                 /* Lastly, send output to the output adapter. */
-                if (oadp->input_pipe( ).put(frame) == 0) {
+                if ((*oadp)->input_pipe( ).put(frame) == 0) {
                     throw std::runtime_error("dead output adapter");
                 }
             }
@@ -139,13 +144,10 @@ class Keyer {
  * Create a new Keyer and pass it to the block for configuration.
  * Then, run the Keyer.
  */
-Object run_keyer(Object /* self */) {
-    Keyer *k = new Keyer;
-    Address_Registration_Guard g((VALUE *)k);
-
-    rb_yield(to_ruby(k));
-    k.run( );
-    return Qnil;
+void run_keyer(void) {
+    Data_Object<Keyer> k(new Keyer);
+    rb_yield(k);
+    k->run( );
 }
 
 /*
@@ -186,13 +188,13 @@ class SvgSubprocessCGConfigProxy {
  * Then, run the Keyer.
  */
 CharacterGenerator *construct_svg_sp_cg(void) {
-    SvgSubprocessCGConfigProxy *p = new SvgSubprocessCGConfigProxy;
-    VALUE *rbobj = to_ruby(p);
-    Address_Registration_Guard g(rbobj);
-
-    rb_yield(rbobj);
-    return p.construct( );
+    Data_Object<SvgSubprocessCGConfigProxy> p(new SvgSubprocessCGConfigProxy);
+    rb_yield(p);
+    return p->construct( );
+    /* p should be GC'd by Ruby */
 }
+
+Data_Type<CharacterGenerator> rb_mCharacterGenerator;
 
 extern "C" void Init_keyer( ) {
     /* export our Keyer class to ruby? */
@@ -202,7 +204,8 @@ extern "C" void Init_keyer( ) {
     rb_mKeyer.define_module_function("svg_subprocess_cg", 
             &construct_svg_sp_cg);
 
-    rb_mKeyer.define_class<CharacterGenerator>("CharacterGenerator");
+    rb_mCharacterGenerator =
+        rb_mKeyer.define_class<CharacterGenerator>("CharacterGenerator");
 
     rb_mKeyer.define_class<Keyer>("KeyerApp")
         .define_constructor(Constructor<Keyer>( ))
