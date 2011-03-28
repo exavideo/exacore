@@ -90,5 +90,32 @@ module Animate
             end
         end
     end
+
+    class HalfCosine < Animation
+        def initialize(start, finish, frames)
+            super()
+            @start = start
+            @finish = finish
+            @frames = 0
+            @total_frames = frames
+        end
+
+        def action(&block)
+            @action = block
+        end
+
+        def update
+            @frames += 1
+            if @frames >= @total_frames
+                @action.call(@finish)
+                call_done_handlers
+            else
+                linear = @frames.to_f / @total_frames.to_f
+                fraction = 0.5 - 0.5 * Math.cos(linear * 3.14159)
+
+                @action.call(@start + (@finish - @start) * fraction)
+            end
+        end
+    end
 end
 

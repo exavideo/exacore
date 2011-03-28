@@ -49,7 +49,7 @@ class GameClock
         if t >= 600
             sprintf "%d:%02d", t / 600, (t / 10) % 60
         else
-            sprintf ":%02d.%d", t / 10, t % 10
+            sprintf "%02d.%d", t / 10, t % 10
         end
     end
 end
@@ -82,7 +82,8 @@ end
 class HockeyState < BaseState
     def initialize
         # start with 20 minutes on the clock in the 1st period
-        @game_clock = GameClock.new(20 * 60 * 10)
+        #@game_clock = GameClock.new(20 * 60 * 10)
+        @game_clock = GameClock.new(599)
         @period = 1
 
         @home_dropdown_offset = 0
@@ -91,8 +92,10 @@ class HockeyState < BaseState
         # we need a good looking score for testing :)
         @home_team = "RPI"
         @home_score = 1
+        @home_fill = "#Home_Team_Score_Box_1_"
         @away_team = "COL"
         @away_score = 0
+        @away_fill = "#Home_Team_Score_Box_4"
 
         @home_text = nil
         @away_text = nil
@@ -180,7 +183,7 @@ class HockeyState < BaseState
     end
     
     def home_dropdown_in
-        slide_down = Animate::Linear.new(-37, 0, 10)
+        slide_down = Animate::HalfCosine.new(-37, 0, 15)
         slide_down.action do |value|
             @home_dropdown_offset = value
         end
@@ -188,7 +191,7 @@ class HockeyState < BaseState
     end
 
     def home_dropdown_out
-        slide_up = Animate::Linear.new(0, -37, 10)
+        slide_up = Animate::HalfCosine.new(0, -37, 30)
         slide_up.action do |value|
             @home_dropdown_offset = value
         end
@@ -197,27 +200,27 @@ class HockeyState < BaseState
 
 
     def start_dissolve_out
-        scores_slide = Animate::Linear.new(0, 100, 30)
+        scores_slide = Animate::HalfCosine.new(0, 100, 30)
         scores_slide.action do |value|
             @scores_xofs = value
         end
 
-        scores_dissolve = Animate::Linear.new(1, 0, 30)
+        scores_dissolve = Animate::HalfCosine.new(1, 0, 30)
         scores_dissolve.action do |value|
             @scores_opacity = value
         end
 
-        clock_slide_x = Animate::Linear.new(0, -30.1, 30)
+        clock_slide_x = Animate::HalfCosine.new(0, -30.1, 30)
         clock_slide_x.action do |value|
             @clock_xofs = value
         end
 
-        clock_slide_y = Animate::Linear.new(0, 95.3, 30)
+        clock_slide_y = Animate::HalfCosine.new(0, 95.3, 30)
         clock_slide_y.action do |value|
             @clock_yofs = value
         end
 
-        clock_dissolve = Animate::Linear.new(1, 0, 30)
+        clock_dissolve = Animate::HalfCosine.new(1, 0, 30)
         clock_dissolve.action do |value|
             @clock_opacity = value
         end
@@ -235,7 +238,7 @@ class HockeyState < BaseState
     end
 
     def finish_dissolve_out
-        bug_dissolve = Animate::Linear.new(1, 0, 30)
+        bug_dissolve = Animate::HalfCosine.new(1, 0, 30)
         bug_dissolve.action do |value|
             @bug_opacity = value
         end
@@ -244,7 +247,7 @@ class HockeyState < BaseState
     end
 
     def start_dissolve_in
-        bug_dissolve = Animate::Linear.new(0, 1, 30)
+        bug_dissolve = Animate::HalfCosine.new(0, 1, 30)
         bug_dissolve.action do |value|
             @bug_opacity = value
         end
@@ -257,27 +260,27 @@ class HockeyState < BaseState
     end
 
     def finish_dissolve_in
-        scores_slide = Animate::Linear.new(100, 0, 30)
+        scores_slide = Animate::HalfCosine.new(100, 0, 30)
         scores_slide.action do |value|
             @scores_xofs = value
         end
 
-        scores_dissolve = Animate::Linear.new(0, 1, 30)
+        scores_dissolve = Animate::HalfCosine.new(0, 1, 30)
         scores_dissolve.action do |value|
             @scores_opacity = value
         end
 
-        clock_dissolve = Animate::Linear.new(0, 1, 30)
+        clock_dissolve = Animate::HalfCosine.new(0, 1, 30)
         clock_dissolve.action do |value|
             @clock_opacity = value
         end
 
-        clock_slide_x = Animate::Linear.new(-30.1, 0, 30)
+        clock_slide_x = Animate::HalfCosine.new(-30.1, 0, 30)
         clock_slide_x.action do |value|
             @clock_xofs = value
         end
 
-        clock_slide_y = Animate::Linear.new(95.3, 0, 30)
+        clock_slide_y = Animate::HalfCosine.new(95.3, 0, 30)
         clock_slide_y.action do |value|
             @clock_yofs = value
         end
@@ -309,27 +312,25 @@ class HockeyState < BaseState
     attr_reader :home_power_play, :away_power_play
     attr_reader :home_dropdown_offset, :away_dropdown_offset
 
+    attr_reader :home_fill, :away_fill
+
     def make_blinker
         b = Animate::Blink.new
-        b.blink = "#ff0000"
-        b.default = "#666666"
+        b.blink = "#Home_Team_Score_Box_4_"
+        b.default = "#Home_Team_Score_Box_1_"
         b.blink_period = 6
         b
     end
 
     def home_goal_blink
         b = make_blinker
-        b.action do |new_color|
-            @home_score_background_color = new_color
-        end
+        b.action { |fill| @home_fill = fill }
         @anim_mgr.start_animation(b)
     end
 
     def away_goal_blink
         b = make_blinker
-        b.action do |new_color|
-            @away_score_background_color = new_color
-        end
+        b.action { |fill| @away_fill = fill }
         @anim_mgr.start_animation(b)
     end
 
