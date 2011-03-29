@@ -31,6 +31,8 @@
 
 using namespace Rice;
 
+#include "wrap_drivers.hpp"
+
 class Keyer {
     protected:
         std::vector<Data_Object<CharacterGenerator> *> cgs;
@@ -38,7 +40,7 @@ class Keyer {
         Data_Object<OutputAdapter> *oadp;
 
         void do_mark(void) {
-            int i;
+            unsigned int i;
 
             for (i = 0; i < cgs.size( ); i++) {
                 cgs[i]->mark( );
@@ -60,7 +62,7 @@ class Keyer {
         }
 
         ~Keyer( ) {
-            int i;
+            unsigned int i;
 
             delete iadp;
             delete oadp;
@@ -150,10 +152,34 @@ void run_keyer(void) {
     k->run( );
 }
 
+class CGConfigProxy {
+    protected:
+        coord_t x_, y_;
+
+        virtual void base_configure(CharacterGenerator *cg) {
+            cg->set_x(x_);
+            cg->set_y(y_);
+        }
+
+    public:
+        CGConfigProxy( ) {
+            x_ = 0;
+            y_ = 0;
+        }
+
+        void x(coord_t xn) {
+            x_ = xn;
+        }
+
+        void y(coord_t yn) {
+            y_ = yn;
+        }
+};
+
 /*
  * A proxy for configuring the SvgSubprocessCharacterGenerator.
  */
-class SvgSubprocessCGConfigProxy {
+class SvgSubprocessCGConfigProxy : public CGConfigProxy {
     public:
         SvgSubprocessCGConfigProxy( ) {
             _cmd = NULL;
@@ -171,7 +197,9 @@ class SvgSubprocessCGConfigProxy {
             if (_cmd == NULL) {
                 throw std::runtime_error("command not specified");
             }
-            return new SvgSubprocessCharacterGenerator(_cmd);
+            CharacterGenerator *cg = new SvgSubprocessCharacterGenerator(_cmd);
+            base_configure(cg);
+            return cg;
         }
 
         ~SvgSubprocessCGConfigProxy( ) {
@@ -196,8 +224,17 @@ CharacterGenerator *construct_svg_sp_cg(void) {
 
 Data_Type<CharacterGenerator> rb_mCharacterGenerator;
 
+template<>
+coord_t from_ruby<coord_t>(Object x) {
+    VALUE v = x.value( );
+    Check_Type(v, T_FIXNUM);
+    return (coord_t) FIX2INT(v);
+}
+
 extern "C" void Init_keyer( ) {
     /* export our Keyer class to ruby? */
+    Init_drivers( );
+
     Module rb_mKeyer = define_module("Keyer");
 
     rb_mKeyer.define_module_function("keyer", &run_keyer);
@@ -214,7 +251,12 @@ extern "C" void Init_keyer( ) {
         .define_method("cg", &Keyer::cg);
 
     rb_mKeyer
-        .define_class<SvgSubprocessCGConfigProxy>
+        .define_class<CGConfigProxy>("CGConfigProxy")
+            .define_method("x", &CGConfigProxy::x)
+            .define_method("y", &CGConfigProxy::y);
+
+    rb_mKeyer
+        .define_class<SvgSubprocessCGConfigProxy, CGConfigProxy>
                 ("SvgSubprocessCGConfigProxy")
             .define_constructor(Constructor<SvgSubprocessCGConfigProxy>( ))
             .define_method("command", &SvgSubprocessCGConfigProxy::command);
