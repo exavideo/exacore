@@ -21,6 +21,7 @@ SUBDIR_INCLUDES = \
 	-I thread/ \
 	-I drivers/ \
 	-I graphics/ \
+	-I replay/ \
 
 include $(shell find . -iname 'subdir.mk')
 include $(shell find . -iname 'targets.mk')

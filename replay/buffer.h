@@ -22,6 +22,13 @@
 
 #include "types.h"
 #include <stdlib.h>
+#include <list>
+
+#include "mutex.h"
+#include "condition.h"
+#include "thread.h"
+
+#include <stdexcept>
 
 class Buffer {
     public:
@@ -29,8 +36,16 @@ class Buffer {
         typedef size_t timecode_t;
 
         Buffer(const char *filename, size_t block_size);
-        Buffer(const char *filename, size_t size, size_t block_size);
+        Buffer(const char *filename, size_t n_blocks, size_t block_size);
         ~Buffer( );
+
+        /*
+         * IMPORTANT NOTE
+         *
+         * "Locking" blocks is not a means of obtaining exclusive access!
+         * This "locking" refers to keeping the data in main memory,
+         * and not allowing it to be swapped out to disk. That's important.
+         */
 
         /*
          * Lock a block, forcing it to be kept available for fast access.
@@ -46,23 +61,18 @@ class Buffer {
          * Obtain a readable and writable pointer to the block 
          * with the given offset. 
          */
-        void *block_ptr(offset_t ofs);
+        void *block_ptr(offset_t ofs) const;
 
         /* Obtain the offset of the next writable block. */
-        offset_t write_offset(void);
+        offset_t write_offset(void) const;
+
+        /* Timecode helpers */
 
         /* 
          * Call when done writing to the currently writable block.
          * This advances the internal pointers.
          */
         timecode_t write_done(void);
-
-        /*
-         * Return the offset of the block n blocks after block k.
-         * Negative "n" values are allowed and represent blocks 
-         * occurring before block k in time.
-         */
-        offset_t rel_offset(offset_t k, int n);
 
         /*
          * Return the offset of a block containing data for the given 
@@ -75,6 +85,39 @@ class Buffer {
          * Return the offset of the block most recently written.
          */
         offset_t live_offset(void);
+
+        /*
+         * Return the total size of the buffer, in blocks.
+         */
+        offset_t size(void) const {
+            return n_blocks;
+        }
+
+        /* Things to make the modular arithmetic easier */
+
+        /* 
+         * Return true if block t lies between blocks l and r.
+         */
+        bool in_range(offset_t l, offset_t r, offset_t t) const;
+
+        /*
+         * Return the offset of the block n blocks after block k.
+         * Negative "n" values are allowed and represent blocks 
+         * occurring before block k in time.
+         */
+        offset_t rel_offset(offset_t k, int n) const;
+
+        /*
+         * Return the cardinality/size of the intersection of the intervals
+         * [a1..a2], [b1..b2].
+         */
+        unsigned int intersect(offset_t a1, offset_t a2, 
+                offset_t b1, offset_t b2) const;
+
+        /*
+         * Return the cardinality/size of the interval [a1..a2].
+         */
+        unsigned int span(offset_t a1, offset_t a2) const;
 
         /*
          * A simple RAII wrapper around locking and unlocking blocks.
@@ -92,29 +135,35 @@ class Buffer {
                 }
 
                 LockHelper(const LockHelper &rhs) {
-                    parent_ = rhs->parent_;
-                    block_ = rhs->block_;
+                    parent_ = rhs.parent_;
+                    block_ = rhs.block_;
 
-                    if (parent != NULL) {
+                    if (parent_ != NULL) {
                         parent_->block_lock(block_);
                     }
                 }
 
+                offset_t block(void) { 
+                    return block_;
+                }
+
                 const LockHelper &operator=(const LockHelper &rhs) {
-                    if (parent != NULL) {
-                        parent->block_unlock(block_);
+                    if (parent_ != NULL) {
+                        parent_->block_unlock(block_);
                     }
 
-                    parent_ = rhs->parent_;
-                    block_ = rhs->block_;
+                    parent_ = rhs.parent_;
+                    block_ = rhs.block_;
 
-                    if (parent != NULL) {
-                        parent->block_lock(block_);
+                    if (parent_ != NULL) {
+                        parent_->block_lock(block_);
                     }
+
+                    return *this;
                 }
 
                 ~LockHelper( ) {
-                    if (parent != NULL) {
+                    if (parent_ != NULL) {
                         parent_->block_unlock(block_);
                     }
                 }
@@ -140,9 +189,51 @@ class Buffer {
         bool empty; 
 };
 
+class RegionLocker : public Thread {
+    public:
+        RegionLocker(Buffer *buf);
+        ~RegionLocker( );
+
+        void set_region(Buffer::offset_t pos, int before, int after);
+        unsigned int n_locked( );
+        unsigned int n_requested( );
+
+    protected:
+        Mutex m;
+        Condition needs_update;
+        
+        /* These values represent what we want. */
+        Buffer::offset_t first_locked;
+        Buffer::offset_t last_locked;
+
+        bool stop;
+        bool update;
+
+        unsigned int n_locked_;
+
+        /* 
+         * These values represent what we've got. 
+         * This is accessed only by the worker, and should always contain
+         * lock helpers for logically consecutive blocks.
+         */
+        std::list<Buffer::LockHelper> locks_held;
+
+        void unlock_unneeded(void);
+        void progress(void);
+
+        void run_thread(void); /* override from Thread */
+
+        Buffer *buffer_;
+};
 
 class BufferReader : public Thread {
 
+};
+
+/* An exception to throw when the timecode is unavailable. */
+class TimecodeNotPresent : public std::runtime_error {
+    public:
+        TimecodeNotPresent( ) : std::runtime_error("Timecode not found") { }
 };
 
 #endif
