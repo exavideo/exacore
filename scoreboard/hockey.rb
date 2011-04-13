@@ -145,16 +145,14 @@ class HockeyPenaltyQueue
         # check if there are already active penalties for this player
         if (@active.has_player?(p.player))
             swap = @schrodinger.find { |pair| pair[1].player == p.player }
-            if swap.nil?
-                @deferred << p
-            else
+            unless swap.nil?
                 idx = @active.find_index(swap[1])
                 @schrodinger.delete(swap)
                 @active[idx] = swap[0]
             end
-        else
-            @deferred << p
         end
+
+        @deferred << p
     end
 
     def update
@@ -208,10 +206,12 @@ class HockeyPenaltyQueue
             # if equal
             elsif all_minors[0].start_time == all_minors[1].start_time
                 # if exactly one is double minor, end the one that isn't
-                if (@deferred.has_player?(all_minors[0].player) and not @deferred.has_player(all_minors[1].player))
+                if (@deferred.has_player?(all_minors[0].player) \
+                        and not @deferred.has_player?(all_minors[1].player))
                     @active.delete(all_minors[1])
                     finish_penalty(all_minors[1])
-                elsif (@deferred.has_player?(all_minors[1].player) and not @deferred.has_player(all_minors[0].player))
+                elsif (@deferred.has_player?(all_minors[1].player) \
+                        and not @deferred.has_player?(all_minors[0].player))
                     @active.delete(all_minors[0])
                     finish_penalty(all_minors[0])
                 else

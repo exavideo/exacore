@@ -526,22 +526,159 @@ class HockeyPenaltyQueueTest < Test::Unit::TestCase
     # Players X1 and X2 both have double minors.
     # A goal is scored. No one is penalized again.
     def test_coincident_double_minors_goal_1
+        # 18:00 double minors 1 and 2
+        advance_clock 1200
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
 
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+
+        @pq.update
+
+        assert_equal(3, @pq.strength)
+        assert_equal(2400, @pq.time_to_strength_change)
+
+        # 17:00 goal!
+        advance_clock 600
+        
+        @pq.drop_penalty
+        @pq.update
+
+        # 17:00 there were 3 minutes left of 5 on 3 at this point.
+        # One of the double minors now ends in 2 minutes.
+        # This means 2 min left of 5 on 3, and 1 min of PP after that.
+        assert_equal(3, @pq.strength)
+        assert_equal(1200, @pq.time_to_strength_change)
+
+        advance_clock 1200
+        assert_equal(4, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        advance_clock 600
+        assert_equal(5, @pq.strength)
+        assert_equal(0, @pq.time_to_strength_change)
     end
 
     def test_coincident_double_minors_goal_2
+        # 18:00 double minors 1 and 2
+        advance_clock 1200
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
 
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+
+        @pq.update
+
+        assert_equal(3, @pq.strength)
+        assert_equal(2400, @pq.time_to_strength_change)
+
+        # 15:00 goal!
+        advance_clock 1800
+        
+        @pq.drop_penalty
+        @pq.update
+
+        # 1 min left of 5 on 3 becomes 1 min left of PP after goal
+        assert_equal(4, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        advance_clock 600
+        assert_equal(5, @pq.strength)
+        assert_equal(0, @pq.time_to_strength_change)
     end
 
-    # Players X1 and X2 both have double minors.
+    # Players X1 and X2 both have minors.
     # A goal is scored, X1 leaves, then X1 is penalized again.
-    def test_coincident_double_minors_goal_penalty_1
+    def test_coincident_minors_goal_penalty_1
+        # 18:00 minors 1 and 2
+        advance_clock 1200
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+        @pq.update
 
+        assert_equal(3, @pq.strength)
+        assert_equal(1200, @pq.time_to_strength_change)
+
+        # 17:00 goal!
+        advance_clock 600
+        
+        assert_equal(3, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        @pq.drop_penalty
+        @pq.update
+
+        assert_equal(4, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        # 16:30 first player penalized again
+        advance_clock 300
+        assert_equal(4, @pq.strength)
+        assert_equal(300, @pq.time_to_strength_change)
+
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
+        @pq.update
+
+        assert_equal(3, @pq.strength)
+        assert_equal(300, @pq.time_to_strength_change)
+
+        # 16:00 second original penalty ends
+        advance_clock 300
+        assert_equal(4, @pq.strength)
+        assert_equal(900, @pq.time_to_strength_change)
+        
+        # 14:30 third penalty ends
+        advance_clock 900
+        assert_equal(5, @pq.strength)
+        assert_equal(0, @pq.time_to_strength_change)
     end
 
     # Players X1 and X2 both have double minors.
     # A goal is scored, X2 leaves, then X2 is penalized again.
-    def test_coincident_double_minors_goal_penalty_2
+    def test_coincident_minors_goal_penalty_2
+        # 18:00 minors 1 and 2
+        advance_clock 1200
+        @pq.add_penalty(HockeyPenalty.new('zajac', false))
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+        @pq.update
+
+        assert_equal(3, @pq.strength)
+        assert_equal(1200, @pq.time_to_strength_change)
+
+        # 17:00 goal!
+        advance_clock 600
+        
+        assert_equal(3, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        @pq.drop_penalty
+        @pq.update
+
+        assert_equal(4, @pq.strength)
+        assert_equal(600, @pq.time_to_strength_change)
+
+        # 16:30 first player penalized again
+        advance_clock 300
+        assert_equal(4, @pq.strength)
+        assert_equal(300, @pq.time_to_strength_change)
+
+        @pq.add_penalty(HockeyPenalty.new('boileau', false))
+        @pq.update
+
+        assert_equal(3, @pq.strength)
+        assert_equal(300, @pq.time_to_strength_change)
+
+        # 16:00 second original penalty ends
+        advance_clock 300
+        assert_equal(4, @pq.strength)
+        assert_equal(900, @pq.time_to_strength_change)
+        
+        # 14:30 third penalty ends
+        advance_clock 900
+        assert_equal(5, @pq.strength)
+        assert_equal(0, @pq.time_to_strength_change)
 
     end
 
