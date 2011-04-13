@@ -38,7 +38,6 @@ class HockeyPenalty
         fail unless @start_time == nil
         @clock = clock
         @start_time = clock.value
-        puts "start penalty for #{@player} at #{@start_time}"
     end
 
     def time_left
