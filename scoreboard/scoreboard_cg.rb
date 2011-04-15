@@ -88,6 +88,7 @@ class HockeyState < BaseState
 
         @home_dropdown_offset = 0
         @away_dropdown_offset = 0
+        @common_dropdown_offset = 0
 
         # we need a good looking score for testing :)
         @home_team = "RPI"
@@ -99,6 +100,8 @@ class HockeyState < BaseState
 
         @home_text = nil
         @away_text = nil
+        @common_text = nil
+
         @home_power_play = false
         @away_power_play = false
         
@@ -131,6 +134,9 @@ class HockeyState < BaseState
         @text_line = ''
         @global_xofs = 0
         @global_yofs = 0
+
+        @home_redscore_opacity = 0.0
+        @away_redscore_opacity = 0.0
 
         # Commands we can accept
         @commands = {
@@ -180,6 +186,22 @@ class HockeyState < BaseState
 
     def commands
         @commands
+    end
+
+    def home_goal_blink
+        sine_blink = Animate::Sine.new(0.0, 1.0, 90, 6)
+        sine_blink.action do |value|
+            @home_redscore_opacity = value
+        end
+        @anim_mgr.start_animation(sine_blink)
+    end
+
+    def away_goal_blink
+        sine_blink = Animate::Sine.new(0.0, 1.0, 90, 6)
+        sine_blink.action do |value|
+            @away_redscore_opacity = value
+        end
+        @anim_mgr.start_animation(sine_blink)
     end
     
     def home_dropdown_in
@@ -308,31 +330,13 @@ class HockeyState < BaseState
     attr_reader :global_xofs, :global_yofs
     attr_reader :text_opacity, :text_bgcolor, :text_fgcolor, :text_line
 
-    attr_reader :home_text, :away_text
+    attr_reader :home_text, :away_text, :common_text
     attr_reader :home_power_play, :away_power_play
-    attr_reader :home_dropdown_offset, :away_dropdown_offset
+    attr_reader :home_dropdown_offset, :away_dropdown_offset, :common_dropdown_offset
 
     attr_reader :home_fill, :away_fill
 
-    def make_blinker
-        b = Animate::Blink.new
-        b.blink = "#Home_Team_Score_Box_4_"
-        b.default = "#Home_Team_Score_Box_1_"
-        b.blink_period = 6
-        b
-    end
-
-    def home_goal_blink
-        b = make_blinker
-        b.action { |fill| @home_fill = fill }
-        @anim_mgr.start_animation(b)
-    end
-
-    def away_goal_blink
-        b = make_blinker
-        b.action { |fill| @away_fill = fill }
-        @anim_mgr.start_animation(b)
-    end
+    attr_reader :home_redscore_opacity, :away_redscore_opacity
 
     def id
         "Hockey 0.1"

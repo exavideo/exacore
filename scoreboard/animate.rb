@@ -26,6 +26,10 @@ module Animate
             @done_handlers << block
         end
 
+        def action(&block)
+            @action = block
+        end
+
         protected
         def call_done_handlers
             @done_handlers.each do |handler|
@@ -45,10 +49,6 @@ module Animate
             @frames = 0
             @blink_period = 10
             @n_blinks = 6
-        end
-
-        def action(&block)
-            @action = block
         end
 
         def update
@@ -75,10 +75,6 @@ module Animate
             @total_frames = frames
         end
 
-        def action(&block)
-            @action = block
-        end
-
         def update
             @frames += 1
             if @frames >= @total_frames
@@ -100,10 +96,6 @@ module Animate
             @total_frames = frames
         end
 
-        def action(&block)
-            @action = block
-        end
-
         def update
             @frames += 1
             if @frames >= @total_frames
@@ -114,6 +106,31 @@ module Animate
                 fraction = 0.5 - 0.5 * Math.cos(linear * 3.14159)
 
                 @action.call(@start + (@finish - @start) * fraction)
+            end
+        end
+    end
+
+    class Sine < Animation
+        def initialize(zero, peak, frames, cycles)
+            super( )
+            @frames = 0
+            @total_frames = frames
+            @period = frames / cycles
+            @freq = 2 * Math::PI / @period
+            @zero = zero
+            @peak = peak
+            STDERR.puts "period=#{@period}"
+            STDERR.puts "freq=#{@freq}"
+        end
+
+        def update
+            @frames += 1
+            if @frames >= @total_frames
+                @action.call(@zero)
+                call_done_handlers
+            else
+                fraction = 0.5 - 0.5 * Math.cos(@frames * @freq)
+                @action.call(@zero + (@peak - @zero) * fraction)
             end
         end
     end
