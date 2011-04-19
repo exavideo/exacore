@@ -17,25 +17,42 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _OPENREPLAY_OUTPUT_ADAPTER_H
-#define _OPENREPLAY_OUTPUT_ADAPTER_H
-
-#include "pipe.h"
-#include "raw_frame.h"
 #include "audio_packet.h"
+#include <stdlib.h>
+#include <stdexcept>
 
-class OutputAdapter {
-    public:
-        virtual Pipe<RawFrame *> &input_pipe( ) = 0;
-        virtual ~OutputAdapter( ) { }
-};
+AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
+        size_t sample_size, size_t n_frames) {
+    
+    _rate = rate;
+    _channels = channels;
+    _sample_size = sample_size;
 
-class InputAdapter {
-    public:
-        virtual Pipe<RawFrame *> &output_pipe( ) = 0;
-        virtual Pipe<AudioPacket *> *audio_output_pipe( ) { return NULL; }
-        virtual ~InputAdapter( ) { }
-};
+    _size = _channels * _sample_size * n_frames;
 
+    _data = (uint8_t *)malloc(_size);
+
+    if (_data == NULL) {
+        throw std::runtime_error("AudioPacket: failed to allocate data");
+    }
+}
+
+AudioPacket::~AudioPacket( ) {
+    if (_data != NULL) {
+        free(_data);
+    }
+}
+
+#ifdef RAWFRAME_POSIX_IO
+
+#include "posix_util.h"
+
+ssize_t AudioPacket::read_from_fd(int fd) {
+    return read_all(fd, _data, _size);
+}
+
+ssize_t AudioPacket::write_to_fd(int fd) {
+    return write_all(fd, _data, _size);
+}
 
 #endif

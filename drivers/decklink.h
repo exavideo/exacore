@@ -29,4 +29,8 @@ InputAdapter *create_decklink_input_adapter(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,
         RawFrame::PixelFormat pf);
 
+InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
+        unsigned int decklink_norm, unsigned int decklink_input,
+        RawFrame::PixelFormat pf);
+
 #endif

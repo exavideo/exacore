@@ -34,6 +34,16 @@ test_decklink_copy_OBJECTS = \
 tests/decklink_copy: $(test_decklink_copy_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
 
+test_decklink_audio_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_audio.o
+
+tests/decklink_audio: $(test_decklink_audio_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
 all_TARGETS += tests/decklink_copy    
 
 test_decklink_key_OBJECTS = \

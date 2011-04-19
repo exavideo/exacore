@@ -17,25 +17,33 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _OPENREPLAY_OUTPUT_ADAPTER_H
-#define _OPENREPLAY_OUTPUT_ADAPTER_H
+#ifndef _AUDIO_PACKET_H
+#define _AUDIO_PACKET_H
 
-#include "pipe.h"
-#include "raw_frame.h"
-#include "audio_packet.h"
+#include "types.h"
+#include <stdlib.h>
 
-class OutputAdapter {
+class AudioPacket {
     public:
-        virtual Pipe<RawFrame *> &input_pipe( ) = 0;
-        virtual ~OutputAdapter( ) { }
-};
+        AudioPacket(unsigned int rate, unsigned int channels,
+                size_t sample_size, size_t n_frames);
+        virtual ~AudioPacket( );
 
-class InputAdapter {
-    public:
-        virtual Pipe<RawFrame *> &output_pipe( ) = 0;
-        virtual Pipe<AudioPacket *> *audio_output_pipe( ) { return NULL; }
-        virtual ~InputAdapter( ) { }
-};
+        uint8_t *data( ) { return _data; }
+        size_t size( ) { return _size; }
+        size_t n_frames( ) { return _size / (_sample_size * _channels); }
 
+#ifdef RAWFRAME_POSIX_IO
+        ssize_t read_from_fd(int fd);
+        ssize_t write_to_fd(int fd);
+#endif
+
+    protected:
+        uint8_t *_data;
+        size_t _size;
+        unsigned int _rate;
+        unsigned int _channels;
+        size_t _sample_size;
+};
 
 #endif

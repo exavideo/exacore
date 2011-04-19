@@ -332,8 +332,11 @@ class DeckLinkInputAdapter : public InputAdapter,
     public:
         DeckLinkInputAdapter(unsigned int card_index = 0,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
-                RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422) 
+                RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
+                bool enable_audio = false) 
                 : deckLink(NULL), out_pipe(16) {
+
+            audio_pipe = NULL;
 
             pf = pf_;
             bpf = convert_pf(pf_);
@@ -341,6 +344,13 @@ class DeckLinkInputAdapter : public InputAdapter,
             deckLink = find_card(card_index);
             select_input_connection(input_);
             open_input(norm_);
+
+            if (enable_audio) {
+                n_channels = 2;
+                select_audio_input_connection( );
+                open_audio_input( );
+            }
+
             start_capture( );
         }
 
@@ -385,9 +395,8 @@ class DeckLinkInputAdapter : public InputAdapter,
                 IDeckLinkAudioInputPacket *audio_in) {
             
             RawFrame *out;
+            AudioPacket *audio_out;
             void *data;
-
-            UNUSED(audio_in);
 
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
@@ -412,11 +421,34 @@ class DeckLinkInputAdapter : public InputAdapter,
                 }
             }
 
+            if (audio_in != NULL && audio_pipe != NULL) {
+                audio_out = new AudioPacket(audio_rate, n_channels, 2, 
+                        audio_in->GetSampleFrameCount( ));
+
+                if (audio_in->GetBytes(&data) != S_OK) {
+                    throw std::runtime_error(
+                        "DeckLink audio input: GetBytes failed"
+                    );
+                }
+
+                memcpy(audio_out->data( ), data, audio_out->size( ));
+
+                if (audio_pipe->put(audio_out) == 0) {
+                    throw std::runtime_error(
+                        "DeckLink audio input: consumer dead"
+                    );
+                }
+            }
+
             return S_OK;
         }
 
         virtual Pipe<RawFrame *> &output_pipe( ) {
             return out_pipe;
+        }
+
+        virtual Pipe<AudioPacket *> *audio_output_pipe( ) { 
+            return audio_pipe;
         }
 
     protected:
@@ -426,6 +458,11 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         RawFrame::PixelFormat pf;
         BMDPixelFormat bpf;
+
+        unsigned int audio_rate;
+        unsigned int n_channels;
+
+        Pipe<AudioPacket *> *audio_pipe;
 
         void open_input(unsigned int norm) {
             assert(deckLink != NULL);
@@ -480,6 +517,46 @@ class DeckLinkInputAdapter : public InputAdapter,
             config->Release( );
         }   
 
+        void open_audio_input( ) {
+            assert(deckLink != NULL);
+            assert(deckLinkInput != NULL);
+
+            audio_pipe = new Pipe<AudioPacket *>(16);
+
+            if (deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz,
+                    bmdAudioSampleType16bitInteger, n_channels) != S_OK) {
+                throw std::runtime_error(
+                    "DeckLink audio input: failed to enable audio input"
+                );
+            }
+
+            audio_rate = 48000;
+        }
+
+        void select_audio_input_connection( ) {
+            IDeckLinkConfiguration *config;
+
+            assert(deckLink != NULL);
+
+            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration, 
+                    (void**) &config) != S_OK) {
+                
+                throw std::runtime_error(
+                    "DeckLink input: get IDeckLinkConfiguration failed"
+                );
+            }
+
+            if (config->SetInt(bmdDeckLinkConfigAudioInputConnection,
+                    bmdAudioConnectionEmbedded) != S_OK) {
+
+                throw std::runtime_error(
+                    "DeckLink input: set embedded audio input failed"
+                );
+            }
+
+            config->Release( );
+        }
+
         void start_capture(void) {
             if (deckLinkInput->SetCallback(this) != S_OK) {
                 throw std::runtime_error(
@@ -508,5 +585,13 @@ InputAdapter *create_decklink_input_adapter(unsigned int card_index,
     
     return new DeckLinkInputAdapter(card_index, 
             decklink_norm, decklink_input, pf);
+}
+
+InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
+        unsigned int decklink_norm, unsigned int decklink_input,
+        RawFrame::PixelFormat pf) {
+    
+    return new DeckLinkInputAdapter(card_index, 
+            decklink_norm, decklink_input, pf, true);
 }
 
