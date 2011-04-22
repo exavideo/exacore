@@ -216,6 +216,13 @@ int main(int argc, const char **argv) {
 
     /* bogus ffmpeg workaround (i.e. writing filler to the pipes) goes here */
     /* (It may be unnecessary with an audio stream?) */
+    RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+    AudioPacket *dummy_audio = new AudioPacket(48000, 2, 2, 1601);
+
+    for (int i = 0; i < 2; i++) {
+        empty->write_to_fd(vpfd);
+        dummy_audio->write_to_fd(apfd);
+    }
 
     iadp = create_decklink_input_adapter_with_audio(0, 0, 0, 
             RawFrame::CbYCrY8422);
