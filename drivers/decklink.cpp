@@ -26,6 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
+#define PIPE_SIZE 16
+
 struct decklink_norm {
     const char *name;
     BMDTimeScale time_base;
@@ -334,7 +336,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
                 bool enable_audio = false) 
-                : deckLink(NULL), out_pipe(16) {
+                : deckLink(NULL), out_pipe(PIPE_SIZE) {
 
             audio_pipe = NULL;
 
@@ -521,7 +523,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             assert(deckLink != NULL);
             assert(deckLinkInput != NULL);
 
-            audio_pipe = new Pipe<AudioPacket *>(16);
+            audio_pipe = new Pipe<AudioPacket *>(PIPE_SIZE);
 
             if (deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz,
                     bmdAudioSampleType16bitInteger, n_channels) != S_OK) {
