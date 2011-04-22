@@ -60,8 +60,10 @@ class RawFrame {
         uint8_t *_data;
         PixelFormat _pixel_format;
 
+        RawFrame(PixelFormat pf);
         size_t minpitch( ) const;
-        void alloc( );
+        virtual void alloc( );
+        virtual void free_data( );
         void make_unpacker( );
         void make_draw_ops( );
 };

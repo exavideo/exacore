@@ -23,6 +23,12 @@
 #include "unpack_CbYCrY8422.h"
 #include "draw_CbYCrY8422.h"
 
+RawFrame::RawFrame(PixelFormat pf) {
+    _pixel_format = pf;
+    make_unpacker( );
+    make_draw_ops( );
+}
+
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
     _h = h;
@@ -49,7 +55,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
 }
 
 RawFrame::~RawFrame( ) {
-    free(_data);
+    free_data( );
     delete unpack;
     delete draw;
 }
@@ -82,6 +88,12 @@ void RawFrame::alloc( ) {
     _data = (uint8_t *)xmalloc(_h * _pitch, "RawFrame", "_data");
     if (_data == NULL) {
         throw std::runtime_error("RawFrame allocation failed");
+    }
+}
+
+void RawFrame::free_data( ) {
+    if (_data) {
+        free(_data);
     }
 }
 

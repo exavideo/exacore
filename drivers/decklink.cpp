@@ -68,6 +68,7 @@ static struct decklink_pixel_format pfs[] = {
     { RawFrame::BGRAn8, bmdFormat8BitARGB, true }
 };
 
+
 static IDeckLink *find_card(int card_index) {
     HRESULT ret;
     IDeckLinkIterator *dli = CreateDeckLinkIteratorInstance( );
@@ -105,6 +106,45 @@ static BMDPixelFormat convert_pf(RawFrame::PixelFormat in_pf) {
         }
     }
 }
+
+/* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
+class DecklinkInputRawFrame : public RawFrame {
+    public:
+        DecklinkInputRawFrame(IDeckLinkVideoFrame *frame, 
+                RawFrame::PixelFormat pf) : RawFrame(pf) {
+
+            void *dp;
+
+            assert(frame != NULL);
+
+            _frame = frame;
+
+            _frame->AddRef( ); 
+
+            if (_frame->GetBytes(&dp) != S_OK) {
+                throw std::runtime_error("Cannot get pointer to raw data");
+            }
+
+            _data = (uint8_t *) dp;
+            _w = _frame->GetWidth( );
+            _h = _frame->GetHeight( );
+            _pitch = _frame->GetRowBytes( );            
+        }
+
+        virtual ~DecklinkInputRawFrame( ) {
+            _frame->Release( );
+            _frame = NULL;
+            _data = NULL;
+        }
+    protected:
+        IDeckLinkVideoFrame *_frame;
+
+        virtual void alloc( ) {
+            throw std::runtime_error(
+                "Cannot allocate a DecklinkInputRawFrame"
+            );
+        }
+};
 
 class DeckLinkOutputAdapter : public OutputAdapter, 
         public IDeckLinkVideoOutputCallback {
@@ -404,8 +444,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
-                    out = new RawFrame(in->GetWidth( ), in->GetHeight( ), 
-                            pf, in->GetRowBytes( ));
+                    out = new DecklinkInputRawFrame(in, pf);
                     
                     if (in->GetBytes(&data) != S_OK) {
                         throw std::runtime_error(
