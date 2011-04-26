@@ -27,6 +27,7 @@
 class OutputAdapter {
     public:
         virtual Pipe<RawFrame *> &input_pipe( ) = 0;
+        virtual Pipe<AudioPacket *> *audio_input_pipe( ) { return NULL; }
         virtual ~OutputAdapter( ) { }
 };
 

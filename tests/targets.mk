@@ -24,6 +24,18 @@ tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)
 
 all_TARGETS += tests/decklink_output_random    
 
+test_decklink_output_random_audio_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_output_random_audio.o
+
+tests/decklink_output_random_audio: $(test_decklink_output_random_audio_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
+all_TARGETS += tests/decklink_output_random_audio
+
 test_decklink_copy_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \

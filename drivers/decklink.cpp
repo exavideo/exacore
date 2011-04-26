@@ -147,15 +147,17 @@ class DecklinkInputRawFrame : public RawFrame {
 };
 
 class DeckLinkOutputAdapter : public OutputAdapter, 
-        public IDeckLinkVideoOutputCallback {
+        public IDeckLinkVideoOutputCallback,
+        public IDeckLinkAudioOutputCallback {
 
     public:
         DeckLinkOutputAdapter(unsigned int card_index = 0, 
                 unsigned int norm_ = 0, 
-                RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422) 
+                RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
+                bool enable_audio = false) 
                 : deckLink(NULL), 
                 deckLinkOutput(NULL), frame_counter(0),
-                last_frame(NULL), in_pipe(4) {
+                last_frame(NULL), in_pipe(4), audio_in_pipe(NULL) {
 
             norm = norm_;
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
@@ -169,6 +171,11 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             configure_card( );
             open_card( );
             preroll_video_frames(4);
+
+            if (enable_audio) {
+                setup_audio( );
+            }
+
             start_video( );
 
             fprintf(stderr, "DeckLink: initialized using norm %s\n", 
@@ -218,7 +225,48 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             return S_OK;
         }
 
+        virtual HRESULT RenderAudioSamples(bool preroll) {
+            AudioPacket *pkt;
+
+            if (preroll) {
+                if (current_audio_pkt != NULL) {
+                    try_finish_current_audio_packet( );
+                    if (current_audio_pkt == NULL) {
+                        audio_preroll_done = 1;
+                    }
+                } 
+            } else {
+                /* Cram as much audio into the buffer as we can. */
+                for (;;) {
+                    if (current_audio_pkt != NULL) {
+                        if (try_finish_current_audio_packet( ) == 0) {
+                            /* 
+                             * if we are writing nothing... the buffer must
+                             * be full. Stop now.
+                             */
+                            break;
+                        }
+                    } else if (audio_in_pipe->data_ready( )) {
+                        if (audio_in_pipe->get(pkt) == 0) {
+                            throw std::runtime_error("audio source dead");
+                        }
+                        current_audio_pkt = pkt;
+                    } else {
+                        /* 
+                         * current audio packet is NULL.
+                         * Nothing is in the pipe.
+                         * Stop now.
+                         */
+                        break;
+                    }
+                }
+            }
+
+            return S_OK;
+        }
+
         Pipe<RawFrame *> &input_pipe( ) { return in_pipe; }
+        Pipe<AudioPacket *> *audio_input_pipe( ) { return audio_in_pipe; }
     
     protected:        
         IDeckLink *deckLink;
@@ -236,6 +284,13 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         RawFrame::PixelFormat pf;
         BMDPixelFormat bpf;
+
+        volatile int audio_preroll_done;
+        unsigned int n_channels;
+        Pipe<AudioPacket *> *audio_in_pipe;
+
+        AudioPacket *current_audio_pkt;
+        uint32_t samples_written_from_current_audio_pkt;
 
         void open_card( ) {
             /* get the DeckLinkOutput interface */
@@ -260,6 +315,51 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 
                 throw std::runtime_error(
                     "Failed to enable DeckLink video output"
+                );
+            }
+        }
+
+        void setup_audio( ) {
+            /* FIXME hard coded default */
+            n_channels = 2; 
+
+            audio_in_pipe = new Pipe<AudioPacket *>(4);
+
+            /* FIXME magic 29.97 related number */
+            /* Set up empty audio packet for prerolling */
+            current_audio_pkt = new AudioPacket(48000, n_channels, 2, 6404);
+
+            assert(deckLinkOutput != NULL);
+
+            if (deckLinkOutput->SetAudioCallback(this) != S_OK) {
+                throw std::runtime_error(
+                    "Failed to set DeckLink audio callback"
+                );
+            }
+
+            if (deckLinkOutput->EnableAudioOutput( 
+                    bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 
+                    n_channels, bmdAudioOutputStreamContinuous) != S_OK) {
+                throw std::runtime_error(
+                    "Failed to enable DeckLink audio output"
+                );
+            }
+
+            audio_preroll_done = 0;
+
+            if (deckLinkOutput->BeginAudioPreroll( ) != S_OK) {
+                throw std::runtime_error(
+                    "Failed to begin DeckLink audio preroll"
+                );
+            }
+
+            while (audio_preroll_done == 0) { 
+                /* FIXME: busy wait */
+            }
+
+            if (deckLinkOutput->EndAudioPreroll( ) != S_OK) {
+                throw std::runtime_error(
+                    "Failed to end DeckLink audio preroll"
                 );
             }
         }
@@ -348,6 +448,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 fprintf(stderr, "DeckLink: on fire\n");
             }
             
+            fprintf(stderr, "video frame scheduled\n");
             deckLinkOutput->ScheduleVideoFrame(frame, 
                 frame_counter * frame_duration, frame_duration, time_base);
 
@@ -365,6 +466,43 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                     "Failed to start scheduled playback!\n"
                 );
             }
+        }
+
+        /* 
+         * Try sending some audio data to the Decklink.
+         * Call only with current_audio_pkt != NULL.
+         * Will set current_audio_pkt to NULL and delete the packet
+         * if it is fully consumed.
+         * Return number of samples consumed.
+         */
+        int try_finish_current_audio_packet( ) {
+            uint32_t n_consumed;
+            uint32_t n_left;
+
+            assert(current_audio_pkt != NULL);
+
+            n_left = current_audio_pkt->n_frames( ) 
+                    - samples_written_from_current_audio_pkt;
+
+            if (deckLinkOutput->ScheduleAudioSamples(
+                    current_audio_pkt->sample(
+                        samples_written_from_current_audio_pkt
+                    ), n_left, 0, 0, &n_consumed) != S_OK) {
+                throw std::runtime_error(
+                    "Failed to schedule audio samples"
+                );
+            }
+
+            if (n_consumed == n_left) {
+                delete current_audio_pkt;
+                current_audio_pkt = NULL;
+            } else if (n_consumed < n_left) {
+                samples_written_from_current_audio_pkt += n_consumed;
+            } else {
+                throw std::runtime_error("This should not happen");
+            }
+
+            return n_consumed;
         }
 };
 
@@ -618,6 +756,12 @@ OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
         unsigned int decklink_norm, RawFrame::PixelFormat pf) {
 
     return new DeckLinkOutputAdapter(card_index, decklink_norm, pf);
+}
+
+OutputAdapter *create_decklink_output_adapter_with_audio(
+        unsigned int card_index, unsigned int decklink_norm,
+        RawFrame::PixelFormat pf) {
+    return new DeckLinkOutputAdapter(card_index, decklink_norm, pf, true);
 }
 
 InputAdapter *create_decklink_input_adapter(unsigned int card_index,

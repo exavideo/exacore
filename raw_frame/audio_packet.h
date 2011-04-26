@@ -22,6 +22,7 @@
 
 #include "types.h"
 #include <stdlib.h>
+#include <assert.h>
 
 class AudioPacket {
     public:
@@ -32,6 +33,11 @@ class AudioPacket {
         uint8_t *data( ) { return _data; }
         size_t size( ) { return _size; }
         size_t n_frames( ) { return _size / (_sample_size * _channels); }
+        /* return pointer to tne n'th sample frame */
+        uint8_t *sample(int n) { 
+            assert(n < (_size / _sample_size));
+            return _data + n * _sample_size;
+        }
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
