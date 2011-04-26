@@ -448,7 +448,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 fprintf(stderr, "DeckLink: on fire\n");
             }
             
-            fprintf(stderr, "video frame scheduled\n");
             deckLinkOutput->ScheduleVideoFrame(frame, 
                 frame_counter * frame_duration, frame_duration, time_base);
 

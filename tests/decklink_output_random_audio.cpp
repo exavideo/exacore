@@ -33,6 +33,7 @@ int main( ) {
     OutputAdapter *oadp;
     AudioPacket *apkt;
     uint8_t x;
+    int n = 0;
 
     oadp = create_decklink_output_adapter_with_audio(0, 0, 
             RawFrame::CbYCrY8422);
@@ -40,7 +41,18 @@ int main( ) {
     for (;;) {
         for (x = 16; x < 224; x++) {
             frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-            apkt = new AudioPacket(48000, 2, 2, 1601);
+
+            if (n == 1 || n == 3) {
+                apkt = new AudioPacket(48000, 2, 2, 1601);
+            } else {
+                apkt = new AudioPacket(48000, 2, 2, 1602);
+            }
+
+            n++;
+            if (n == 5) {
+                n = 0;
+            }
+
             if (apkt->read_from_fd(STDIN_FILENO) <= 0) {
                 exit(0);
             }
