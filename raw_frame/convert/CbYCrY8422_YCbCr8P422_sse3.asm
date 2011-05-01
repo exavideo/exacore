@@ -28,8 +28,6 @@ CbYCrY8422_YCbCr8P422_sse3:
     ; rcx = Cb plane pointer
     ; r8 = Cr plane pointer
     
-    int 3
-
     movdqa xmm0, [rsi]          ; xmm0 = [uyvyuyvyuyvyuyvy]
     movdqa xmm3, [rsi+16]
     movdqa xmm6, [rsi+32]
