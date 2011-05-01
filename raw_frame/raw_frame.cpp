@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -20,11 +21,13 @@
 #include <stdexcept>
 #include "xmalloc.h"
 #include <assert.h>
+#include "pack_CbYCrY8422.h"
 #include "unpack_CbYCrY8422.h"
 #include "draw_CbYCrY8422.h"
 
 RawFrame::RawFrame(PixelFormat pf) {
     _pixel_format = pf;
+    make_packer( );
     make_unpacker( );
     make_draw_ops( );
 }
@@ -35,6 +38,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _pixel_format = pf;
     _pitch = minpitch( );
     alloc( );
+    make_packer( );
     make_unpacker( );
     make_draw_ops( );
 }
@@ -50,6 +54,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
         );
     }
     alloc( );
+    make_packer( );
     make_unpacker( );
     make_draw_ops( );
 }
@@ -94,6 +99,18 @@ void RawFrame::alloc( ) {
 void RawFrame::free_data( ) {
     if (_data) {
         free(_data);
+    }
+}
+
+void RawFrame::make_packer(void) {
+    switch (_pixel_format) {
+        case CbYCrY8422:
+            pack = new CbYCrY8422Packer(this);
+            break;
+
+        default:
+            pack = new RawFramePacker(this);
+            break;
     }
 }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -47,4 +48,20 @@ class Mjpeg422Encoder {
         JSAMPARRAY y_scans, cb_scans, cr_scans;
 };
 
+class Mjpeg422Decoder {
+    public:
+        Mjpeg422Decoder(coord_t maxw_, coord_t maxh_);
+        RawFrame *decode(void *data, size_t size);
+        ~Mjpeg422Decoder( );
+
+    protected:
+        void libjpeg_init( );
+        coord_t maxw, maxh;
+
+        uint8_t *y_plane, *cb_plane, *cr_plane;
+        JSAMPARRAY y_scans, cb_scans, cr_scans;
+
+        struct jpeg_decompress_struct cinfo;
+        struct jpeg_error_mgr jerr;
+};
 #endif

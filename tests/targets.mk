@@ -12,6 +12,17 @@ tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
 
 all_TARGETS += tests/mjpeg_422_encode    
 
+test_mjpeg_422_decode_OBJECTS = \
+	$(common_OBJECTS) \
+	$(mjpeg_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/mjpeg_422_decode.o
+
+tests/mjpeg_422_decode: $(test_mjpeg_422_decode_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
+
+all_TARGETS += tests/mjpeg_422_decode    
+
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \

@@ -22,6 +22,7 @@
 #include "types.h"
 #include <stdexcept>
 
+class RawFramePacker;
 class RawFrameUnpacker;
 class RawFrameDrawOps;
 
@@ -51,6 +52,7 @@ class RawFrame {
         ssize_t write_to_fd(int fd);
 #endif
 
+        RawFramePacker *pack;
         RawFrameUnpacker *unpack;
         RawFrameDrawOps *draw;
 
@@ -64,16 +66,42 @@ class RawFrame {
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );
+        void make_packer( );
         void make_unpacker( );
         void make_draw_ops( );
 };
 
 #define CHECK(x) check((void *)(x))
 
+class RawFramePacker {
+    public:
+        RawFramePacker(RawFrame *f_) : f(f_) {
+            do_YCbCr8P422 = NULL;
+        }
+
+        void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
+            CHECK(do_YCbCr8P422);
+            do_YCbCr8P422(f->size( ), f->data( ), Y, Cb, Cr);
+        }
+
+    protected:
+        void check(void *ptr) {
+            if (ptr == NULL) {
+                throw std::runtime_error("Conversion not supported");
+            }
+        }
+
+        RawFrame *f;
+
+        void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
+                uint8_t *, uint8_t *);
+};
+
 class RawFrameUnpacker {
     public:
         RawFrameUnpacker(RawFrame *f_) : f(f_) { 
             do_YCbCr8P422 = NULL;
+            do_CbYCrY8422 = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
