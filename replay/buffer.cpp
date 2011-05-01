@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -26,6 +27,9 @@
 #include <assert.h>
 
 Buffer::Buffer(const char *filename, size_t block_size) {
+    UNUSED(filename);
+    UNUSED(block_size);
+
     throw std::runtime_error("stub"); /* FIXME */
 }
 
@@ -33,6 +37,7 @@ Buffer::Buffer(const char *filename, size_t n_blocks, size_t block_size) {
     this->n_blocks = n_blocks;
     this->block_size = block_size;
     /* FIXME this is still stubbed */
+    UNUSED(filename);
 }
 
 Buffer::~Buffer( ) {
