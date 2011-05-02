@@ -1,4 +1,4 @@
-# Copyright 2011 Andrew H. Armenia.
+# Copyright 2011 Exavideo LLC.
 # 
 # This file is part of openreplay.
 # 
