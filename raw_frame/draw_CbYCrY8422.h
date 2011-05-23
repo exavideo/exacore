@@ -26,10 +26,17 @@
 void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha);
 
+void CbYCrY8422_alpha_key_sse2(RawFrame *bkgd, RawFrame *key, 
+        coord_t x, coord_t y, uint8_t galpha);
+
 class CbYCrY8422DrawOps : public RawFrameDrawOps {
     public:
         CbYCrY8422DrawOps(RawFrame *f_) : RawFrameDrawOps(f_) {
-            do_alpha_blend = CbYCrY8422_alpha_key_default;
+            if (cpu_sse3_available( )) {
+                do_alpha_blend = CbYCrY8422_alpha_key_sse2;
+            } else {
+                do_alpha_blend = CbYCrY8422_alpha_key_default;
+            }
         }
 };
 
