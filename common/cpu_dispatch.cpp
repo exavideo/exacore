@@ -41,6 +41,9 @@ static void print_cpu_info( ) {
     if (cpu_ssse3_available( )) {
         fprintf(stderr, "SSSE3 ");
     }
+    if (cpu_sse41_available( )) {
+        fprintf(stderr, "SSE41 ");
+    }
     fprintf(stderr, "\n");
 }
 
@@ -72,6 +75,17 @@ bool cpu_ssse3_available( ) {
     if (force_no_simd) {
         return false;
     } else if (cpuid_ecx & 0x00000200) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool cpu_sse41_available( ) {
+    cpuid_init( );
+    if (force_no_simd) {
+        return false;
+    } else if (cpuid_ecx & 0x00080000) {
         return true;
     } else {
         return false;

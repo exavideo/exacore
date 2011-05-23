@@ -20,11 +20,12 @@
 #include "raw_frame.h"
 #include <assert.h>
 
+extern "C" 
 void CbYCrY8422_BGRAn8_key_chunk_sse2(void *bkgd, void *key, 
         uint64_t size, uint64_t galpha);
 
-void CbYCrY8422_alpha_key_default(void *bkgd, void *key,
-        uint64_t size, uint64_t galpha);
+void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
+        coord_t x, coord_t y, uint8_t galpha);
 
 void CbYCrY8422_alpha_key_sse2(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
@@ -34,21 +35,21 @@ void CbYCrY8422_alpha_key_sse2(RawFrame *bkgd, RawFrame *key,
 
     assert(x % 2 == 0);
 
-    if (key->pix_fmt( ) == RawFrame::BGRAn8) {
+    if (key->pixel_format( ) == RawFrame::BGRAn8) {
         /* special case: exact size */
-        if (x == 0 && && bkgd->w( ) == key->w( )) {
+        if (x == 0 && bkgd->w( ) == key->w( )) {
             if (bkgd->h( ) < key->h( )) {
-                CbYCrY8422_BGRAn8_key_chunk(bkgd->scanline(y), key->data( ),
-                        2*bkgd->size( ), galpha);
+                CbYCrY8422_BGRAn8_key_chunk_sse2(bkgd->scanline(y), 
+                        key->data( ), 2*bkgd->size( ), galpha);
             } else {
-                CbYCrY8422_BGRAn8_key_chunk(bkgd->scanline(y), key->data( ),
-                        key->size( ), galpha);
+                CbYCrY8422_BGRAn8_key_chunk_sse2(bkgd->scanline(y), 
+                        key->data( ), key->size( ), galpha);
             }
         } else {
             for (i = 0; i < key->h( ) && y < bkgd->h( ); i++, y++) {
                 pix_ptr = bkgd->scanline(y) + 2*x;
-                CbYCrY8422_BGRAn8_key_chunk(pix_ptr, key->scanline(i), 
-                        key->pitch( ), galpha);
+                CbYCrY8422_BGRAn8_key_chunk_sse2(pix_ptr, 
+                        key->scanline(i), key->pitch( ), galpha);
             }
         }
     } else {

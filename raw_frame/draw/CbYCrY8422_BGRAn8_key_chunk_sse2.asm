@@ -21,7 +21,7 @@ bits 64
 section text align=16
 global CbYCrY8422_BGRAn8_key_chunk_sse2
 
-CbYCrY8422_BGRAn8_key_sse2_chunk:
+CbYCrY8422_BGRAn8_key_chunk_sse2:
     ; rdi = CbYCbY8422 background data
     ; rsi = BGRAn8 key/fill data
     ; rdx = number of source pixels to key
@@ -34,119 +34,131 @@ CbYCrY8422_BGRAn8_key_sse2_chunk:
     mulps       xmm8, [OneOn255]    ; xmm8 = global alpha multiplier
 
 .loop:
-    ; load RGB pixels and expand to 32-bit float
-    movdqa      xmm5, [rsi]         ; xmm0 = [bgrabgrabgrabgra]
-    add         rsi, 16 
-
-    ; xmm3 = A
-    movdqa      xmm3, xmm5          ; xmm3 = [bgrabgrabgrabgra]
-    psrld       xmm3, 24            ; xmm3 = [a   a   a   a   ]
-
-    ; optimization: if all alpha's are zero, skip the rest
+    ; xmm3 = a
+    movdqa      xmm3, [rsi]
+    psrld       xmm3, 24
+    
+    ; check if anything to do, skip expensive stuff if not
     ptest       xmm3, xmm3
     jc          .next
+    cvtdq2ps    xmm3, xmm3
 
-    cvtdq2ps    xmm3, xmm3          ; xmm3 = [a   a   a   a   ]
-    mulps       xmm3, xmm8          ; global alpha factor
+    mulps       xmm3, xmm8  ; multiply in global alpha
 
-    ; xmm0 = R
-    movdqa      xmm0, xmm5          ; xmm0 = [bgrabgrabgrabgra]
-    psrld       xmm0, 16            ; xmm0 = [ra  ra  ra  ra  ]
-    pand        xmm0, [Mask4 wrt rip]       ; xmm0 = [r   r   r   r   ]
-    cvtdq2ps    xmm0, xmm0          ; xmm0 = [r   r   r   r   ]
-
-    ; xmm1 = G
-    movdqa      xmm1, xmm5          ; xmm1 = [bgrabgrabgrabgra]
-    psrld       xmm1, 8             ; xmm1 = [gra gra gra gra ]
-    pand        xmm1, [Mask4 wrt rip]       ; xmm1 = [g   g   g   g   ]
-    cvtdq2ps    xmm1, xmm1          ; xmm1 = [g   g   g   g   ]
-
-    ; xmm2 = B
-    movdqa      xmm2, xmm5          ; xmm2 = [bgrabgrabgrabgra]
-    pand        xmm2, [Mask4 wrt rip]       ; xmm2 = [b   b   b   b   ]
-    cvtdq2ps    xmm2, xmm2          ; xmm2 = [b   b   b   b   ]
-
-    ; compute Y
-    movdqa      xmm5, xmm0
-    mulps       xmm5, [YR_coeff wrt rip]
-    movdqa      xmm1, xmm4
-    mulps       xmm4, [YG_coeff wrt rip]
-    addps       xmm5, xmm4
-    movdqa      xmm2, xmm4
-    mulps       xmm4, [YB_coeff wrt rip]
-    addps       xmm5, xmm4
-    addps       xmm5, [Y_offset wrt rip]
-
-    ; compute Cb
-    movdqa      xmm6, xmm2
-    subps       xmm6, xmm5
-    mulps       xmm6, [CB_scale wrt rip]
-    addps       xmm6, [CBCR_offset wrt rip]
-    
-    ; compute Cr
-    movdqa      xmm7, xmm0
-    subps       xmm7, xmm5
-    mulps       xmm7, [CR_scale wrt rip]
-    addps       xmm7, [CBCR_offset wrt rip]
-
-    ; now for the key,
-    ; xmm3 = [a   a   a   a   ]
-    ; xmm5 = [y   y   y   y   ]
-    ; xmm6 = [cb  cb  cb  cb  ]
-    ; xmm7 = [cr  cr  cr  cr  ] 
-    ; somehow make this look like:
-    ; [cb  y   cr  y   ] [cb  y   cr  y   ].
-
-    ; load 4 pixels of background CbYCrY data
-    movq        xmm0, [rdi]         ; xmm0 = [uyvyuyvy        ] (u=Cb, y=Cr)
-    pxor        xmm4, xmm4
-    punpcklbw   xmm0, xmm4          ; xmm0 = [u y v y u y v y ]
-    movdqa      xmm0, xmm1
-    movdqa      xmm0, xmm2
-    pand        xmm0, [Mask4 wrt rip]       ; xmm0 = [u   v   u   v   ]
+    ; xmm0 = r
+    movdqa      xmm0, [rsi]
+    psrld       xmm0, 16
+    pand        xmm0, [Mask4]
     cvtdq2ps    xmm0, xmm0
-    movdqa      xmm1, xmm0
-    shufps      xmm0, xmm0, 0xa0    ; xmm0 = [cb  cb  cb  cb  ]
-    shufps      xmm1, xmm1, 0xf5    ; xmm1 = [cr  cr  cr  cr  ]
-    psrld       xmm2, 16            ; xmm2 = [y   y   y   y   ]
+
+    ; xmm1 = g
+    movdqa      xmm1, [rsi]
+    psrld       xmm1, 8
+    pand        xmm1, [Mask4]
+    cvtdq2ps    xmm1, xmm1
+
+    ; xmm2 = b
+    movdqa      xmm2, [rsi]
+    pand        xmm2, [Mask4]
     cvtdq2ps    xmm2, xmm2
 
-    movdqa      xmm4, [MaxAlpha wrt rip]
-    subps       xmm4, xmm3
+    ; compute Y in xmm1
+    mulps       xmm1, [YG_coeff wrt rip]
+    movdqa      xmm4, xmm2
+    mulps       xmm4, [YB_coeff wrt rip]
+    addps       xmm4, xmm1
+    movdqa      xmm4, xmm0
+    mulps       xmm4, [YR_coeff wrt rip]
+    addps       xmm4, xmm1
 
-    mulps       xmm0, xmm4
-    mulps       xmm1, xmm4
-    mulps       xmm2, xmm4
-
-    mulps       xmm5, xmm3
-    mulps       xmm6, xmm3
-    mulps       xmm7, xmm3
-
-    addps       xmm5, xmm2
-    addps       xmm6, xmm0
-    addps       xmm7, xmm1
-
-    mulps       xmm5, [OneOn255 wrt rip]    ; xmm5 = Y output
-    mulps       xmm6, [OneOn255 wrt rip]    ; xmm6 = Cb output
-    mulps       xmm7, [OneOn255 wrt rip]    ; xmm7 = Cr output
-
-    ; shuffle some crap around here and make CbYCrY again
-    cvtps2dq    xmm5, xmm5          ; xmm5 = [y   y   y   y   ]
-    packusdw    xmm5, xmm5          ; xmm5 = [y y y y y y y y ]
-    cvtps2dq    xmm6, xmm6          ; xmm6 = [u   u   u   u   ]
-    cvtps2dq    xmm7, xmm7          ; xmm7 = [v   v   v   v   ]
-    pand        xmm6, [MaskUnusedChroma wrt rip]    ; xmm6 = [u       u       ]
-    pand        xmm7, [MaskUnusedChroma wrt rip]    ; xmm7 = [v       v       ]
-    packusdw    xmm6, xmm6          ; xmm6 = [u   u   u   u   ]
-    packusdw    xmm7, xmm7          ; xmm7 = [v   v   v   v   ]
-    psllq       xmm5, 8             ; xmm5 = [ y y y y y y y y]
-    psllq       xmm7, 16            ; xmm7 = [  v   v   v   v ]
-    por         xmm5, xmm6          ; xmm5 = [uy yuy yuy yuy y]
-    por         xmm5, xmm7          ; xmm5 = [uyvyuyvyuyvyuyvy]
+    ; compute Cb = (B' - Y') * scale + offset
+    subps       xmm2, xmm1
+    mulps       xmm2, [CB_scale wrt rip]
+    addps       xmm2, [CBCR_offset wrt rip]
     
-    movq        [rdi], xmm5         ; [rdi] = [uyvyuyvy]
+    ; compute Cr = (R' - Y') * scale + offset
+    subps       xmm0, xmm1
+    mulps       xmm0, [CR_scale wrt rip]
+    addps       xmm0, [CBCR_offset wrt rip]
+
+    ; xmm0 = key Cr
+    ; xmm1 = key Y
+    ; xmm2 = key Cb
+    ; xmm3 = key alpha
+
+    ; load 4 pixels of background CbYCrY data
+    pxor        xmm7, xmm7
+
+    ; xmm4 = vector of 4 Cr
+    movq        xmm4, [rdi]
+    punpcklbw   xmm4, xmm7
+    pand        xmm4, [Mask4]
+    cvtdq2ps    xmm4, xmm4
+    shufps      xmm6, xmm6, 0xf5
+
+    ; xmm5 = vector of 4 Y
+    movq        xmm5, [rdi]
+    punpcklbw   xmm5, xmm7
+    psrld       xmm5, 16
+    cvtdq2ps    xmm5, xmm5
+
+    ; xmm6 = vector of 4 Cb
+    movq        xmm6, [rdi]
+    punpcklbw   xmm6, xmm7
+    pand        xmm6, [Mask4]
+    cvtdq2ps    xmm6, xmm6
+    shufps      xmm6, xmm6, 0xa0
+
+    ; xmm4 = background Cr
+    ; xmm5 = background Y
+    ; xmm6 = background Cb
+
+    ; alpha blending
+    ; get background alpha in xmm7 as max-key alpha in xmm3
+    movdqa      xmm7, [MaxAlpha wrt rip]
+    subps       xmm7, xmm3
+
+    ; scale source Cr/Y/Cb by source alpha
+    mulps       xmm0, xmm3
+    mulps       xmm1, xmm3
+    mulps       xmm2, xmm3
+
+    ; scale destination Cr/Y/Cb by destination alpha
+    mulps       xmm4, xmm7
+    mulps       xmm5, xmm7
+    mulps       xmm6, xmm7
+    
+    ; combine images
+    addps       xmm4, xmm0
+    addps       xmm5, xmm1
+    addps       xmm6, xmm2
+
+    ; divide by 255
+    mulps       xmm4, [OneOn255 wrt rip]    ; xmm5 = Y output
+    mulps       xmm5, [OneOn255 wrt rip]    ; xmm6 = Cb output
+    mulps       xmm6, [OneOn255 wrt rip]    ; xmm7 = Cr output
+
+    ; convert back to integer Y/Cb/Cr values
+    cvtps2dq    xmm4, xmm4          
+    cvtps2dq    xmm5, xmm5         
+    cvtps2dq    xmm6, xmm6        
+
+    ; xmm4 = final Cr
+    ; xmm5 = final Y
+    ; xmm6 = final Cb
+    
+    ; store as Cb-Y-Cr-Y
+    pslld       xmm5, 16
+    shufps      xmm4, xmm4, 0xa0
+    pand        xmm4, [Cr_mask]
+    pand        xmm6, [Cb_mask]
+    por         xmm5, xmm4
+    por         xmm5, xmm6
+    packuswb    xmm5, xmm5
+    movq        [rdi], xmm5
 
 .next:
+    add rsi, 16
     add rdi, 8
     sub rdx, 16
     jg .loop
@@ -162,8 +174,14 @@ Y_offset            times 4 dd 16.0
 CBCR_offset         times 4 dd 128.0
 CB_scale            times 4 dd 0.47339
 CR_scale            times 4 dd 0.55781
-OneOn255            times 4 dd 0.0039215686
 MaxAlpha            times 4 dd 255.0
+; won't find this one in Poynton... it's just 1/255.0.
+; NASM can't do floating point computations to get literals,
+; so we have this ugly constant instead.
+OneOn255            times 4 dd 0.0039215686
+
+; Bit masks
 Mask4               times 4 db 0xff, 0x00, 0x00, 0x00
-MaskUnusedChroma    times 2 db 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+Cb_mask             times 4 db 0xff, 0x00, 0x00, 0x00
+Cr_mask             times 4 db 0x00, 0x00, 0xff, 0x00
 ; vim:syntax=nasm64
