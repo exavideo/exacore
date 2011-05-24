@@ -31,7 +31,7 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     movd        xmm8, rcx
     cvtdq2ps    xmm8, xmm8
     shufps      xmm8, xmm8, 0x00
-    mulps       xmm8, [OneOn255]    ; xmm8 = global alpha multiplier
+    mulps       xmm8, [OneOn255 wrt rip]    ; xmm8 = global alpha multiplier
 
 .loop:
     ; xmm3 = a
@@ -39,8 +39,12 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     psrld       xmm3, 24
     
     ; check if anything to do, skip expensive stuff if not
-    ptest       xmm3, xmm3
-    jc          .next
+    movdqa      xmm9, xmm3
+    packusdw    xmm9, xmm9
+    movq        rcx,  xmm9
+    test        rcx,  rcx
+    jz          .next
+
     cvtdq2ps    xmm3, xmm3
 
     mulps       xmm3, xmm8  ; multiply in global alpha
@@ -48,28 +52,29 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     ; xmm0 = r
     movdqa      xmm0, [rsi]
     psrld       xmm0, 16
-    pand        xmm0, [Mask4]
+    pand        xmm0, [Mask4 wrt rip]
     cvtdq2ps    xmm0, xmm0
 
     ; xmm1 = g
     movdqa      xmm1, [rsi]
     psrld       xmm1, 8
-    pand        xmm1, [Mask4]
+    pand        xmm1, [Mask4 wrt rip]
     cvtdq2ps    xmm1, xmm1
 
     ; xmm2 = b
     movdqa      xmm2, [rsi]
-    pand        xmm2, [Mask4]
+    pand        xmm2, [Mask4 wrt rip]
     cvtdq2ps    xmm2, xmm2
 
     ; compute Y in xmm1
     mulps       xmm1, [YG_coeff wrt rip]
     movdqa      xmm4, xmm2
     mulps       xmm4, [YB_coeff wrt rip]
-    addps       xmm4, xmm1
+    addps       xmm1, xmm4
     movdqa      xmm4, xmm0
     mulps       xmm4, [YR_coeff wrt rip]
-    addps       xmm4, xmm1
+    addps       xmm1, xmm4
+    addps       xmm1, [Y_offset wrt rip]
 
     ; compute Cb = (B' - Y') * scale + offset
     subps       xmm2, xmm1
@@ -92,7 +97,7 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     ; xmm4 = vector of 4 Cr
     movq        xmm4, [rdi]
     punpcklbw   xmm4, xmm7
-    pand        xmm4, [Mask4]
+    pand        xmm4, [Mask4 wrt rip]
     cvtdq2ps    xmm4, xmm4
     shufps      xmm6, xmm6, 0xf5
 
@@ -105,7 +110,7 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     ; xmm6 = vector of 4 Cb
     movq        xmm6, [rdi]
     punpcklbw   xmm6, xmm7
-    pand        xmm6, [Mask4]
+    pand        xmm6, [Mask4 wrt rip]
     cvtdq2ps    xmm6, xmm6
     shufps      xmm6, xmm6, 0xa0
 
@@ -138,7 +143,8 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     mulps       xmm5, [OneOn255 wrt rip]    ; xmm6 = Cb output
     mulps       xmm6, [OneOn255 wrt rip]    ; xmm7 = Cr output
 
-    ; convert back to integer Y/Cb/Cr values
+    ; subsample and convert back to integer Y/Cb/Cr values
+    shufps      xmm4, xmm4, 0xa0
     cvtps2dq    xmm4, xmm4          
     cvtps2dq    xmm5, xmm5         
     cvtps2dq    xmm6, xmm6        
@@ -149,9 +155,8 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     
     ; store as Cb-Y-Cr-Y
     pslld       xmm5, 16
-    shufps      xmm4, xmm4, 0xa0
-    pand        xmm4, [Cr_mask]
-    pand        xmm6, [Cb_mask]
+    pand        xmm4, [Cr_mask wrt rip]
+    pand        xmm6, [Cb_mask wrt rip]
     por         xmm5, xmm4
     por         xmm5, xmm6
     packuswb    xmm5, xmm5
@@ -182,6 +187,6 @@ OneOn255            times 4 dd 0.0039215686
 
 ; Bit masks
 Mask4               times 4 db 0xff, 0x00, 0x00, 0x00
-Cb_mask             times 4 db 0xff, 0x00, 0x00, 0x00
-Cr_mask             times 4 db 0x00, 0x00, 0xff, 0x00
+Cb_mask             times 2 db 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+Cr_mask             times 2 db 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00
 ; vim:syntax=nasm64
