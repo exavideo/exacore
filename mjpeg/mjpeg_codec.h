@@ -51,7 +51,7 @@ class Mjpeg422Encoder {
 class Mjpeg422Decoder {
     public:
         Mjpeg422Decoder(coord_t maxw_, coord_t maxh_);
-        RawFrame *decode(void *data, size_t size);
+        RawFrame *decode(void *data, size_t size, int scale_down = 1);
         ~Mjpeg422Decoder( );
 
     protected:

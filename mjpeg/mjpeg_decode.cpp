@@ -65,7 +65,7 @@ void Mjpeg422Decoder::libjpeg_init( ) {
     jpeg_create_decompress(&cinfo);
 }
 
-RawFrame *Mjpeg422Decoder::decode(void *data, size_t size) {
+RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
     JSAMPARRAY planes[3];
     JDIMENSION scanlines_produced = 0;
 
@@ -75,9 +75,9 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size) {
     cinfo.dct_method = JDCT_FASTEST;
     cinfo.raw_data_out = TRUE;
 
-    if (cinfo.image_width > maxw || cinfo.image_height > maxh) {
-        throw std::runtime_error("Mjpeg422Decoder: image too large");
-    }
+    cinfo.scale_num = 1;
+    cinfo.scale_denom = scale_down;
+
 
     if (cinfo.num_components != 3) {
         throw std::runtime_error("Mjpeg422Decoder: wrong number of components");
@@ -99,6 +99,10 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size) {
     }
 
     jpeg_start_decompress(&cinfo);
+
+    if (cinfo.output_width > maxw || cinfo.output_height > maxh) {
+        throw std::runtime_error("Mjpeg422Decoder: image too large");
+    }
 
     while (cinfo.output_scanline < cinfo.output_height) {
         planes[0] = y_scans + scanlines_produced;

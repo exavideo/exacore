@@ -21,7 +21,18 @@ test_mjpeg_422_decode_OBJECTS = \
 tests/mjpeg_422_decode: $(test_mjpeg_422_decode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
 
-all_TARGETS += tests/mjpeg_422_decode    
+all_TARGETS += tests/mjpeg_422_decode_scaled    
+
+test_mjpeg_422_decode_scaled_OBJECTS = \
+	$(common_OBJECTS) \
+	$(mjpeg_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/mjpeg_422_decode_scaled.o
+
+tests/mjpeg_422_decode_scaled: $(test_mjpeg_422_decode_scaled_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
+
+all_TARGETS += tests/mjpeg_422_decode_scaled    
 
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
