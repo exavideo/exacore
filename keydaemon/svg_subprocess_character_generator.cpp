@@ -53,10 +53,11 @@ void SvgSubprocessCharacterGenerator::request( ) {
     }
 }
 
-size_t SvgSubprocessCharacterGenerator::read_length( ) {
-    unsigned int ret;
+template <typename T>
+static T read_item_from_fd(int fd) {
+    T ret;
 
-    if (read_all(recv_fd, &ret, sizeof(ret)) != 1) {
+    if (read_all(fd, &ret, sizeof(ret)) != 1) {
         fprintf(stderr, "it's dead??\n");
         throw std::runtime_error("dead subprocess?");
     }
@@ -122,6 +123,7 @@ void SvgSubprocessCharacterGenerator::do_fork( ) {
 void SvgSubprocessCharacterGenerator::run_thread( ) {
     RawFrame *frame;
     size_t svg_size;
+    uint8_t alpha;
     char *svg_data;
     
     /* fork subprocess */
@@ -132,14 +134,20 @@ void SvgSubprocessCharacterGenerator::run_thread( ) {
         request( );
 
         /* get the SVG */
-        svg_size = read_length( );
-        svg_data = read_svg(svg_size);
+        svg_size = read_item_from_fd<uint32_t>(recv_fd);
+        alpha = read_item_from_fd<uint8_t>(recv_fd);
+        if (svg_size > 0) {
+            svg_data = read_svg(svg_size);
 
-        /* render SVG to frame */
-        frame = RsvgFrame::render_svg(svg_data, svg_size);
-        free(svg_data);
+            /* render SVG to frame */
+            frame = RsvgFrame::render_svg(svg_data, svg_size);
+            frame->set_global_alpha(alpha);
+            free(svg_data);
 
-        /* put frame down the pipe */
-        _output_pipe.put(frame);
+            /* put frame down the pipe */
+            _output_pipe.put(frame);
+        } else {
+            _output_pipe.put(NULL);
+        }
     }
 }

@@ -32,7 +32,6 @@ class SvgSubprocessCharacterGenerator : public CharacterGenerator {
         void do_fork( );
 
         void request( );
-        size_t read_length( );
         char *read_svg(size_t length);
 
         char *_cmd;
