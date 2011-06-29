@@ -27,6 +27,7 @@
 
 RawFrame::RawFrame(PixelFormat pf) {
     _pixel_format = pf;
+    _global_alpha = 0xff;
     make_packer( );
     make_unpacker( );
     make_draw_ops( );
@@ -35,6 +36,7 @@ RawFrame::RawFrame(PixelFormat pf) {
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
     _h = h;
+    _global_alpha = 0xff;
     _pixel_format = pf;
     _pitch = minpitch( );
     alloc( );
@@ -46,6 +48,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
     _w = w;
     _h = h;
+    _global_alpha = 0xff;
     _pixel_format = pf;
     _pitch = pitch;
     if (_pitch < minpitch( )) {

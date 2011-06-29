@@ -38,6 +38,9 @@ class RawFrame {
 
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
         uint8_t *data( ) { return _data; }
+
+        uint8_t global_alpha( ) { return _global_alpha; }
+        void set_global_alpha(uint8_t a) { _global_alpha = a; }
         
         coord_t w( ) const { return _w; }
         coord_t h( ) const { return _h; }
@@ -60,6 +63,7 @@ class RawFrame {
         coord_t _w, _h;
         size_t _pitch;
         uint8_t *_data;
+        uint8_t _global_alpha;
         PixelFormat _pixel_format;
 
         RawFrame(PixelFormat pf);
