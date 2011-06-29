@@ -118,6 +118,11 @@ class Keyer {
                 /* get overlay from each CG */
                 for (unsigned int i = 0; i < cgs.size( ); i++) {
                     Data_Object<CharacterGenerator> cg = *(cgs[i]);
+                    
+                    if (!cg->output_pipe( ).data_ready( )) {
+                        fprintf(stderr, "not keying this frame on account of staleness\n");
+                        continue;
+                    }
 
                     if (cg->output_pipe( ).get(cgout) == 0) {
                         throw std::runtime_error("dead character generator");
@@ -128,7 +133,8 @@ class Keyer {
                      * will output a NULL frame. We can safely ignore those.
                      */
                     if (cgout != NULL) {
-                        frame->draw->alpha_key(cg->x( ), cg->y( ), cgout, 255);
+                        frame->draw->alpha_key(cg->x( ), cg->y( ), 
+                                cgout, cgout->global_alpha( ));
                         delete cgout;
                     }
                 }
