@@ -32,6 +32,15 @@
 #include "condition.h"
 
 /*
+ * Thrown when a broken pipe condition is detected.
+ */
+class BrokenPipe : public virtual std::exception {
+    const char *what( ) const throw( ) { 
+        return "Broken pipe between threads\n";
+    }
+};
+
+/*
  * A channel for communicating objects between threads.
  * 
  * Methods:
@@ -68,11 +77,12 @@ class Pipe {
             write_done = false;
         }
 
-        int get(T& obj) {
+        T get() {
+            T obj;
             { MutexLock lock(mut);
                 while (empty( )) {
                     if (write_done) {
-                        return 0;
+                        throw BrokenPipe( );
                     } else {
                         pipe_not_empty.wait(mut);
                     }
@@ -88,19 +98,19 @@ class Pipe {
 
                 /* signal not full */
                 pipe_not_full.signal( );
-                return 1;
             }
+            return obj;
         }
 
-        int put(const T& obj) {
+        void put(const T& obj) {
             { MutexLock lock(mut);
                 if (read_done) {
-                    return 0;
+                    throw BrokenPipe( );
                 }
 
                 while (full( )) {
                     if (read_done) {
-                        return 0;
+                        throw BrokenPipe( );
                     } else {
                         pipe_not_full.wait(mut);
                     }
@@ -114,7 +124,6 @@ class Pipe {
 
                 /* signal not empty */
                 pipe_not_empty.signal( );
-                return 1;
             }
         }
 
@@ -122,6 +131,7 @@ class Pipe {
             { MutexLock lock(mut);
                 read_done = true;
                 /* signal "not full" so producer does not deadlock */
+                pipe_not_full.signal( );
             }
         }
 
@@ -129,6 +139,7 @@ class Pipe {
             { MutexLock lock(mut);
                 write_done = true;
                 /* signal "not empty" so consumer does not deadlock */
+                pipe_not_empty.signal( );
             }
         }
 

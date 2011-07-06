@@ -228,9 +228,7 @@ class SenderThread : public Thread {
                     break;
                 }
 
-                if (_fpipe->put(thing) == 0) {
-                    break;
-                }
+                _fpipe->put(thing); 
             }
         }
 

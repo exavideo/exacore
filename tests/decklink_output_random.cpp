@@ -35,10 +35,7 @@ int main( ) {
         for (x = 16; x < 224; x++) {
             frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
             memset(frame->data( ), x, frame->size( ));
-            if (oadp->input_pipe( ).put(frame) < 0) {
-                fprintf(stderr, "could not write frame to output");
-                exit(1);
-            }
+            oadp->input_pipe( ).put(frame);
         }
     }
 }

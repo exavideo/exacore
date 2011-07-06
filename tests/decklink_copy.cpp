@@ -25,7 +25,6 @@
 #include <string.h>
 
 int main( ) {
-    RawFrame *frame;
     InputAdapter *iadp;
     OutputAdapter *oadp;
 
@@ -33,12 +32,7 @@ int main( ) {
     oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
 
     for (;;) {
-        if (iadp->output_pipe( ).get(frame) == 0) {
-            break;
-        }
-        if (oadp->input_pipe( ).put(frame) == 0) {
-            break;
-        }
+        oadp->input_pipe( ).put(iadp->output_pipe( ).get( ));
     }
 }
 

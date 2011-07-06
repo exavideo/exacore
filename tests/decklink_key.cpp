@@ -38,23 +38,21 @@ int main( ) {
 
     iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
     oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
-    //iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::BGRAn8);
-    //oadp = create_decklink_output_adapter(1, 0, RawFrame::BGRAn8);
 
-    for (;;) {
-        if (iadp->output_pipe( ).get(frame) == 0) {
-            break;
-        }
+    try {
+        for (;;) {
+            frame = iadp->output_pipe( ).get( );
 
-        if (galpha < 255) {
-            galpha++;
+            if (galpha < 255) {
+                galpha++;
+            }
+            
+            frame->draw->alpha_key(96, 830, &key, galpha);
+            
+            oadp->input_pipe( ).put(frame);
         }
-        
-        frame->draw->alpha_key(96, 830, &key, galpha);
-        
-        if (oadp->input_pipe( ).put(frame) == 0) {
-            break;
-        }
+    } catch (BrokenPipe&) {
+        fprintf(stderr, "no more data...\n");
     }
 }
 

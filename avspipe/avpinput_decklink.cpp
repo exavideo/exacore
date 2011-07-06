@@ -176,9 +176,7 @@ class SenderThread : public Thread {
         void run_thread(void) {
             SendableThing *thing;
             for (;;) {
-                if (_fpipe->get(thing) == 0) {
-                    break;
-                }
+                thing = _fpipe->get( );
 
                 if (thing->write_to_fd(_out_fd) <= 0) {
                     fprintf(stderr, "write failed or pipe broken\n");

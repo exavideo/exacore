@@ -123,3 +123,27 @@ void Mjpeg422Encoder::encode(RawFrame *f) {
 
     jpeg_finished_size = jpeg_size;
 }
+
+void Mjpeg422Encoder::encode_to(RawFrame *f, void *buf, size_t size) {
+    /* FIXME: lots of code in common with encode() */
+    JDIMENSION scanlines_consumed = 0;
+
+    JSAMPARRAY planes[3];
+
+    f->unpack->YCbCr8P422(y_plane, cb_plane, cr_plane);    
+   
+    jpeg_mem_dest(&cinfo, buf, &size);
+    jpeg_start_compress(&cinfo, TRUE);
+
+    while (scanlines_consumed < h) {
+        planes[0] = y_scans + scanlines_consumed;
+        planes[1] = cb_scans + scanlines_consumed;
+        planes[2] = cr_scans + scanlines_consumed;
+        scanlines_consumed += jpeg_write_raw_data(&cinfo, planes, 
+                h - scanlines_consumed);
+    }
+
+    jpeg_finish_compress(&cinfo);
+
+    jpeg_finished_size = size;
+}

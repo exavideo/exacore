@@ -30,6 +30,7 @@ class Mjpeg422Encoder {
         Mjpeg422Encoder(coord_t w_, coord_t h_, 
                 size_t max_frame_size = 524288);
         void encode(RawFrame *f);
+        void encode_to(RawFrame *f, void *buf, size_t size);
         void *get_data(void) { return jpeg_data; }
         size_t get_data_size(void) { return jpeg_finished_size; }
         ~Mjpeg422Encoder( );

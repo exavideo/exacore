@@ -50,27 +50,27 @@ int main( ) {
     iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
     oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
     
-    for (;;) {
-        /* get frame */
-        if (iadp->output_pipe( ).get(frame) == 0) {
-            break;
-        }
+    try {
+        for (;;) {
+            /* get frame */
+            frame = iadp->output_pipe( ).get( );
 
-        /* render SVG */
-        key = RsvgFrame::render_svg(svg_buf, read_pos);
-    
-        /* crude dissolve in */
-        if (galpha < 255) {
-            galpha++;
-        }
+            /* render SVG */
+            key = RsvgFrame::render_svg(svg_buf, read_pos);
+        
+            /* crude dissolve in */
+            if (galpha < 255) {
+                galpha++;
+            }
 
-        /* draw as key */
-        frame->draw->alpha_key(20, 20, key, galpha);
-        delete key;
+            /* draw as key */
+            frame->draw->alpha_key(20, 20, key, galpha);
+            delete key;
 
-        /* send to output */
-        if (oadp->input_pipe( ).put(frame) == 0) {
-            break;
+            /* send to output */
+            oadp->input_pipe( ).put(frame);
         }
+    } catch (BrokenPipe&) {
+        fprintf(stderr, "no more data\n");
     }
 }

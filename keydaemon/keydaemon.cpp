@@ -49,41 +49,36 @@ int main(int argc, char **argv) {
     iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
     oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
 
-    /* main loop */
-    for (;;) {
-        /* get incoming frame */
-        if (iadp->output_pipe( ).get(frame) == 0) {
-            goto dead_pipe;
-        }
+    try {
+        /* main loop */
+        for (;;) {
+            /* get incoming frame */
+            frame = iadp->output_pipe( ).get( );
 
-        /* get overlay from each CG */
-        for (unsigned int i = 0; i < cgs.size( ); i++) {
-            CharacterGenerator *cg = cgs[i];
+            /* get overlay from each CG */
+            for (unsigned int i = 0; i < cgs.size( ); i++) {
+                CharacterGenerator *cg = cgs[i];
 
-            if (cg->output_pipe( ).get(cgout) == 0) {
-                goto dead_pipe;
+                cgout = cg->output_pipe( ).get( );
+
+                /*
+                 * If no overlay is being rendered by this CG right now, the CG
+                 * will output a NULL frame. We can safely ignore those.
+                 */
+                if (cgout != NULL) {
+                    frame->draw->alpha_key(cg->x( ), cg->y( ), cgout, 255);
+                    delete cgout;
+                }
             }
 
-            /*
-             * If no overlay is being rendered by this CG right now, the CG
-             * will output a NULL frame. We can safely ignore those.
-             */
-            if (cgout != NULL) {
-                frame->draw->alpha_key(cg->x( ), cg->y( ), cgout, 255);
-                delete cgout;
-            }
+            /* Lastly, send output to the output adapter. */
+            oadp->input_pipe( ).put(frame);
         }
-
-        /* Lastly, send output to the output adapter. */
-        if (oadp->input_pipe( ).put(frame) == 0) {
-            goto dead_pipe;
-        }
+    } catch (BrokenPipe &) {
+        /* The program should only reach this point if something goes wrong. */
+        fprintf(stderr, "A component has died unceremoniously\n");
+        exit(1);
     }
-
-dead_pipe:
-    /* The program should only reach this point if something goes wrong. */
-    fprintf(stderr, "A component has died unceremoniously\n");
-    exit(1);
 }
 
 

@@ -226,8 +226,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         }
 
         virtual HRESULT RenderAudioSamples(bool preroll) {
-            AudioPacket *pkt;
-
             if (preroll) {
                 if (current_audio_pkt != NULL) {
                     try_finish_current_audio_packet( );
@@ -247,10 +245,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                             break;
                         }
                     } else if (audio_in_pipe->data_ready( )) {
-                        if (audio_in_pipe->get(pkt) == 0) {
-                            throw std::runtime_error("audio source dead");
-                        }
-                        current_audio_pkt = pkt;
+                        current_audio_pkt = audio_in_pipe->get( );
                     } else {
                         /* 
                          * current audio packet is NULL.
@@ -419,19 +414,10 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         void schedule_frame(IDeckLinkMutableVideoFrame *frame) {
             RawFrame *input = NULL;
-            int ret;
             void *data;
 
             if (in_pipe.data_ready( )) {
-                ret = in_pipe.get(input);
-                if (ret < 0) {
-                    perror("pipe get");
-                    throw std::runtime_error("DeckLink: pipe get failed");
-                } else if (ret == 0) {
-                    fprintf(stderr, "decklink EOF?");
-                    /* FIXME this should be a black frame or something */
-                    input = NULL; 
-                } /* else it worked and we're OK */
+                input = in_pipe.get( );
             } else if (last_frame != NULL) {
                 /* use the stale frame */
                 input = last_frame;
@@ -444,7 +430,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 frame->GetBytes(&data);
                 input->unpack->CbYCrY8422((uint8_t *) data);
             } else {
-                /* no frames... showing something *really* old */
                 fprintf(stderr, "DeckLink: on fire\n");
             }
             
@@ -590,12 +575,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                     }
 
                     memcpy(out->data( ), data, out->size( ));
-
-                    if (out_pipe.put(out) == 0) {
-                        throw std::runtime_error(
-                            "DeckLink input: consumer dead"
-                        );
-                    }
+                    out_pipe.put(out);
                 }
             }
 
@@ -610,12 +590,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 }
 
                 memcpy(audio_out->data( ), data, audio_out->size( ));
-
-                if (audio_pipe->put(audio_out) == 0) {
-                    throw std::runtime_error(
-                        "DeckLink audio input: consumer dead"
-                    );
-                }
+                audio_pipe->put(audio_out);
             }
 
             return S_OK;

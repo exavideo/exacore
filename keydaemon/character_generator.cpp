@@ -35,8 +35,6 @@ CharacterGenerator::~CharacterGenerator( ) {
 void CharacterGenerator::run_thread(void) {
     for (;;) {
         /* just dump lots of null frames */
-        if (_output_pipe.put(NULL) == 0) {
-            throw std::runtime_error("Broken pipe");
-        }
+        _output_pipe.put(NULL);
     }
 }

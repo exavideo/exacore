@@ -59,15 +59,8 @@ int main( ) {
 
             memset(frame->data( ), x, frame->size( ));
 
-            if (oadp->input_pipe( ).put(frame) < 0) {
-                fprintf(stderr, "could not write frame to output");
-                exit(1);
-            }
-
-            if (oadp->audio_input_pipe( )->put(apkt) < 0) {
-                fprintf(stderr, "could not write audio data to output");
-                exit(1);
-            }
+            oadp->input_pipe( ).put(frame);
+            oadp->audio_input_pipe( )->put(apkt);
         }
     }
 }

@@ -29,9 +29,8 @@ int main(int argc, char **argv) {
     UNUSED(argv);
 
     for (i = 0; i < 30; i++) {
-        if (cg.output_pipe( ).get(out) == 0) {
-            fprintf(stderr, "ruby died??\n");
-        } else if (out == NULL) {
+        out = cg.output_pipe( ).get( );
+        if (out == NULL) {
             fprintf(stderr, "no frame??\n");
         } else {
             fprintf(stderr, "w=%d h=%d\n", out->w( ), out->h( ));
