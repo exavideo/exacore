@@ -21,6 +21,7 @@
 
 
 #include <sys/types.h>
+#include <stdexcept>
 
 /* 
  * These read or write all of the data possible from/to the given fd.
@@ -31,5 +32,19 @@
  */
 ssize_t read_all(int fd, void *data, size_t size);
 ssize_t write_all(int fd, const void *data, size_t size);
+
+/*
+ * A C++ exception wrapper around POSIX errors.
+ */
+class POSIXError : public std::exception {
+    public:
+        POSIXError( ) throw();
+        POSIXError(const char *msg) throw();
+        POSIXError(const char *msg, int en) throw();
+        const char *what( ) const throw() { return what_; }
+    private:
+        void format_message(const char *msg, int errno) throw();
+        char what_[256];
+};
 
 #endif

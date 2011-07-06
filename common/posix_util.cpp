@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 ssize_t read_all(int fd, void *data, size_t size) {
     ssize_t nread;
@@ -67,4 +69,29 @@ ssize_t write_all(int fd, const void *data, size_t size) {
     }
 
     return 1;
+}
+
+POSIXError::POSIXError( ) throw() {
+    format_message("unknown source", errno);
+}
+
+POSIXError::POSIXError(const char *msg) throw() {
+    format_message(msg, errno);
+}
+
+POSIXError::POSIXError(const char *msg, int en) throw() {
+    format_message(msg, en);
+}
+
+void POSIXError::format_message(const char *msg, int en) throw() {
+    const char *error_str;
+
+    if (en < 0 || en >= sys_nerr) {
+        error_str = "Unknown error";
+    } else {
+        error_str = sys_errlist[en];
+    }
+
+    memset(what_, 0, sizeof(what_));
+    snprintf(what_, sizeof(what_) - 1, "%s: OS error: %s", msg, error_str);
 }
