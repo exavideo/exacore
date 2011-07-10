@@ -379,6 +379,12 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                         "cannot enable low-latency mode\n"
                 );
             }
+
+            if (config->SetInt(bmdDeckLinkConfigBypass, -1) != S_OK) {
+                fprintf(stderr, "DeckLink output: warning: "
+                        "cannot deactivate card bypass relay\n"
+                );
+            }
                     
             /* throw outputs at wall, see what sticks :) */
             #if 0
