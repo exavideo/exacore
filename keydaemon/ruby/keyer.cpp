@@ -109,40 +109,38 @@ class Keyer {
             }
 
             /* main loop */
-            for (;;) {
-                /* get incoming frame */
-                if ((*iadp)->output_pipe( ).get(frame) == 0) {
-                    throw std::runtime_error("dead input adapter");
-                }
+            try {
+                for (;;) {
+                    /* get incoming frame */
+                    frame = (*iadp)->output_pipe( ).get( );
 
-                /* get overlay from each CG */
-                for (unsigned int i = 0; i < cgs.size( ); i++) {
-                    Data_Object<CharacterGenerator> cg = *(cgs[i]);
-                    
-                    if (!cg->output_pipe( ).data_ready( )) {
-                        fprintf(stderr, "not keying this frame on account of staleness\n");
-                        continue;
+                    /* get overlay from each CG */
+                    for (unsigned int i = 0; i < cgs.size( ); i++) {
+                        Data_Object<CharacterGenerator> cg = *(cgs[i]);
+                        
+                        if (!cg->output_pipe( ).data_ready( )) {
+                            fprintf(stderr, "not keying this frame on account of staleness\n");
+                            continue;
+                        }
+
+                        cgout = cg->output_pipe( ).get( );
+
+                        /*
+                         * If no overlay is being rendered by this CG right now, the CG
+                         * will output a NULL frame. We can safely ignore those.
+                         */
+                        if (cgout != NULL) {
+                            frame->draw->alpha_key(cg->x( ), cg->y( ), 
+                                    cgout, cgout->global_alpha( ));
+                            delete cgout;
+                        }
                     }
 
-                    if (cg->output_pipe( ).get(cgout) == 0) {
-                        throw std::runtime_error("dead character generator");
-                    }
-
-                    /*
-                     * If no overlay is being rendered by this CG right now, the CG
-                     * will output a NULL frame. We can safely ignore those.
-                     */
-                    if (cgout != NULL) {
-                        frame->draw->alpha_key(cg->x( ), cg->y( ), 
-                                cgout, cgout->global_alpha( ));
-                        delete cgout;
-                    }
+                    /* Lastly, send output to the output adapter. */
+                    (*oadp)->input_pipe( ).put(frame);
                 }
-
-                /* Lastly, send output to the output adapter. */
-                if ((*oadp)->input_pipe( ).put(frame) == 0) {
-                    throw std::runtime_error("dead output adapter");
-                }
+            } catch (BrokenPipe &) {
+                fprintf(stderr, "Unexpected component shutdown\n");
             }
         }
 };
