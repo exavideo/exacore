@@ -115,3 +115,12 @@ tests/svg_key: $(test_svg_key_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/svg_key    
+
+test_fbdev_OBJECTS = \
+	$(common_OBJECTS) \
+	tests/fbdev.o
+
+tests/fbdev: $(test_fbdev_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
+
+all_TARGETS += tests/fbdev    
