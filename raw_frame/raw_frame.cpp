@@ -24,6 +24,7 @@
 #include "pack_CbYCrY8422.h"
 #include "unpack_CbYCrY8422.h"
 #include "draw_CbYCrY8422.h"
+#include "draw_BGRAn8.h"
 
 RawFrame::RawFrame( ) {
     _pixel_format = UNDEF;
@@ -152,6 +153,10 @@ void RawFrame::make_draw_ops(void) {
         /* specific handlers go here */
         case CbYCrY8422:
             draw = new CbYCrY8422DrawOps(this);
+            break;
+
+        case BGRAn8:
+            draw = new BGRAn8DrawOps(this);
             break;
 
         default:

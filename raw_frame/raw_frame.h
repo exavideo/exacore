@@ -146,12 +146,18 @@ class RawFrameDrawOps {
     public:
         RawFrameDrawOps(RawFrame *f_) : f(f_) { 
             do_alpha_blend = NULL;
+            do_blit = NULL;
         }
 
         void alpha_key(coord_t x, coord_t y, RawFrame *key, 
                 uint8_t galpha) {
             CHECK(do_alpha_blend);
             do_alpha_blend(f, key, x, y, galpha);
+        }
+
+        void blit(cood_t x, coord_t y, RawFrame *src) {
+            CHECK(do_blit);
+            do_blit(f, src, x. y);
         }
     protected:
         void check(void *ptr) {
@@ -162,6 +168,7 @@ class RawFrameDrawOps {
 
         void (*do_alpha_blend)(RawFrame *bkgd, RawFrame *key, 
                 coord_t x, coord_t y, uint8_t galpha);
+        void (*do_blit)(RawFrame *bkgd, RawFrame *src, coord_t x, coord_t y);
 
         RawFrame *f;
 
