@@ -110,6 +110,9 @@ class RawFrameUnpacker {
         RawFrameUnpacker(RawFrame *f_) : f(f_) { 
             do_YCbCr8P422 = NULL;
             do_CbYCrY8422 = NULL;
+            do_BGRAn8 = NULL;
+            do_BGRAn8_scale_1_2 = NULL;
+            do_BGRAn8_scale_1_4 = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
@@ -121,6 +124,21 @@ class RawFrameUnpacker {
         void CbYCrY8422(uint8_t *data) {
             CHECK(do_CbYCrY8422);
             do_CbYCrY8422(f->size( ), f->data( ), data);
+        }
+
+        void BGRAn8(uint8_t *data) {
+            CHECK(do_BGRAn8);
+            do_BGRAn8(f->size( ), f->data( ), data);
+        }
+
+        void BGRAn8_scale_1_2(uint8_t *data) {
+            CHECK(do_BGRAn8_scale_1_2);
+            do_BGRAn8_scale_1_2(f->size( ), f->data( ), data, f->pitch( ));
+        }
+
+        void BGRAn8_scale_1_4(uint8_t *data) {
+            CHECK(do_BGRAn8_scale_1_4);
+            do_BGRAn8_scale_1_4(f->size( ), f->data( ), data, f->pitch( ));
         }
 
     protected:
@@ -140,7 +158,41 @@ class RawFrameUnpacker {
         void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
                 uint8_t *, uint8_t *);
         void (*do_CbYCrY8422)(size_t, uint8_t *, uint8_t *);
+        void (*do_BGRAn8)(size_t, uint8_t *, uint8_t *);
+        void (*do_BGRAn8_scale_1_2)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
+        void (*do_BGRAn8_scale_1_4)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
 };
+
+class RawFrameConverter {
+    public:
+        RawFrameConverter(RawFrame *f_) : f(f_) { }
+
+        RawFrame *BGRAn8( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8(ret->data( ));
+            return ret;
+        }
+
+        RawFrame *BGRAn8_scale_1_2( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8_scale_1_2(ret->data( ));
+            return ret;
+        }
+
+        RawFrame *BGRAn8_scale_1_4( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8_scale_1_4(ret->data( ));
+            return ret;
+        }
+
+    
+    protected:
+        RawFrame *match_frame(RawFrame::PixelFormat pf) {
+            return new RawFrame(f->w( ), f->h( ), pf);
+        }
+}
 
 class RawFrameDrawOps {
     public:
