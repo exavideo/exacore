@@ -29,6 +29,7 @@ class RawFrameDrawOps;
 class RawFrame {
     public:
         enum PixelFormat { 
+            UNDEF,
             RGB8, YCbCr8, CbYCrY8422, 
             RGBAn8, BGRAn8, YCbCrAn8 
         };
@@ -66,7 +67,10 @@ class RawFrame {
         uint8_t _global_alpha;
         PixelFormat _pixel_format;
 
+        RawFrame( );
         RawFrame(PixelFormat pf);
+
+        void initialize_pf(PixelFormat pf);
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );
