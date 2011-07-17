@@ -28,9 +28,13 @@ void *xmalloc(size_t sz, const char *module, const char *what) {
 
     ret = malloc(sz);
     if (ret == NULL) {
-        asprintf(&msg, "xmalloc: %s failed to allocate %s", module, what);
-        throw std::runtime_error(msg);
-        /* FIXME LEAK this leaks asprintf's result */
+        if (asprintf(&msg, "xmalloc: %s failed to allocate %s", 
+                module, what) == -1) {
+            throw std::runtime_error("Very likely out of memory");
+        } else {
+            throw std::runtime_error(msg);
+            /* FIXME LEAK this leaks asprintf's result */
+        }
     } else {
         return ret;
     }

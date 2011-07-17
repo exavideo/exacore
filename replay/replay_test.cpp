@@ -34,7 +34,7 @@ int main( ) {
     ReplayBuffer buf("d1", 2L << 30, 256 << 10);
     
     /* start input/output */
-    iadp = create_decklink_input_adapter(2, 0, 0, RawFrame::CbYCrY8422);
+    iadp = create_decklink_input_adapter(1, 0, 0, RawFrame::CbYCrY8422);
     oadp = create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422);
 
     /* start ingest and playout threads */
