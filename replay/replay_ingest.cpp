@@ -32,7 +32,7 @@ ReplayIngest::~ReplayIngest( ) {
 
 void ReplayIngest::run_thread( ) {
     RawFrame *input;
-    //RawFrame *monitor_frame;
+    ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     Mjpeg422Encoder enc(1920, 1080); /* FIXME: hard coded frame size */
 
@@ -47,9 +47,11 @@ void ReplayIngest::run_thread( ) {
         enc.encode_to(input, dest.data_ptr, dest.data_size);
         buf->finish_frame_write( );
 
-        /* scale down frame to send to monitor(????) */
-        //monitor_frame = input->convert->RGBAn8_scale_1_2( );
-        //monitor.put(monitor_frame);
+        /* scale down frame to send to monitor */
+        monitor_frame = new ReplayRawFrame(
+            input->convert->RGBAn8_scale_1_4( )
+        );
+        monitor.put(monitor_frame);
         
         delete input;
     }
