@@ -67,7 +67,6 @@ void ReplayPreview::mark_out( ) {
 void ReplayPreview::run_thread( ) {
     ReplayFrameData rfd;
     ReplayRawFrame *monitor_frame;
-    RawFrame *new_frame;
 
     for (;;) {
         /* wait for some work to do */
@@ -80,7 +79,7 @@ void ReplayPreview::run_thread( ) {
         // FIXME this could be more efficient
         // new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2, RawFrame::BGRAn8) ??
         new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2);
-        monitor_frame->frame_data = new_frame->convert->BGRAn8( );
+        monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
         delete new_frame;
 
         monitor.put(monitor_frame);

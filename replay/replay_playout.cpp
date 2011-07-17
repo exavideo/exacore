@@ -43,8 +43,7 @@ void ReplayPlayout::run_thread( ) {
     Mjpeg422Decoder dec(1920, 1080);
     ReplayFrameData rfd;
     RawFrame *frame;
-    //RawFrame *monitor_frame;
-    //ReplayRawFrame *mrrf;
+    ReplayRawFrame *monitor_frame;
 
     for (;;) {
         get_and_advance_current_frame(source, tc);
@@ -59,10 +58,10 @@ void ReplayPlayout::run_thread( ) {
             frame = dec.decode(rfd.data_ptr, rfd.data_size);
 
             /* scale down to BGRAn8 and send to monitor port */
-            //monitor_frame = frame->convert->BGRAn8_scale_1_2( );
-            //mrrf = new ReplayRawFrame;
-            //mrrf->frame_data = monitor_frame;
-            //monitor.put(mrrf);
+            monitor_frame = new ReplayRawFrame(
+                frame->convert->BGRAn8_scale_1_2( )
+            );
+            monitor.put(monitor_frame);
 
             /* send the full CbYCrY frame to output */
             oadp->input_pipe( ).put(frame);
