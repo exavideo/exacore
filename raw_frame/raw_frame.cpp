@@ -24,8 +24,25 @@
 #include "pack_CbYCrY8422.h"
 #include "unpack_CbYCrY8422.h"
 #include "draw_CbYCrY8422.h"
+#include "draw_BGRAn8.h"
+
+RawFrame::RawFrame( ) {
+    _pixel_format = UNDEF;
+    _w = 0;
+    _h = 0;
+    _pitch = 0;
+    _data = NULL;
+    _global_alpha = 0xff;
+    pack = NULL;
+    unpack = NULL;
+    draw = NULL;
+}
 
 RawFrame::RawFrame(PixelFormat pf) {
+    initialize_pf(pf);
+}
+
+void RawFrame::initialize_pf(PixelFormat pf) {
     _pixel_format = pf;
     _global_alpha = 0xff;
     make_packer( );
@@ -64,6 +81,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
 
 RawFrame::~RawFrame( ) {
     free_data( );
+    delete pack;
     delete unpack;
     delete draw;
 }
@@ -135,6 +153,10 @@ void RawFrame::make_draw_ops(void) {
         /* specific handlers go here */
         case CbYCrY8422:
             draw = new CbYCrY8422DrawOps(this);
+            break;
+
+        case BGRAn8:
+            draw = new BGRAn8DrawOps(this);
             break;
 
         default:

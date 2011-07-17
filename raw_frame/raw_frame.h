@@ -29,6 +29,7 @@ class RawFrameDrawOps;
 class RawFrame {
     public:
         enum PixelFormat { 
+            UNDEF,
             RGB8, YCbCr8, CbYCrY8422, 
             RGBAn8, BGRAn8, YCbCrAn8 
         };
@@ -66,7 +67,10 @@ class RawFrame {
         uint8_t _global_alpha;
         PixelFormat _pixel_format;
 
+        RawFrame( );
         RawFrame(PixelFormat pf);
+
+        void initialize_pf(PixelFormat pf);
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );
@@ -106,6 +110,9 @@ class RawFrameUnpacker {
         RawFrameUnpacker(RawFrame *f_) : f(f_) { 
             do_YCbCr8P422 = NULL;
             do_CbYCrY8422 = NULL;
+            do_BGRAn8 = NULL;
+            do_BGRAn8_scale_1_2 = NULL;
+            do_BGRAn8_scale_1_4 = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
@@ -117,6 +124,21 @@ class RawFrameUnpacker {
         void CbYCrY8422(uint8_t *data) {
             CHECK(do_CbYCrY8422);
             do_CbYCrY8422(f->size( ), f->data( ), data);
+        }
+
+        void BGRAn8(uint8_t *data) {
+            CHECK(do_BGRAn8);
+            do_BGRAn8(f->size( ), f->data( ), data);
+        }
+
+        void BGRAn8_scale_1_2(uint8_t *data) {
+            CHECK(do_BGRAn8_scale_1_2);
+            do_BGRAn8_scale_1_2(f->size( ), f->data( ), data, f->pitch( ));
+        }
+
+        void BGRAn8_scale_1_4(uint8_t *data) {
+            CHECK(do_BGRAn8_scale_1_4);
+            do_BGRAn8_scale_1_4(f->size( ), f->data( ), data, f->pitch( ));
         }
 
     protected:
@@ -136,18 +158,58 @@ class RawFrameUnpacker {
         void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
                 uint8_t *, uint8_t *);
         void (*do_CbYCrY8422)(size_t, uint8_t *, uint8_t *);
+        void (*do_BGRAn8)(size_t, uint8_t *, uint8_t *);
+        void (*do_BGRAn8_scale_1_2)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
+        void (*do_BGRAn8_scale_1_4)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
 };
+
+class RawFrameConverter {
+    public:
+        RawFrameConverter(RawFrame *f_) : f(f_) { }
+
+        RawFrame *BGRAn8( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8(ret->data( ));
+            return ret;
+        }
+
+        RawFrame *BGRAn8_scale_1_2( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8_scale_1_2(ret->data( ));
+            return ret;
+        }
+
+        RawFrame *BGRAn8_scale_1_4( ) {
+            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            f->unpack->BGRAn8_scale_1_4(ret->data( ));
+            return ret;
+        }
+
+    
+    protected:
+        RawFrame *match_frame(RawFrame::PixelFormat pf) {
+            return new RawFrame(f->w( ), f->h( ), pf);
+        }
+}
 
 class RawFrameDrawOps {
     public:
         RawFrameDrawOps(RawFrame *f_) : f(f_) { 
             do_alpha_blend = NULL;
+            do_blit = NULL;
         }
 
         void alpha_key(coord_t x, coord_t y, RawFrame *key, 
                 uint8_t galpha) {
             CHECK(do_alpha_blend);
             do_alpha_blend(f, key, x, y, galpha);
+        }
+
+        void blit(cood_t x, coord_t y, RawFrame *src) {
+            CHECK(do_blit);
+            do_blit(f, src, x. y);
         }
     protected:
         void check(void *ptr) {
@@ -158,6 +220,7 @@ class RawFrameDrawOps {
 
         void (*do_alpha_blend)(RawFrame *bkgd, RawFrame *key, 
                 coord_t x, coord_t y, uint8_t galpha);
+        void (*do_blit)(RawFrame *bkgd, RawFrame *src, coord_t x, coord_t y);
 
         RawFrame *f;
 
