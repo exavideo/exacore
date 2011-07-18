@@ -22,6 +22,8 @@
 
 #include "replay_data.h"
 #include "thread.h"
+#include "mutex.h"
+#include "condition.h"
 #include "async_port.h"
 #include <stdexcept>
 
@@ -44,10 +46,10 @@ class ReplayPreview : public Thread {
             const char *what( ) const throw() { 
                 return "Cannot place mark out before mark in";
             }
-        }
+        };
     protected:
         void run_thread( );
-        void do_update(ReplayFrameData &rfd);
+        void wait_update(ReplayFrameData &rfd);
 
         ReplayShot current_shot;
         timecode_t current_pos;

@@ -18,6 +18,9 @@
  */
 
 #include "replay_preview.h"
+#include "replay_buffer.h"
+#include "mjpeg_codec.h"
+#include <stdio.h>
 
 ReplayPreview::ReplayPreview( ) {
     current_shot.source = NULL;
@@ -29,6 +32,8 @@ ReplayPreview::~ReplayPreview( ) {
 }
 
 void ReplayPreview::change_shot(const ReplayShot &shot) {
+    fprintf(stderr, "Preview: updating shot\n");
+
     MutexLock l(m);
     current_shot = shot;
     current_pos = shot.start;
@@ -43,6 +48,8 @@ void ReplayPreview::get_shot(ReplayShot &shot) {
 
 void ReplayPreview::seek(timecode_t delta) {
     /* FIXME: do some more error checking here */
+    fprintf(stderr, "Preview: seeking\n");
+
     MutexLock l(m);
     current_pos += delta;
     update_monitor = true;
@@ -65,37 +72,42 @@ void ReplayPreview::mark_out( ) {
 }
 
 void ReplayPreview::run_thread( ) {
+    Mjpeg422Decoder dec(1920, 1080);
     ReplayFrameData rfd;
     ReplayRawFrame *monitor_frame;
+    RawFrame *new_frame;
 
     for (;;) {
         /* wait for some work to do */
         wait_update(rfd);
 
-        /* build monitor frame */
-        monitor_frame = new ReplayRawFrame;
+        try {
+            /* decode at 1/2 size */
+            new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2);
+            fprintf(stderr, "replay monitor frame: %dx%d", (int) new_frame->w( ), (int) new_frame->h( ));
+            monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
+            delete new_frame;
 
-        /* decode at 1/2 size */
-        // FIXME this could be more efficient
-        // new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2, RawFrame::BGRAn8) ??
-        new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2);
-        monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
-        delete new_frame;
-
-        monitor.put(monitor_frame);
+            monitor.put(monitor_frame);
+        } catch (ReplayFrameNotFoundException &e) {
+            fprintf(stderr, "replay preview: frame not found\n");
+            /* FIXME: put some indication up on the monitor (or get back on the end) */;
+        }
     }
 }
 
-void ReplayPreview::do_update(ReplayFrameData &rfd) {
+void ReplayPreview::wait_update(ReplayFrameData &rfd) {
     MutexLock l(m);
     
     /* wait until there is some work to be done */
-    while (!update_monitor) {
+    while (!update_monitor || current_shot.source == NULL) {
+        update_monitor = false;
         updated.wait(m);
     }
 
     update_monitor = false;
 
+    fprintf(stderr, "updating monitor\n");
     /* grab the frame from the buffer */
     current_shot.source->get_readable_frame(current_pos, rfd);
 }

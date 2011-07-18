@@ -19,20 +19,21 @@
 
 #include "replay_ingest.h"
 #include "replay_buffer.h"
+#include "replay_preview.h"
 #include "replay_playout.h"
 #include "replay_multiviewer.h"
 #include "framebuffer_display_surface.h"
 #include "decklink.h"
 #include "raw_frame.h"
 #include "pipe.h"
+#include "posix_util.h"
+#include <linux/input.h>
 
 int main( ) {
     InputAdapter *iadp;
     OutputAdapter *oadp;
     FramebufferDisplaySurface ds;
     
-    ReplayShot *shot;
-
     /* set up multiviewer */
     ReplayMultiviewer mv(&ds);
     ReplayMultiviewer::SourceParams mvsrc;
@@ -52,24 +53,49 @@ int main( ) {
     mvsrc.y = 540;
     mv.add_source(mvsrc);
 
+    ReplayPreview preview;
+    mvsrc.source = &preview.monitor;
+    mvsrc.source_name = "Preview";
+    mvsrc.x = 0;
+    mvsrc.y = 0;
+    mv.add_source(mvsrc);
+
     ReplayPlayout playout(oadp);
     mvsrc.source = &playout.monitor;
     mvsrc.source_name = "Program";
-    mvsrc.x = 0;
+    mvsrc.x = 960;
     mvsrc.y = 0;
     mv.add_source(mvsrc);
 
     mv.start( );
 
-    /* wait a while */
-    sleep(15);
+    struct input_event evt;
+    int last_value = -1;
 
-    /* roll replay! */
-    fprintf(stderr, "ROLL REPLAY...");
-    shot = buf.make_shot(-150); /* five seconds back from now */
-    playout.roll_shot(shot);
-    fprintf(stderr, "rolling!\n");
+    for (;;) {
+        if (read_all(STDIN_FILENO, &evt, sizeof(evt)) != 1) {
+            break;
+        }
 
-    /* let it roll for a bit before we exit unceremoniously */
-    for (;;)    sleep(20);
+        if (evt.type == 1 && evt.code == 260 && evt.value == 1) {
+            /* make shot, put into preview */
+            ReplayShot *shot = buf.make_shot(-30);
+            preview.change_shot(*shot);
+            delete shot;
+        } else if (evt.type == 1 && evt.code == 257 && evt.value == 1) {
+            playout.stop( );
+        } else if (evt.type == 1 && evt.code == 259 && evt.value == 1) {
+            /* roll out current preview shot */
+            ReplayShot shot;
+            preview.mark_in( );
+            preview.get_shot(shot);
+            playout.roll_shot(&shot);
+        } else if (evt.type == 2 && evt.code == 7) {
+            /* seek preview */
+            if (last_value != -1) {
+                preview.seek(evt.value - last_value);
+            }
+            last_value = evt.value;
+        }
+    }   
 }

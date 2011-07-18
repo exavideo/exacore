@@ -24,6 +24,7 @@
 ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
     current_source = NULL;
+    running = false;
     start_thread( );
 }
 
@@ -35,6 +36,7 @@ void ReplayPlayout::roll_shot(ReplayShot *shot) {
     MutexLock l(m);
     current_source = shot->source;
     current_tc = shot->start;
+    running = true;
 }
 
 void ReplayPlayout::run_thread( ) {
@@ -75,9 +77,16 @@ void ReplayPlayout::get_and_advance_current_frame(ReplayBuffer *&src,
     if (current_source != NULL) {
         src = current_source;
         tc = current_tc;
-        current_tc++;
+        if (running) {
+            current_tc++;
+        }
     } else {
         src = NULL;
         tc = 0;
     }
+}
+
+void ReplayPlayout::stop( ) {
+    MutexLock l(m);
+    running = false;
 }

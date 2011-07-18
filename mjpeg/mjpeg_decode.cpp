@@ -104,6 +104,12 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
         throw std::runtime_error("Mjpeg422Decoder: image too large");
     }
 
+    for (unsigned int i = 0; i < cinfo.output_height; i++) {
+        y_scans[i] = y_plane + i * cinfo.output_width;
+        cb_scans[i] = cb_plane + i * (cinfo.output_width / 2);
+        cr_scans[i] = cr_plane + i * (cinfo.output_width / 2);
+    }
+
     while (cinfo.output_scanline < cinfo.output_height) {
         planes[0] = y_scans + scanlines_produced;
         planes[1] = cb_scans + scanlines_produced;
@@ -114,7 +120,8 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
 
     jpeg_finish_decompress(&cinfo);
 
-    RawFrame *result = new RawFrame(maxw, maxh, RawFrame::CbYCrY8422);
+    RawFrame *result = new RawFrame(cinfo.output_width, cinfo.output_height, 
+            RawFrame::CbYCrY8422);
     result->pack->YCbCr8P422(y_plane, cb_plane, cr_plane);
     return result;
 }

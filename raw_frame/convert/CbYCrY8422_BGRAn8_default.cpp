@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "clamp.h"
 
 void CbYCrY8422_BGRAn8_default(size_t n, uint8_t *src, uint8_t *dst) {
     int32_t cb, y1, cr, y2;
@@ -47,9 +48,9 @@ void CbYCrY8422_BGRAn8_default(size_t n, uint8_t *src, uint8_t *dst) {
         b = y1 + 541 * cb;
         b /= 256;
 
-        dst[0] = b;
-        dst[1] = g;
-        dst[2] = r;
+        dst[0] = CLAMP(b);
+        dst[1] = CLAMP(g);
+        dst[2] = CLAMP(r);
         dst[3] = 0xff;
 
         r = y2 + 259 * cr;
@@ -61,9 +62,9 @@ void CbYCrY8422_BGRAn8_default(size_t n, uint8_t *src, uint8_t *dst) {
         b = y1 + 541 * cb;
         b /= 256;
 
-        dst[4] = b;
-        dst[5] = g;
-        dst[6] = r;
+        dst[4] = CLAMP(b);
+        dst[5] = CLAMP(g);
+        dst[6] = CLAMP(r);
         dst[7] = 0xff;
 
         dst += 8;

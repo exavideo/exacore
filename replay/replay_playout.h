@@ -33,6 +33,7 @@ class ReplayPlayout : public Thread {
         ~ReplayPlayout( );
 
         void roll_shot(ReplayShot *shot);
+        void stop( );
 
         AsyncPort<ReplayRawFrame> monitor;
 
@@ -46,6 +47,8 @@ class ReplayPlayout : public Thread {
         timecode_t current_tc;
 
         Mutex m;
+
+        bool running;
 };
 
 #endif
