@@ -19,6 +19,7 @@
 
 #include "replay_ingest.h"
 #include "mjpeg_codec.h"
+#include <assert.h>
 
 ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_) {
     iadp = iadp_;
@@ -49,7 +50,7 @@ void ReplayIngest::run_thread( ) {
 
         /* scale down frame to send to monitor */
         monitor_frame = new ReplayRawFrame(
-            input->convert->RGBAn8_scale_1_4( )
+            input->convert->BGRAn8_scale_1_4( )
         );
         monitor.put(monitor_frame);
         

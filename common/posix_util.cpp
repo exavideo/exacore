@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/ioctl.h>
 
 ssize_t read_all(int fd, void *data, size_t size) {
     ssize_t nread;
@@ -94,4 +95,10 @@ void POSIXError::format_message(const char *msg, int en) throw() {
 
     memset(what_, 0, sizeof(what_));
     snprintf(what_, sizeof(what_) - 1, "%s: OS error: %s", msg, error_str);
+}
+
+void xioctl(int fd, int req, void *param) {
+    if (ioctl(fd, req, param) == -1) {
+        throw POSIXError("ioctl");
+    }
 }

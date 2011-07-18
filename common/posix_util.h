@@ -47,4 +47,6 @@ class POSIXError : public std::exception {
         char what_[256];
 };
 
+void xioctl(int fd, int req, void *param);
+
 #endif

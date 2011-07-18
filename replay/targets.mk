@@ -7,9 +7,11 @@ replay_replay_test_OBJECTS = \
 	$(raw_frame_OBJECTS) \
     $(drivers_decklink_OBJECTS) \
     $(thread_OBJECTS) \
+    $(display_surface_OBJECTS) \
     replay/replay_buffer.o \
     replay/replay_ingest.o \
     replay/replay_playout.o \
+    replay/replay_multiviewer.o \
     replay/replay_test.o
 
 replay/replay_test: $(replay_replay_test_OBJECTS)

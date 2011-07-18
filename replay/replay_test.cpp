@@ -20,6 +20,8 @@
 #include "replay_ingest.h"
 #include "replay_buffer.h"
 #include "replay_playout.h"
+#include "replay_multiviewer.h"
+#include "framebuffer_display_surface.h"
 #include "decklink.h"
 #include "raw_frame.h"
 #include "pipe.h"
@@ -27,8 +29,13 @@
 int main( ) {
     InputAdapter *iadp;
     OutputAdapter *oadp;
-
+    FramebufferDisplaySurface ds;
+    
     ReplayShot *shot;
+
+    /* set up multiviewer */
+    ReplayMultiviewer mv(&ds);
+    ReplayMultiviewer::SourceParams mvsrc;
     
     /* set up replay buffer */
     ReplayBuffer buf("d1", 2L << 30, 256 << 10);
@@ -39,10 +46,23 @@ int main( ) {
 
     /* start ingest and playout threads */
     ReplayIngest ingest(iadp, &buf);
+    mvsrc.source = &ingest.monitor;
+    mvsrc.source_name = "Source 1";
+    mvsrc.x = 0;
+    mvsrc.y = 540;
+    mv.add_source(mvsrc);
+
     ReplayPlayout playout(oadp);
+    mvsrc.source = &playout.monitor;
+    mvsrc.source_name = "Program";
+    mvsrc.x = 0;
+    mvsrc.y = 0;
+    mv.add_source(mvsrc);
+
+    mv.start( );
 
     /* wait a while */
-    sleep(10);
+    sleep(15);
 
     /* roll replay! */
     fprintf(stderr, "ROLL REPLAY...");
@@ -51,5 +71,5 @@ int main( ) {
     fprintf(stderr, "rolling!\n");
 
     /* let it roll for a bit before we exit unceremoniously */
-    for (;;)    sleep(10);
+    for (;;)    sleep(20);
 }

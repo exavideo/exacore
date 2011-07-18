@@ -18,6 +18,7 @@
  */
 
 #include "raw_frame.h"
+#include <string.h>
 
 void BGRAn8_blit_default(RawFrame *bkgd, RawFrame *src,
         coord_t x, coord_t y) {
@@ -31,7 +32,9 @@ void BGRAn8_blit_default(RawFrame *bkgd, RawFrame *src,
         n_to_copy = 4 * src->w( );
     }
 
-    for (coord_t sy = 0; sy < src->h( ) && y < bkgd->h; y++, sy++) {
+    fprintf(stderr, "n_to_copy=%d\n", (int) n_to_copy);
+
+    for (coord_t sy = 0; sy < src->h( ) && y < bkgd->h( ); y++, sy++) {
         bscan = bkgd->scanline(y) + 4 * x;
         sscan = src->scanline(sy);
         memcpy(bscan, sscan, n_to_copy);

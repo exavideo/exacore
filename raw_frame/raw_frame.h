@@ -21,10 +21,12 @@
     
 #include "types.h"
 #include <stdexcept>
+#include <stdio.h>
 
 class RawFramePacker;
 class RawFrameUnpacker;
 class RawFrameDrawOps;
+class RawFrameConverter;
 
 class RawFrame {
     public:
@@ -59,6 +61,7 @@ class RawFrame {
         RawFramePacker *pack;
         RawFrameUnpacker *unpack;
         RawFrameDrawOps *draw;
+        RawFrameConverter *convert;
 
     protected:
         coord_t _w, _h;
@@ -74,9 +77,13 @@ class RawFrame {
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );
+
+        void make_ops( );
+
         void make_packer( );
         void make_unpacker( );
         void make_draw_ops( );
+        void make_converter( );
 };
 
 #define CHECK(x) check((void *)(x))
@@ -176,23 +183,28 @@ class RawFrameConverter {
         }
 
         RawFrame *BGRAn8_scale_1_2( ) {
-            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            RawFrame *ret = new RawFrame(f->w( ) / 2, f->h( ) / 2, 
+                    RawFrame::BGRAn8);
             f->unpack->BGRAn8_scale_1_2(ret->data( ));
             return ret;
         }
 
         RawFrame *BGRAn8_scale_1_4( ) {
-            RawFrame *ret = match_frame(RawFrame::BGRAn8);
+            RawFrame *ret = new RawFrame(f->w( ) / 4, f->h( ) / 4, 
+                    RawFrame::BGRAn8);
             f->unpack->BGRAn8_scale_1_4(ret->data( ));
             return ret;
         }
 
     
     protected:
+        RawFrame *f;
+
         RawFrame *match_frame(RawFrame::PixelFormat pf) {
+            fprintf(stderr, "matching frame to %p\n", f);
             return new RawFrame(f->w( ), f->h( ), pf);
         }
-}
+};
 
 class RawFrameDrawOps {
     public:
@@ -207,9 +219,9 @@ class RawFrameDrawOps {
             do_alpha_blend(f, key, x, y, galpha);
         }
 
-        void blit(cood_t x, coord_t y, RawFrame *src) {
+        void blit(coord_t x, coord_t y, RawFrame *src) {
             CHECK(do_blit);
-            do_blit(f, src, x. y);
+            do_blit(f, src, x, y);
         }
     protected:
         void check(void *ptr) {

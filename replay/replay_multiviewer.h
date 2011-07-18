@@ -21,6 +21,10 @@
 #define _REPLAY_MULTIVIEWER_H
 
 #include <vector>
+#include "thread.h"
+#include "display_surface.h"
+#include "async_port.h"
+#include "replay_data.h"
 
 class ReplayMultiviewer : public Thread {
     public:
@@ -42,3 +46,5 @@ class ReplayMultiviewer : public Thread {
 
         std::vector<SourceParams> sources;
 };
+
+#endif

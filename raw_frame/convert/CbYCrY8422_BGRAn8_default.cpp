@@ -30,6 +30,11 @@ void CbYCrY8422_BGRAn8_default(size_t n, uint8_t *src, uint8_t *dst) {
         cr = src[2];
         y2 = src[3];
 
+        y1 -= 16;
+        y2 -= 16;
+        cb -= 128;
+        cr -= 128;
+
         y1 *= 298;
         y2 *= 298;
 

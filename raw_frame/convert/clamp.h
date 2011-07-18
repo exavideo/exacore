@@ -17,29 +17,9 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _FRAMEBUFFER_DISPLAY_SURFACE_H
-#define _FRAMEBUFFER_DISPLAY_SURFACE_H
+#ifndef _RAW_FRAME_CONVERT_CLAMP_H
+#define _RAW_FRAME_CONVERT_CLAMP_H
 
-#include "display_surface.h"
-#include <linux/fb.h>
-
-class FramebufferDisplaySurface : public DisplaySurface {
-    public:
-        FramebufferDisplaySurface(const char *fb = "/dev/fb0");
-        ~FramebufferDisplaySurface( );
-        virtual void flip( );
-        virtual void free_data( );
-    protected:
-        int _fd;
-        int _ttyfd;
-
-        struct fb_var_screeninfo _vinfo;
-        struct fb_var_screeninfo _old_vinfo;
-
-        uint8_t *_real_data;
-        uint8_t *_real_data2;
-        size_t screensize;
-};
-
+#define CLAMP(x) (x < 0 ? 0 : (x > 255 ? 255 : x))
 
 #endif

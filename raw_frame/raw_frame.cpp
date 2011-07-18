@@ -36,6 +36,7 @@ RawFrame::RawFrame( ) {
     pack = NULL;
     unpack = NULL;
     draw = NULL;
+    convert = NULL;
 }
 
 RawFrame::RawFrame(PixelFormat pf) {
@@ -45,9 +46,7 @@ RawFrame::RawFrame(PixelFormat pf) {
 void RawFrame::initialize_pf(PixelFormat pf) {
     _pixel_format = pf;
     _global_alpha = 0xff;
-    make_packer( );
-    make_unpacker( );
-    make_draw_ops( );
+    make_ops( );
 }
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
@@ -57,9 +56,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _pixel_format = pf;
     _pitch = minpitch( );
     alloc( );
-    make_packer( );
-    make_unpacker( );
-    make_draw_ops( );
+    make_ops( );
 }
 
 RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
@@ -74,9 +71,14 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
         );
     }
     alloc( );
+    make_ops( );
+}
+
+void RawFrame::make_ops(void) {
     make_packer( );
     make_unpacker( );
     make_draw_ops( );
+    make_converter( );
 }
 
 RawFrame::~RawFrame( ) {
@@ -84,6 +86,7 @@ RawFrame::~RawFrame( ) {
     delete pack;
     delete unpack;
     delete draw;
+    delete convert;
 }
 
 size_t RawFrame::minpitch( ) const {
@@ -121,6 +124,10 @@ void RawFrame::free_data( ) {
     if (_data) {
         free(_data);
     }
+}
+
+void RawFrame::make_converter(void) {
+    convert = new RawFrameConverter(this);
 }
 
 void RawFrame::make_packer(void) {

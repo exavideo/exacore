@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "clamp.h"
 
 void CbYCrY8422_BGRAn8_scale_1_2_default(size_t n, uint8_t *src, 
         uint8_t *dst, unsigned int s_pitch) {
@@ -34,6 +35,10 @@ void CbYCrY8422_BGRAn8_scale_1_2_default(size_t n, uint8_t *src,
             y1 = src_scan[1];
             cr = src_scan[2];
 
+            y1 -= 16;
+            cb -= 128;
+            cr -= 128;
+
             y1 *= 298;
 
             r = y1 + 459 * cr;
@@ -45,9 +50,9 @@ void CbYCrY8422_BGRAn8_scale_1_2_default(size_t n, uint8_t *src,
             b = y1 + 541 * cb;
             b /= 256;
 
-            dst[0] = b;
-            dst[1] = g;
-            dst[2] = r;
+            dst[0] = CLAMP(b);
+            dst[1] = CLAMP(g);
+            dst[2] = CLAMP(r);
             dst[3] = 0xff;
 
             dst += 4;
