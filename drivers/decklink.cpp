@@ -26,7 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#define PIPE_SIZE 16
+#define IN_PIPE_SIZE 4
+#define OUT_PIPE_SIZE 8 
 
 struct decklink_norm {
     const char *name;
@@ -157,7 +158,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 bool enable_audio = false) 
                 : deckLink(NULL), 
                 deckLinkOutput(NULL), frame_counter(0),
-                last_frame(NULL), in_pipe(4), audio_in_pipe(NULL) {
+                last_frame(NULL), in_pipe(OUT_PIPE_SIZE), audio_in_pipe(NULL) {
 
             norm = norm_;
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
@@ -318,7 +319,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             /* FIXME hard coded default */
             n_channels = 2; 
 
-            audio_in_pipe = new Pipe<AudioPacket *>(4);
+            audio_in_pipe = new Pipe<AudioPacket *>(OUT_PIPE_SIZE);
 
             /* FIXME magic 29.97 related number */
             /* Set up empty audio packet for prerolling */
@@ -504,7 +505,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
                 bool enable_audio = false) 
-                : deckLink(NULL), out_pipe(PIPE_SIZE) {
+                : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
 
@@ -580,8 +581,12 @@ class DeckLinkInputAdapter : public InputAdapter,
                         );
                     }
 
-                    memcpy(out->data( ), data, out->size( ));
-                    out_pipe.put(out);
+                    if (out_pipe.can_put( )) {
+                        out_pipe.put(out);
+                    } else {
+                        fprintf(stderr, "DeckLink: dropping input frame on floor\n");
+                        delete out;
+                    }
                 }
             }
 
@@ -680,7 +685,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             assert(deckLink != NULL);
             assert(deckLinkInput != NULL);
 
-            audio_pipe = new Pipe<AudioPacket *>(PIPE_SIZE);
+            audio_pipe = new Pipe<AudioPacket *>(IN_PIPE_SIZE);
 
             if (deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz,
                     bmdAudioSampleType16bitInteger, n_channels) != S_OK) {

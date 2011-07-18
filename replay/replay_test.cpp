@@ -38,7 +38,7 @@ int main( ) {
     ReplayMultiviewer::SourceParams mvsrc;
     
     /* set up replay buffer */
-    ReplayBuffer buf("d1", 2L << 30, 256 << 10);
+    ReplayBuffer buf("d1", 2L << 30, 256 << 11);
     
     /* start input/output */
     iadp = create_decklink_input_adapter(1, 0, 0, RawFrame::CbYCrY8422);

@@ -32,8 +32,6 @@ void BGRAn8_blit_default(RawFrame *bkgd, RawFrame *src,
         n_to_copy = 4 * src->w( );
     }
 
-    fprintf(stderr, "n_to_copy=%d\n", (int) n_to_copy);
-
     for (coord_t sy = 0; sy < src->h( ) && y < bkgd->h( ); y++, sy++) {
         bscan = bkgd->scanline(y) + 4 * x;
         sscan = src->scanline(sy);

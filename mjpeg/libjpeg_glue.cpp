@@ -122,7 +122,7 @@ GLOBAL(void) jpeg_mem_dest(j_compress_ptr cinfo, void *data, size_t *len) {
 METHODDEF(void) throw_on_error_exit(j_common_ptr cinfo) {
     (*cinfo->err->output_message)(cinfo);
     /* return control to exception handler (or maybe crash spectacularly) */
-    throw std::runtime_error("JPEG decode error");
+    throw std::runtime_error("JPEG codec error");
 }
 
 struct jpeg_error_mgr *jpeg_throw_on_error(struct jpeg_error_mgr *error_mgr) {

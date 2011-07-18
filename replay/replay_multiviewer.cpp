@@ -43,27 +43,8 @@ void ReplayMultiviewer::run_thread( ) {
             ReplayRawFrame *f = src.source->get( );
             if (f != NULL) {
                 dpy->draw->blit(src.x, src.y, f->frame_data);
-                #if 0
-                for (int j = 0; i < f->frame_data->h( ); j++) {
-                    fprintf(stderr, "scribbling on the framebuffer??\n");
-                    uint8_t *scan = dpy->scanline(src.y + j);
-                    scan += 4 * src.x;
-
-                    for (int i = 0; i < f->frame_data->w( ); i++) {
-                        scan[0] = 0xff;
-                        scan[1] = 0x00;
-                        scan[2] = 0x00;
-                        scan[3] = 0xff;
-
-                        scan += 4;
-                    }
-                }
-                #endif
-            } else {
-                fprintf(stderr, "no frame was available??\n");
             }
         }
-        
         dpy->flip( );
     }
 }

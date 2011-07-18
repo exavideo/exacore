@@ -157,6 +157,16 @@ class Pipe {
             return ret;
         }
 
+        bool can_put(void) {
+            MutexLock lock(mut);
+
+            if (full( )) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
         ~Pipe( ) { 
             for (unsigned int i = 0; i < buf_len; i++) {
                 if (buf[i] != NULL) {
