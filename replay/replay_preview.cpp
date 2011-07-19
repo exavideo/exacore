@@ -78,16 +78,17 @@ void ReplayPreview::run_thread( ) {
     RawFrame *new_frame;
 
     for (;;) {
-        /* wait for some work to do */
-        wait_update(rfd);
-
         try {
+            /* wait for some work to do */
+            wait_update(rfd);
+
             /* decode at 1/2 size */
             new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2);
             fprintf(stderr, "replay monitor frame: %dx%d", (int) new_frame->w( ), (int) new_frame->h( ));
+
+            /* send to multiview */
             monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
             delete new_frame;
-
             monitor.put(monitor_frame);
         } catch (ReplayFrameNotFoundException &e) {
             fprintf(stderr, "replay preview: frame not found\n");
