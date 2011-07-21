@@ -119,7 +119,7 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
         fprintf(stderr, "past the end: tc=%d tc_current=%d\n",
                 (int) tc, (int) tc_current);
         throw ReplayFrameNotFoundException( );
-    } else if (tc < tc_current - n_frames) {
+    } else if (tc < tc_current - n_frames || tc < 0) { 
         fprintf(stderr, "past the beginning: tc=%d tc_current=%d\n", 
                 (int) tc, (int) tc_current);
         throw ReplayFrameNotFoundException( );

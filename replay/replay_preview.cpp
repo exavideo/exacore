@@ -91,6 +91,7 @@ void ReplayPreview::run_thread( ) {
             delete new_frame;
             monitor.put(monitor_frame);
         } catch (ReplayFrameNotFoundException &e) {
+            /* catching the exception here = segfault?? */
             fprintf(stderr, "replay preview: frame not found\n");
             /* FIXME: put some indication up on the monitor (or get back on the end) */;
         }
