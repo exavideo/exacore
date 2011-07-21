@@ -26,6 +26,7 @@
 #include "replay_data.h"
 #include "replay_buffer.h"
 #include "async_port.h"
+#include "rational.h"
 
 class ReplayPlayout : public Thread {
     public:
@@ -39,16 +40,22 @@ class ReplayPlayout : public Thread {
 
     protected:
         void run_thread( );
-        void get_and_advance_current_frame(ReplayBuffer *&source, 
-                timecode_t &tc);
+        void get_and_advance_current_fields(ReplayFrameData &f1, 
+                ReplayFrameData &f2, Rational &pos);
+
+        void decode_field(RawFrame *out, ReplayFrameData &field, 
+                ReplayFrameData &cache_data, RawFrame *&cache_frame,
+                bool is_first_field);
+
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
-        timecode_t current_tc;
+        Rational current_pos;
+        Rational field_rate;
 
         Mutex m;
 
-        bool running;
+        Mjpeg422Decoder dec;
 };
 
 #endif

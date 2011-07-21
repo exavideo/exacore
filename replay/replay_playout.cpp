@@ -21,7 +21,8 @@
 #include "raw_frame.h"
 #include "mjpeg_codec.h"
 
-ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
+/* FIXME hardcoded 1920x1080 decoding */
+ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : dec(1920, 1080) {
     oadp = oadp_;
     current_source = NULL;
     running = false;
@@ -35,58 +36,120 @@ ReplayPlayout::~ReplayPlayout( ) {
 void ReplayPlayout::roll_shot(ReplayShot *shot) {
     MutexLock l(m);
     current_source = shot->source;
-    current_tc = shot->start;
-    running = true;
+    field_rate = Rational(1,2);
+    current_pos = Rational((int) shot->start);
+}
+
+void ReplayPlayout::stop( ) {
+    MutexLock l(m);
+    field_rate = Rational(0);
 }
 
 void ReplayPlayout::run_thread( ) {
     ReplayBuffer *source;
     timecode_t tc;
     Mjpeg422Decoder dec(1920, 1080);
-    ReplayFrameData rfd;
-    RawFrame *frame;
     ReplayRawFrame *monitor_frame;
 
+    Rational pos;
+    ReplayFrameData rfd1, rfd2;
+    ReplayFrameData rfd_cache;
+    RawFrame *f_cache = NULL;
+    RawFrame *out = NULL;
+    rfd_cache.data_ptr = NULL;
+
     for (;;) {
-        get_and_advance_current_frame(source, tc);
-        if (source == NULL) {
-            /* show something useless */
+        get_and_advance_current_fields(rfd1, rfd2, pos);
+        
+        if (rfd1.data_ptr == NULL) {
+            /* out = something... */
         } else {
-            fprintf(stderr, "decode tc=%d\n", (int) tc);
-            /* get the frame index we should be showing now */
-
-            /* get frame from buffer and decode it */
-            source->get_readable_frame(tc, rfd);
-            frame = dec.decode(rfd.data_ptr, rfd.data_size);
-
-            /* scale down to BGRAn8 and send to monitor port */
-            monitor_frame = new ReplayRawFrame(
-                frame->convert->BGRAn8_scale_1_2( )
-            );
-            monitor.put(monitor_frame);
-
-            /* send the full CbYCrY frame to output */
-            oadp->input_pipe( ).put(frame);
+            decode_field(out, rfd1, rfd_cache, f_cache, true);
+            decode_field(out, rfd2, rfd_cache, f_cache, false);
         }
+
+        /* scale down to BGRAn8 and send to monitor port */
+        monitor_frame = new ReplayRawFrame(
+            out->convert->BGRAn8_scale_1_2( )
+        );
+        monitor.put(monitor_frame);
+
+        /* send the full CbYCrY frame to output */
+        oadp->input_pipe( ).put(frame);
     }
 }
 
-void ReplayPlayout::get_and_advance_current_frame(ReplayBuffer *&src, 
-        timecode_t &tc) {
+void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
+        ReplayFrameData &f2, Rational &pos) {
     MutexLock l(m);
+    timecode_t tc;
+
     if (current_source != NULL) {
-        src = current_source;
-        tc = current_tc;
-        if (running) {
-            current_tc++;
+        tc = current_pos.integer_part( );
+        current_source->get_readable_frame(tc, f1);
+
+        /* FIXME: this assumes bottom-field-first format */
+        if (current_pos.fractional_part( ).less_than_one_half( )) {
+            f1.use_top_field = false;  
+        } else {
+            f1.use_top_field = true;
+        }
+
+        current_pos += field_rate;
+        
+        tc = current_pos.integer_part( );
+        current_source->get_readable_frame(tc, f2);
+        
+        if (current_pos.fractional_part( ).less_than_one_half( )) {
+            f1.use_top_field = false;
+        } else {
+            f1.use_top_field = true;
         }
     } else {
-        src = NULL;
+        f1.data_ptr = NULL;
+        f2.data_ptr = NULL;
         tc = 0;
     }
 }
 
-void ReplayPlayout::stop( ) {
-    MutexLock l(m);
-    running = false;
-}
+
+void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
+        ReplayFrameData &cache_data, RawFrame *&cache_frame,
+        bool is_first_field) {
+
+    /* decode the field data if we don't have it cached */
+    if (field.data_ptr != cache_data.data_ptr) {
+        delete cache_frame;
+        cache_frame = dec->decode(field.data_ptr, field.data_size);
+        cache_data = field;
+    }
+
+    /* FIXME: this logic assumes bottom-field first video */
+    /* FIXME: need to implement scanline interpolation for case 3 and 4 */
+    /* FIXME: all this memcpy-ing is looking ugly (but maybe hard to avoid) */
+    if (!is_first_field && field.use_top_field) {
+        /* case 1: copying a top field to a top field */
+        for (coord_t i = 0; i < cache_frame.h( ); i += 2) {
+            memcpy(out->scanline(i), cache_frame->scanline(i), 
+                    cache_frame->pitch( )); 
+        }
+    } else if (is_first_field && !field.use_top_field) {
+        /* case 2: copying a bottom field to a bottom field */
+        for (coord_t i = 1; i < cache_frame.h( ); i += 2) {
+            memcpy(out->scanline(i), cache_frame->scanline(i),
+                    cache_frame->pitch( ));
+        }
+    } else if (is_first_field && field.use_top_field) {
+        /* case 3: copying a top field into a bottom field */
+        for (coord_t i = 0; i < cache_frame.h( ); i += 2) {
+            memcpy(out->scanline(i + 1), cache_frame->scanline(i),
+                    cache_frame->pitch( ));
+        }
+    } else if (!is_first_field && !field.use_top_field) {
+        /* case 4: copying a bottom field into a top field */
+        for (coord_t i = 1; i < cache_frame.h( ); i += 2) {
+            memcpy(out->scanline(i - 1), cache_frame->scanline(i),
+                    cache_frame->pitch( ));
+        }
+    }
+}       
