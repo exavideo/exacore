@@ -24,7 +24,7 @@
 
 class RationalDivisionByZeroException : public virtual std::exception {
     const char *what() const throw() { return "Illegal rational operation"; }
-}
+};
 
 /*
  * Note: Overflow of rational operations is subject to undefined behavior.
@@ -39,32 +39,32 @@ class Rational {
         int denom( ) const;
         float to_float( ) const;
 
-        const int integer_part( ) const;
-        const Rational fractional_part( ) const;
-        const Rational inverse( ) const;
+        int integer_part( ) const;
+        Rational fractional_part( ) const;
+        Rational inverse( ) const;
 
         const Rational &operator=(const Rational &rhs);
 
-        const Rational operator-( ) const;
+        Rational operator-( ) const;
 
         const Rational &operator+=(const Rational &rhs);
         const Rational &operator-=(const Rational &rhs);
         const Rational &operator*=(const Rational &rhs);
         const Rational &operator/=(const Rational &rhs);
         
-        const Rational operator+(const Rational &rhs) const;
-        const Rational operator-(const Rational &rhs) const;
-        const Rational operator*(const Rational &rhs) const;
-        const Rational operator/(const Rational &rhs) const;
+        Rational operator+(const Rational &rhs) const;
+        Rational operator-(const Rational &rhs) const;
+        Rational operator*(const Rational &rhs) const;
+        Rational operator/(const Rational &rhs) const;
 
-        const bool operator<(const Rational &rhs) const;
-        const bool operator<=(const Rational &rhs) const;
-        const bool operator==(const Rational &rhs) const;
-        const bool operator>=(const Rational &rhs) const;
-        const bool operator>(const Rational &rhs) const;
+        bool operator<(const Rational &rhs) const;
+        bool operator<=(const Rational &rhs) const;
+        bool operator==(const Rational &rhs) const;
+        bool operator>=(const Rational &rhs) const;
+        bool operator>(const Rational &rhs) const;
 
         /* fast shortcut to check if a rational is less than one half */
-        const bool less_than_one_half( ) const;
+        bool less_than_one_half( ) const;
 
     protected:
         /* Always call reduce( ) after an update */

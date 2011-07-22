@@ -21,6 +21,14 @@
 #include <pthread.h>
 #include <stdexcept>
 
+#include "posix_util.h"
+
+static void throw_on_error(int ret, const char *msg) {
+    if (ret != 0) {
+        throw POSIXError(msg, ret);
+    }
+}
+
 Mutex::Mutex( ) {
     pthread_mutexattr_t attr;
 
@@ -46,9 +54,7 @@ Mutex::~Mutex( ) {
 }
 
 void Mutex::lock( ) {
-    if (pthread_mutex_lock(&mut) != 0) {
-        throw std::runtime_error("Failed to lock mutex");
-    }
+    throw_on_error(pthread_mutex_lock(&mut), "Failed to lock mutex");
 }
 
 void Mutex::unlock( ) {

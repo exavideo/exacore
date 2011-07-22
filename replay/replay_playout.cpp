@@ -20,9 +20,11 @@
 #include "replay_playout.h"
 #include "raw_frame.h"
 #include "mjpeg_codec.h"
+#include <string.h>
 
 /* FIXME hardcoded 1920x1080 decoding */
-ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : dec(1920, 1080) {
+ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : 
+        current_pos(0), field_rate(0), dec(1920, 1080) {
     oadp = oadp_;
     current_source = NULL;
     running = false;
@@ -36,7 +38,7 @@ ReplayPlayout::~ReplayPlayout( ) {
 void ReplayPlayout::roll_shot(ReplayShot *shot) {
     MutexLock l(m);
     current_source = shot->source;
-    field_rate = Rational(1,2);
+    field_rate = Rational(1,12);
     current_pos = Rational((int) shot->start);
 }
 
@@ -46,12 +48,9 @@ void ReplayPlayout::stop( ) {
 }
 
 void ReplayPlayout::run_thread( ) {
-    ReplayBuffer *source;
-    timecode_t tc;
-    Mjpeg422Decoder dec(1920, 1080);
     ReplayRawFrame *monitor_frame;
 
-    Rational pos;
+    Rational pos(0);
     ReplayFrameData rfd1, rfd2;
     ReplayFrameData rfd_cache;
     RawFrame *f_cache = NULL;
@@ -61,6 +60,8 @@ void ReplayPlayout::run_thread( ) {
     for (;;) {
         get_and_advance_current_fields(rfd1, rfd2, pos);
         
+        out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+
         if (rfd1.data_ptr == NULL) {
             /* out = something... */
         } else {
@@ -75,7 +76,7 @@ void ReplayPlayout::run_thread( ) {
         monitor.put(monitor_frame);
 
         /* send the full CbYCrY frame to output */
-        oadp->input_pipe( ).put(frame);
+        oadp->input_pipe( ).put(out);
     }
 }
 
@@ -85,6 +86,7 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
     timecode_t tc;
 
     if (current_source != NULL) {
+        pos = current_pos;
         tc = current_pos.integer_part( );
         current_source->get_readable_frame(tc, f1);
 
@@ -95,16 +97,26 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
             f1.use_top_field = true;
         }
 
+        fprintf(stderr, "f1: %d %s ", (int) tc, f1.use_top_field ? "top" : "bottom");
+        fprintf(stderr, "[pos=%d/%d ", current_pos.num( ), current_pos.denom( ));
+        fprintf(stderr, "fp=%d/%d]\n", current_pos.fractional_part( ).num( ), current_pos.fractional_part( ).denom( ));
+
         current_pos += field_rate;
         
         tc = current_pos.integer_part( );
         current_source->get_readable_frame(tc, f2);
         
         if (current_pos.fractional_part( ).less_than_one_half( )) {
-            f1.use_top_field = false;
+            f2.use_top_field = false;
         } else {
-            f1.use_top_field = true;
+            f2.use_top_field = true;
         }
+
+        fprintf(stderr, "f2: %d %s ", (int) tc, f2.use_top_field ? "top" : "bottom");
+        fprintf(stderr, "[pos=%d/%d ", current_pos.num( ), current_pos.denom( ));
+        fprintf(stderr, "fp=%d/%d]\n", current_pos.fractional_part( ).num( ), current_pos.fractional_part( ).denom( ));
+
+        current_pos += field_rate;
     } else {
         f1.data_ptr = NULL;
         f2.data_ptr = NULL;
@@ -117,10 +129,18 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         ReplayFrameData &cache_data, RawFrame *&cache_frame,
         bool is_first_field) {
 
+    if (is_first_field) {
+        //fprintf(stderr, "top field <- frame %d %s field\n",
+        //        (int) field.pos, field.use_top_field ? "top" : "bottom");
+    } else {
+        //fprintf(stderr, "bottom field <- frame %d %s field\n",
+        //        (int) field.pos, field.use_top_field ? "top" : "bottom");
+    }
+
     /* decode the field data if we don't have it cached */
     if (field.data_ptr != cache_data.data_ptr) {
         delete cache_frame;
-        cache_frame = dec->decode(field.data_ptr, field.data_size);
+        cache_frame = dec.decode(field.data_ptr, field.data_size);
         cache_data = field;
     }
 
@@ -129,25 +149,25 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
     /* FIXME: all this memcpy-ing is looking ugly (but maybe hard to avoid) */
     if (!is_first_field && field.use_top_field) {
         /* case 1: copying a top field to a top field */
-        for (coord_t i = 0; i < cache_frame.h( ); i += 2) {
+        for (coord_t i = 0; i < cache_frame->h( ); i += 2) {
             memcpy(out->scanline(i), cache_frame->scanline(i), 
                     cache_frame->pitch( )); 
         }
     } else if (is_first_field && !field.use_top_field) {
         /* case 2: copying a bottom field to a bottom field */
-        for (coord_t i = 1; i < cache_frame.h( ); i += 2) {
+        for (coord_t i = 1; i < cache_frame->h( ); i += 2) {
             memcpy(out->scanline(i), cache_frame->scanline(i),
                     cache_frame->pitch( ));
         }
     } else if (is_first_field && field.use_top_field) {
         /* case 3: copying a top field into a bottom field */
-        for (coord_t i = 0; i < cache_frame.h( ); i += 2) {
+        for (coord_t i = 0; i < cache_frame->h( ); i += 2) {
             memcpy(out->scanline(i + 1), cache_frame->scanline(i),
                     cache_frame->pitch( ));
         }
     } else if (!is_first_field && !field.use_top_field) {
         /* case 4: copying a bottom field into a top field */
-        for (coord_t i = 1; i < cache_frame.h( ); i += 2) {
+        for (coord_t i = 1; i < cache_frame->h( ); i += 2) {
             memcpy(out->scanline(i - 1), cache_frame->scanline(i),
                     cache_frame->pitch( ));
         }

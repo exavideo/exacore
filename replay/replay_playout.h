@@ -27,6 +27,7 @@
 #include "replay_buffer.h"
 #include "async_port.h"
 #include "rational.h"
+#include "mjpeg_codec.h"
 
 class ReplayPlayout : public Thread {
     public:

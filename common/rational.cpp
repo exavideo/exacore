@@ -17,8 +17,9 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common/rational.h"
+#include "rational.h"
 #include <assert.h>
+#include <stdio.h>
 
 Rational::Rational(int number) {
     _num = number;
@@ -30,7 +31,7 @@ Rational::Rational(int num, int denom) {
     _denom = denom;
 
     if (_denom < 0) {
-      throw RationalDivisionByZeroException; 
+        throw RationalDivisionByZeroException( ); 
     }
 
     reduce( );
@@ -49,8 +50,8 @@ int Rational::denom( ) const {
     return _denom;
 }
 
-const int Rational::integer_part( ) const {
-    if (num > 0) {
+int Rational::integer_part( ) const {
+    if (_num > 0) {
         return _num / _denom;
     } else {
         /* avoid "implementation-defined" behavior */
@@ -58,8 +59,8 @@ const int Rational::integer_part( ) const {
     }
 }
 
-const Rational Rational::fractional_part( ) const {
-    if (num > 0) {
+Rational Rational::fractional_part( ) const {
+    if (_num > 0) {
         return Rational(_num % _denom, _denom);
     } else {
         /* work around potential C++ weirdness */
@@ -67,7 +68,7 @@ const Rational Rational::fractional_part( ) const {
     }
 }
 
-const Rational Rational::inverse( ) const {
+Rational Rational::inverse( ) const {
     return Rational(_denom, _num);
 };
 
@@ -78,12 +79,12 @@ const Rational &Rational::operator=(const Rational &rhs) {
     return *this;
 }
 
-const Rational operator-( ) const {
+Rational Rational::operator-( ) const {
     return Rational(-_num, _denom); 
 }
 
-const Rational &operator+=(const Rational &rhs) {
-    int cd = lcm(_denom, &rhs._denom);
+const Rational &Rational::operator+=(const Rational &rhs) {
+    int cd = lcm(_denom, rhs._denom);
     int m1 = cd / _denom;
     int m2 = cd / rhs._denom;
 
@@ -94,57 +95,59 @@ const Rational &operator+=(const Rational &rhs) {
     return *this;
 }
 
-const Rational &operator-=(const Rational &rhs) {
-    this += -rhs;
+const Rational &Rational::operator-=(const Rational &rhs) {
+    *this += -rhs;
     return *this;
 }
 
-const Rational &operator*=(const Rational &rhs) {
-    _num *= _rhs.num( );
-    _denom *= _rhs.denom( );
+const Rational &Rational::operator*=(const Rational &rhs) {
+    _num *= rhs.num( );
+    _denom *= rhs.denom( );
     reduce( );
 
     return *this;
 }
 
-const Rational &operator/=(const Rational &rhs) {
-    this *= _rhs.inverse( );
+const Rational &Rational::operator/=(const Rational &rhs) {
+    *this *= rhs.inverse( );
     return *this;
 }
 
-const Rational operator+(const Rational &rhs) const {
+Rational Rational::operator+(const Rational &rhs) const {
     Rational result(*this);
     result += rhs;
     return result;
 }
 
-const Rational operator-(const Rational &rhs) const {
+Rational Rational::operator-(const Rational &rhs) const {
     Rational result(*this);
     result -= rhs;
     return result;
 }
 
-const Rational operator*(const Rational &rhs) const {
+Rational Rational::operator*(const Rational &rhs) const {
     Rational result(*this);
     result *= rhs;
     return result;
 }
 
-const Rational operator/(const Rational &rhs) const {
+Rational Rational::operator/(const Rational &rhs) const {
     Rational result(*this);
     result /= rhs;
     return result;
 }
 
-const bool Rational::less_than_one_half( ) const {
-    if (_num < _denom / 2) {
+bool Rational::less_than_one_half( ) const {
+    if (2 * _num < _denom) {
+        fprintf(stderr, "%d/%d < 1/2\n", _num, _denom);
         return true;
     } else {
+        fprintf(stderr, "%d/%d >= 1/2\n", _num, _denom);
         return false;
     }
 }
 
-static int Rational::gcd(int a, int b) {
+int Rational::gcd(int a, int b) {
     int gcd;
 
     assert(a != 0 || b != 0);
@@ -169,7 +172,7 @@ static int Rational::gcd(int a, int b) {
     return gcd;
 }
 
-static int Rational::lcm(int a, int b) {
+int Rational::lcm(int a, int b) {
     assert(a > 0);
     assert(b > 0);
 
@@ -177,15 +180,15 @@ static int Rational::lcm(int a, int b) {
 }
 
 void Rational::reduce(void) {
-    assert(denom != 0);
+    assert(_denom != 0);
 
     /* move any negative signs to the numerator */
     if (_denom < 0) {
-        _num = -num;
-        _denom = -denom;
+        _num = -_num;
+        _denom = -_denom;
     }
 
-    int gc = gcd(_num, _denum);
+    int gc = gcd(_num, _denom);
     _num /= gc;
     _denom /= gc;
 }
