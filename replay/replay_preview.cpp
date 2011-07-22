@@ -32,8 +32,6 @@ ReplayPreview::~ReplayPreview( ) {
 }
 
 void ReplayPreview::change_shot(const ReplayShot &shot) {
-    fprintf(stderr, "Preview: updating shot\n");
-
     MutexLock l(m);
     current_shot = shot;
     current_pos = shot.start;
@@ -48,8 +46,6 @@ void ReplayPreview::get_shot(ReplayShot &shot) {
 
 void ReplayPreview::seek(timecode_t delta) {
     /* FIXME: do some more error checking here */
-    fprintf(stderr, "Preview: seeking\n");
-
     MutexLock l(m);
     current_pos += delta;
     update_monitor = true;
@@ -84,7 +80,6 @@ void ReplayPreview::run_thread( ) {
 
             /* decode at 1/2 size */
             new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 2);
-            fprintf(stderr, "replay monitor frame: %dx%d", (int) new_frame->w( ), (int) new_frame->h( ));
 
             /* send to multiview */
             monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
@@ -109,7 +104,6 @@ void ReplayPreview::wait_update(ReplayFrameData &rfd) {
 
     update_monitor = false;
 
-    fprintf(stderr, "updating monitor\n");
     /* grab the frame from the buffer */
     current_shot.source->get_readable_frame(current_pos, rfd);
 }
