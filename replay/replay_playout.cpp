@@ -97,10 +97,6 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
             f1.use_top_field = true;
         }
 
-        fprintf(stderr, "f1: %d %s ", (int) tc, f1.use_top_field ? "top" : "bottom");
-        fprintf(stderr, "[pos=%d/%d ", current_pos.num( ), current_pos.denom( ));
-        fprintf(stderr, "fp=%d/%d]\n", current_pos.fractional_part( ).num( ), current_pos.fractional_part( ).denom( ));
-
         current_pos += field_rate;
         
         tc = current_pos.integer_part( );
@@ -111,10 +107,6 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         } else {
             f2.use_top_field = true;
         }
-
-        fprintf(stderr, "f2: %d %s ", (int) tc, f2.use_top_field ? "top" : "bottom");
-        fprintf(stderr, "[pos=%d/%d ", current_pos.num( ), current_pos.denom( ));
-        fprintf(stderr, "fp=%d/%d]\n", current_pos.fractional_part( ).num( ), current_pos.fractional_part( ).denom( ));
 
         current_pos += field_rate;
     } else {
@@ -128,14 +120,6 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
 void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         ReplayFrameData &cache_data, RawFrame *&cache_frame,
         bool is_first_field) {
-
-    if (is_first_field) {
-        //fprintf(stderr, "top field <- frame %d %s field\n",
-        //        (int) field.pos, field.use_top_field ? "top" : "bottom");
-    } else {
-        //fprintf(stderr, "bottom field <- frame %d %s field\n",
-        //        (int) field.pos, field.use_top_field ? "top" : "bottom");
-    }
 
     /* decode the field data if we don't have it cached */
     if (field.data_ptr != cache_data.data_ptr) {

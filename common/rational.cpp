@@ -139,10 +139,8 @@ Rational Rational::operator/(const Rational &rhs) const {
 
 bool Rational::less_than_one_half( ) const {
     if (2 * _num < _denom) {
-        fprintf(stderr, "%d/%d < 1/2\n", _num, _denom);
         return true;
     } else {
-        fprintf(stderr, "%d/%d >= 1/2\n", _num, _denom);
         return false;
     }
 }
