@@ -201,7 +201,6 @@ class RawFrameConverter {
         RawFrame *f;
 
         RawFrame *match_frame(RawFrame::PixelFormat pf) {
-            fprintf(stderr, "matching frame to %p\n", f);
             return new RawFrame(f->w( ), f->h( ), pf);
         }
 };
