@@ -25,6 +25,7 @@
 #include "unpack_CbYCrY8422.h"
 #include "draw_CbYCrY8422.h"
 #include "draw_BGRAn8.h"
+#include <string.h>
 
 RawFrame::RawFrame( ) {
     _pixel_format = UNDEF;
@@ -181,6 +182,33 @@ ssize_t RawFrame::read_from_fd(int fd) {
 }
 
 ssize_t RawFrame::write_to_fd(int fd) {
+    return write_all(fd, _data, size( ));
+}
+
+ssize_t RawFrame::write_tga_to_fd(int fd) {
+    uint8_t tga_header[18];
+
+    memset(tga_header, 0, sizeof(tga_header));
+
+    tga_header[0] = 0;  /* no image ID */
+    tga_header[1] = 0;  /* no color map */
+    tga_header[2] = 2;  /* uncompressed, true-color */
+    /* 3 through 7 are for color map data */
+    tga_header[12] = _w & 0xff;     /* image width */
+    tga_header[13] = (_w >> 8) & 0xff;
+    tga_header[14] = _h & 0xff;     /* image height */
+    tga_header[15] = (_h >> 8) & 0xff;
+    tga_header[16] = minpitch( ) / _w * 8;
+    switch (_pixel_format) {
+        case RGBAn8:
+        case BGRAn8:
+        case YCbCrAn8:
+            tga_header[17] = 0x28;
+        default:
+            tga_header[17] = 0x20;
+    }
+
+    write_all(fd, tga_header, sizeof(tga_header));
     return write_all(fd, _data, size( ));
 }
 

@@ -56,6 +56,7 @@ class RawFrame {
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
         ssize_t write_to_fd(int fd);
+        ssize_t write_tga_to_fd(int fd);
 #endif
 
         RawFramePacker *pack;
