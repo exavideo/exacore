@@ -124,3 +124,15 @@ tests/fbdev: $(test_fbdev_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/fbdev    
+
+test_freetype_test_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(graphics_OBJECTS) \
+    $(thread_OBJECTS) \
+	tests/freetype_test.o
+
+tests/freetype_test: $(test_freetype_test_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
+
+all_TARGETS += tests/freetype_test    
