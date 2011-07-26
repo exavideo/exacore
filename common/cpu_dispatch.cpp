@@ -20,9 +20,12 @@
 #include "cpu_dispatch.h"
 #include <stdio.h>
 
-#define cpuid(f,a,b,c,d) \
-    __asm__ __volatile__("cpuid":\
-        "=a" (a), "=b" (b), "=c" (c), "=d" (d) : "a" (f));
+#define cpuid(f,c,d) \
+    __asm__ __volatile__( \
+            "push %%ebx; " \
+            "mov %2, %%eax; cpuid; mov %%ecx, %0; mov %%edx, %1; " \
+            "pop %%ebx; " : \
+        "=r" (c), "=r" (d) : "r" (f) : "%eax","%ecx","%edx");
 
 static bool force_no_simd = false;
 static bool cpuid_done = false;
@@ -48,9 +51,8 @@ static void print_cpu_info( ) {
 }
 
 static void cpuid_init( ) {
-    int a, b;
     if (!cpuid_done) {
-        cpuid(0x1, a, b, cpuid_ecx, cpuid_edx);
+        cpuid(0x1, cpuid_ecx, cpuid_edx);
         cpuid_done = true;
 
         print_cpu_info( );
