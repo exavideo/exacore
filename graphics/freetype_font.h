@@ -37,13 +37,17 @@ class FreetypeFont {
         ~FreetypeFont( );
 
         void set_size(unsigned int n_pixels);
-
+        void set_fgcolor(int r, int g, int b, int a);
+        void set_bgcolor(int r, int g, int b, int a); 
         RawFrame *render_string(const char *string);
     private:
         static void do_library_init( );
         static FT_Library library;
         FT_Face face;
         int _h, _baseline;
+
+        int rb, gb, bb, ab;
+        int rf, gf, bf, af;
 };
 
 #endif
