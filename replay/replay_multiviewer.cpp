@@ -48,15 +48,15 @@ void ReplayMultiviewer::run_thread( ) {
             const SourceParams &src = sources[i];
             ReplayRawFrame *f = src.source->get( );
             if (f != NULL) {
+                render_text(f);
                 dpy->draw->blit(src.x, src.y, f->frame_data);
-                render_text(f, src.x, src.y);
             }
         }
         dpy->flip( );
     }
 }
 
-void ReplayMultiviewer::render_text(ReplayRawFrame *f, coord_t x, coord_t y) {
+void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
     int w = f->frame_data->w( );
     int h = f->frame_data->h( );
 
@@ -78,19 +78,19 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f, coord_t x, coord_t y) {
              */
             text = large_font->render_string(f->source_name);
         }
-        xt = x + w / 2 - text->w( ) / 2;
-        yt = y + h - text->h( );
-        dpy->draw->alpha_key(xt, yt, text, 255);
+        xt = w / 2 - text->w( ) / 2;
+        yt = h - text->h( );
+        f->frame_data->draw->alpha_key(xt, yt, text, 255);
         delete text;
 
         if (f->source_name2 != NULL) {
             /*
              * render the second source name on top of the primary
              */
-            text = small_font->render_string(f->source_name2);
-            xt = x + w / 2 - text->w( ) / 2;
+            text = small_font->render_string(f->source_name);
+            xt = w / 2 - text->w( ) / 2;
             yt = yt - text->h( );
-            dpy->draw->alpha_key(xt, yt, text, 255);
+            f->frame_data->draw->alpha_key(xt, yt, text, 255);
             delete text;
         }
     }
@@ -131,6 +131,6 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f, coord_t x, coord_t y) {
 
     RawFrame *text = small_font->render_string(timecode_buf);
     /* draw timecode at top left corner */
-    dpy->draw->alpha_key(x, y, text, 255);
+    f->frame_data->draw->alpha_key(0, 0, text, 255);
     delete text;
 }

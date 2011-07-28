@@ -44,7 +44,7 @@ class ReplayMultiviewer : public Thread {
 
     protected:
         void run_thread( );
-        void render_text(ReplayRawFrame *f, coord_t x, coord_t y);
+        void render_text(ReplayRawFrame *f);
         DisplaySurface *dpy;
         
         FreetypeFont *large_font;
