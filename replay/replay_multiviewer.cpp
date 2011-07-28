@@ -18,14 +18,20 @@
  */
 
 #include "replay_multiviewer.h"
+#include "freetype_font.h"
 #include <stdio.h>
 
 ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     dpy = dpy_;
+    large_font = new FreetypeFont("../fonts/Inconsolata.ttf");
+    large_font->set_size(30);
+    small_font = new FreetypeFont("../fonts/Inconsolata.ttf");
+    large_font->set_size(10);
 }
 
 ReplayMultiviewer::~ReplayMultiviewer( ) {
-
+    delete large_font;
+    delete small_font;
 }
 
 void ReplayMultiviewer::add_source(const SourceParams &params) {
@@ -43,8 +49,88 @@ void ReplayMultiviewer::run_thread( ) {
             ReplayRawFrame *f = src.source->get( );
             if (f != NULL) {
                 dpy->draw->blit(src.x, src.y, f->frame_data);
+                render_text(f, src.x, src.y);
             }
         }
         dpy->flip( );
     }
+}
+
+void ReplayMultiviewer::render_text(ReplayRawFrame *f, coord_t x, coord_t y) {
+    int w = f->frame_data->w( );
+    int h = f->frame_data->h( );
+
+    int xt, yt;
+
+    /* source names */
+    if (f->source_name != NULL) {
+        RawFrame *text;
+        if (f->source_name2 == NULL) {
+            /* 
+             * a simple source, probably an ingest
+             * just render its name centered at the bottom
+             */
+            text = small_font->render_string(f->source_name);
+        } else {
+            /*
+             * complex source like program or preview
+             * render its name larger... we'll render the subtitle later
+             */
+            text = large_font->render_string(f->source_name);
+        }
+        xt = x + w / 2 - text->w( ) / 2;
+        yt = y + h - text->h( );
+        dpy->draw->alpha_key(xt, yt, text, 255);
+        delete text;
+
+        if (f->source_name2 != NULL) {
+            /*
+             * render the second source name on top of the primary
+             */
+            text = small_font->render_string(f->source_name);
+            xt = x + w / 2 - text->w( ) / 2;
+            yt = yt - text->h( );
+            dpy->draw->alpha_key(xt, yt, text, 255);
+            delete text;
+        }
+    }
+
+    /* timecode */
+    #define TIMECODE_BUF_SIZE 80
+    #define TIMECODE_FPS 30
+    char timecode_buf[TIMECODE_BUF_SIZE];
+    timecode_buf[TIMECODE_BUF_SIZE - 1] = 0;
+    
+    int hours, minutes, seconds, frames;
+    /* decompose integer timecode part */
+    frames = f->tc;
+    
+    seconds = frames / TIMECODE_FPS;
+    frames %= TIMECODE_FPS;
+
+    minutes = seconds / 60;
+    seconds %= 60;
+    
+    hours = minutes / 60;
+    minutes %= 60;
+    
+    if (f->fractional_tc == Rational(0)) {
+        /* no fractional part so don't take up space */
+        snprintf(timecode_buf, TIMECODE_BUF_SIZE - 1,
+                "%02d:%02d:%02d:%02d",
+                hours, minutes, seconds, frames);
+    } else {
+        /* include the fractional part when present */
+        snprintf(timecode_buf, TIMECODE_BUF_SIZE - 1,
+                "%02d:%02d:%02d:%02d %d/%d",
+                hours, minutes, seconds, frames,
+                f->fractional_tc.num( ),
+                f->fractional_tc.denom( )
+        );
+    }
+
+    RawFrame *text = small_font->render_string(timecode_buf);
+    /* draw timecode at top left corner */
+    dpy->draw->alpha_key(x, y, text, 255);
+    delete text;
 }
