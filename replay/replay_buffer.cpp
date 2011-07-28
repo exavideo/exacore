@@ -26,10 +26,12 @@
 #include <sys/mman.h>
 
 #include <stdio.h>
-
+#include <string.h>
+#include <stdlib.h>
+#include <stdexcept>
 
 ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
-        size_t frame_size) {
+        size_t frame_size, const char *name) {
     int error;
 
     /* open and allocate buffer file */
@@ -55,6 +57,10 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
     this->buffer_size = buffer_size;
     this->frame_size = frame_size;
     this->n_frames = buffer_size / frame_size;
+    this->name = strdup(name);
+    if (this->name == NULL) {
+        throw std::runtime_error("allocation failure");
+    }
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
@@ -65,6 +71,8 @@ ReplayBuffer::~ReplayBuffer( ) {
     if (close(fd) != 0) {
         throw POSIXError("close");
     }
+
+    free(name);
 }
 
 ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
@@ -133,4 +141,6 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     frame_data.data_size = frame_size;
 }
 
-
+const char *ReplayBuffer::get_name( ) {
+    return name;
+}

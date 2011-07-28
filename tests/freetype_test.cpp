@@ -21,9 +21,11 @@
 #include <unistd.h>
 
 int main( ) {
-    FreetypeFont droid_sans("../fonts/DejaVuLGCSans-Bold.ttf");
-    droid_sans.set_size(72);
-    RawFrame *text = droid_sans.render_string("PREVIEW");
+    FreetypeFont droid_sans("../fonts/Inconsolata.otf");
+    droid_sans.set_size(20);
+    droid_sans.set_fgcolor(255, 255, 255, 255);
+    droid_sans.set_bgcolor(0, 0, 0, 192);
+    RawFrame *text = droid_sans.render_string("01:02:03:04 5/6");
 
     text->write_tga_to_fd(STDOUT_FILENO);
     delete text;

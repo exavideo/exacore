@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "raw_frame.h"
+#include "rational.h"
 
 class ReplayBuffer;
 
@@ -55,13 +56,20 @@ struct ReplayFrameData {
  * them when they go out of scope.
  */
 struct ReplayRawFrame {
-    ReplayRawFrame(RawFrame *f) { frame_data = f; }
+    ReplayRawFrame(RawFrame *f) : fractional_tc(0) { 
+        frame_data = f; 
+        source_name = NULL;
+        source_name2 = NULL;
+        tc = 0;
+    }
     ~ReplayRawFrame( ) { delete frame_data; }
 
     RawFrame *frame_data;
     /* other stuff goes here */
     const char *source_name;
+    const char *source_name2;
     timecode_t tc;
+    Rational fractional_tc;
 };
 
 #endif

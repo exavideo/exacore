@@ -33,7 +33,8 @@ class ReplayBuffer {
     public:
         enum whence_t { ZERO, START, END };
 
-        ReplayBuffer(const char *path, size_t buffer_size, size_t frame_size);
+        ReplayBuffer(const char *path, size_t buffer_size, size_t frame_size,
+                const char *name="(unnamed)");
         ~ReplayBuffer( );
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
@@ -43,12 +44,15 @@ class ReplayBuffer {
 
         void get_readable_frame(timecode_t tc, ReplayFrameData &frame_data);
 
+        const char *get_name( );
+
     private:
+        char *name;
         int fd;
 
         size_t buffer_size;
         size_t frame_size;
-        unsigned int n_frames;
+        timecode_t n_frames;
 
         uint8_t *data;
 

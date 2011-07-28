@@ -52,6 +52,11 @@ void ReplayIngest::run_thread( ) {
         monitor_frame = new ReplayRawFrame(
             input->convert->BGRAn8_scale_1_4( )
         );
+        
+        /* fill in monitor status info */
+        monitor_frame->source_name = buf->get_name( );
+        monitor_frame->tc = dest.pos;
+
         monitor.put(monitor_frame);
         
         delete input;

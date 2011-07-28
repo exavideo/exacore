@@ -84,9 +84,14 @@ void ReplayPreview::run_thread( ) {
             /* send to multiview */
             monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
             delete new_frame;
+            
+            /* fill in timecode and source info for monitor */
+            monitor_frame->source_name = "Preview";
+            monitor_frame->source_name2 = rfd.source->get_name( );
+            monitor_frame->tc = rfd.pos;
+
             monitor.put(monitor_frame);
         } catch (ReplayFrameNotFoundException &e) {
-            /* catching the exception here = segfault?? */
             fprintf(stderr, "replay preview: frame not found\n");
             /* FIXME: put some indication up on the monitor (or get back on the end) */;
         }

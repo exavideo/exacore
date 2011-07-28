@@ -35,6 +35,9 @@ FreetypeFont::FreetypeFont(const char *font_file, FT_Long index) {
     _h = 0;
     face = NULL;
     FTCHK(FT_New_Face(library, font_file, index, &face));
+
+    rb = gb = bb = ab = 0;
+    rf = gf = bf = af = 255;
 }
 
 void FreetypeFont::set_size(unsigned int n_pixels) {
@@ -50,34 +53,80 @@ void FreetypeFont::set_size(unsigned int n_pixels) {
     _baseline = _h + face->size->metrics.descender / 64;
 }
 
+void FreetypeFont::set_fgcolor(int r, int g, int b, int a) {
+    rf = r;
+    gf = g;
+    bf = b;
+    af = a;
+}
+
+void FreetypeFont::set_bgcolor(int r, int g, int b, int a) {
+    rb = r;
+    gb = g;
+    bb = b;
+    ab = a;
+}
+
 RawFrame *FreetypeFont::render_string(const char *string) {
     int x;
     RawFrame *ret;
     FT_GlyphSlot slot = face->glyph;
+    FT_Bool use_kerning = FT_HAS_KERNING(face);
+    FT_UInt glyph_index, previous;
+
     uint8_t *glyph_scanline;
 
     x = 0;
+    previous = 0;
 
     /* first compute the size of the resulting image */
     const char *scan_ptr = string;
     while (*scan_ptr != '\0') {
-        FTCHK(FT_Load_Char(face, *scan_ptr, FT_LOAD_DEFAULT));
+        glyph_index = FT_Get_Char_Index(face, *scan_ptr);
         scan_ptr++;
 
+        if (use_kerning && previous != 0 && glyph_index != 0) {
+            FT_Vector delta;
+            FT_Get_Kerning(face, previous, glyph_index, 
+                    FT_KERNING_DEFAULT, &delta);
+            x += delta.x / 64;
+        }
+
+        FTCHK(FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT));
+
         x += slot->advance.x / 64;
+
+        previous = glyph_index;
     }
 
     /* initialize a raw frame */
     ret = new RawFrame(x, _h, RawFrame::BGRAn8);
-    memset(ret->data( ), 0, ret->size( ));    
     
     /* second pass: draw it */
     scan_ptr = string;
     int xd = 0;
-    uint8_t *dest_scanline;
+    previous = 0;
+    uint8_t *dest_scanline = ret->data( );
+
+    for (unsigned int i = 0; i < ret->size( ); i += 4) {
+        dest_scanline[i] = bb;
+        dest_scanline[i+1] = gb;
+        dest_scanline[i+2] = rb;
+        dest_scanline[i+3] = ab;
+    }
+
     while (*scan_ptr != '\0') {
-        FTCHK(FT_Load_Char(face, *scan_ptr, FT_LOAD_RENDER));
+        glyph_index = FT_Get_Char_Index(face, *scan_ptr);
         scan_ptr++;
+
+        if (use_kerning && previous != 0 && glyph_index != 0) {
+            FT_Vector delta;
+            FT_Get_Kerning(face, previous, glyph_index,
+                    FT_KERNING_DEFAULT, &delta);
+            xd += delta.x / 64;
+        }
+
+        FTCHK(FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER));
 
         //int yd = -(slot->bitmap_top);
         int yd = _baseline - slot->bitmap_top;
@@ -89,17 +138,22 @@ RawFrame *FreetypeFont::render_string(const char *string) {
                 int xd2 = xd;
                 for (int x = 0; x < slot->bitmap.width && xd2 < ret->w( ); 
                         x++, xd2++) {
-                    /* for now... just draw in white with font as alpha */
-                    dest_scanline[0] = 0xff;
-                    dest_scanline[1] = 0xff;
-                    dest_scanline[2] = 0xff;
-                    dest_scanline[3] = glyph_scanline[x];
+
+                    dest_scanline[0] = (bf * glyph_scanline[x] 
+                            + bb * (255 - glyph_scanline[x])) / 255;
+                    dest_scanline[1] = (gf * glyph_scanline[x]
+                            + gb * (255 - glyph_scanline[x])) / 255;
+                    dest_scanline[2] = (rf * glyph_scanline[x]
+                            + rb * (255 - glyph_scanline[x])) / 255;
+                    dest_scanline[3] = (af * glyph_scanline[x]
+                            + ab * (255 - glyph_scanline[x])) / 255;
                     dest_scanline += 4;
                 }
             }
         }
 
         xd += slot->advance.x / 64;
+        previous = glyph_index;
     }
 
     return ret;

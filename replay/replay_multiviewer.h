@@ -26,6 +26,8 @@
 #include "async_port.h"
 #include "replay_data.h"
 
+class FreetypeFont;
+
 class ReplayMultiviewer : public Thread {
     public:
         ReplayMultiviewer(DisplaySurface *dpy_);
@@ -42,7 +44,11 @@ class ReplayMultiviewer : public Thread {
 
     protected:
         void run_thread( );
+        void render_text(ReplayRawFrame *f, coord_t x, coord_t y);
         DisplaySurface *dpy;
+        
+        FreetypeFont *large_font;
+        FreetypeFont *small_font;
 
         std::vector<SourceParams> sources;
 };

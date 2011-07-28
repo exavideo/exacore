@@ -21,11 +21,14 @@
 #define _OPENREPLAY_DRAW_BGRAN8_H
 
 void BGRAn8_blit_default(RawFrame *bkgd, RawFrame *src, coord_t x, coord_t y);
+void BGRAn8_alpha_key_default(RawFrame *bkgd, RawFrame *key, 
+        coord_t x, coord_t y, uint8_t galpha);
 
 class BGRAn8DrawOps : public RawFrameDrawOps {
     public:
         BGRAn8DrawOps(RawFrame *f_) : RawFrameDrawOps(f_) {
             do_blit = BGRAn8_blit_default;
+            do_alpha_blend = BGRAn8_alpha_key_default;
         }
 };
 
