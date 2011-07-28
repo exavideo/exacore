@@ -190,3 +190,11 @@ void Rational::reduce(void) {
     _num /= gc;
     _denom /= gc;
 }
+
+bool Rational::operator==(const Rational &rhs) const {
+    if (_num == rhs._num && _denom == rhs._denom) {
+        return true;
+    } else {
+        return false;
+    }
+}

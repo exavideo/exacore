@@ -8,6 +8,7 @@ replay_replay_test_OBJECTS = \
     $(drivers_decklink_OBJECTS) \
     $(thread_OBJECTS) \
     $(display_surface_OBJECTS) \
+    $(graphics_OBJECTS) \
     replay/replay_buffer.o \
     replay/replay_ingest.o \
     replay/replay_preview.o \
@@ -16,7 +17,7 @@ replay_replay_test_OBJECTS = \
     replay/replay_test.o
 
 replay/replay_test: $(replay_replay_test_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += replay/replay_test
 
