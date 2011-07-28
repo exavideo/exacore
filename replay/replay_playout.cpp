@@ -73,6 +73,17 @@ void ReplayPlayout::run_thread( ) {
         monitor_frame = new ReplayRawFrame(
             out->convert->BGRAn8_scale_1_2( )
         );
+
+        /* fill in timecode and other goodies for monitor */
+        monitor_frame->source_name = "Program";
+        if (rfd1.data_ptr != NULL) {
+            monitor_frame->source_name2 = rfd1.source->get_name( );
+            monitor_frame->tc = pos.integer_part( );
+            monitor_frame->fractional_tc = pos.fractional_part( );
+        } else {
+            monitor_frame->source_name2 = "No Clip";
+        }
+
         monitor.put(monitor_frame);
 
         /* send the full CbYCrY frame to output */
