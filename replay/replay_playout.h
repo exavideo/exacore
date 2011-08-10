@@ -34,10 +34,11 @@ class ReplayPlayout : public Thread {
         ReplayPlayout(OutputAdapter *oadp_);
         ~ReplayPlayout( );
 
-        void roll_shot(ReplayShot *shot);
+        void roll_shot(const ReplayShot &shot);
         void stop( );
 
         AsyncPort<ReplayRawFrame> monitor;
+        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
     protected:
         void run_thread( );

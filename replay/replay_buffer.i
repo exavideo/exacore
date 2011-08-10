@@ -1,7 +1,7 @@
 /*
  * Copyright 2011 Exavideo LLC.
  * 
- * This file is part of openreplay.
+* This file is part of openreplay.
  * 
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +17,18 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+/* ReplayBuffer swig interface */
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
-
-class ReplayIngest : public Thread {
+class ReplayBuffer {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
+        ReplayBuffer(const char *, size_t, size_t, const char * = "(unnamed)");
+        ~ReplayBuffer( );
 
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
+        enum whence_t { ZERO, START, END };
+
+        ReplayShot *make_shot(timecode_t, whence_t = END);
+
+        const char *get_name( );
 };
 
-#endif
-
+%rename("name") ReplayBuffer::get_name( );

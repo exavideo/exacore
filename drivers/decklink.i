@@ -17,28 +17,23 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+%include "raw_frame.i"
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
+%{
+    #include "decklink.h"
+%}
 
-class ReplayIngest : public Thread {
-    public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
+/* FIXME these will leak. For now this is sort of by design. */
 
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
-};
+OutputAdapter *create_decklink_output_adapter(unsigned int, 
+        unsigned int, RawFrame::PixelFormat);
 
-#endif
+OutputAdapter *create_decklink_output_adapter_with_audio(unsigned int, 
+        unsigned int, RawFrame::PixelFormat);
+
+InputAdapter *create_decklink_input_adapter(unsigned int, unsigned int,
+        unsigned int, RawFrame::PixelFormat);
+
+InputAdapter *create_decklink_input_adapter_with_audio(unsigned int, 
+        unsigned int, unsigned int, RawFrame::PixelFormat);
 

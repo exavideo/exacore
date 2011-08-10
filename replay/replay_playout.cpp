@@ -35,11 +35,11 @@ ReplayPlayout::~ReplayPlayout( ) {
     
 }
 
-void ReplayPlayout::roll_shot(ReplayShot *shot) {
+void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     MutexLock l(m);
-    current_source = shot->source;
+    current_source = shot.source;
     field_rate = Rational(1,12);
-    current_pos = Rational((int) shot->start);
+    current_pos = Rational((int) shot.start);
 }
 
 void ReplayPlayout::stop( ) {

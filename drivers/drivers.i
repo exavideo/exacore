@@ -17,28 +17,8 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+class InputAdapter;
+class OutputAdapter;
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
-
-class ReplayIngest : public Thread {
-    public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
-
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
-};
-
-#endif
+%include "decklink.i"
 

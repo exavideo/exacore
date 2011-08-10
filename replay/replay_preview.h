@@ -41,6 +41,7 @@ class ReplayPreview : public Thread {
         void mark_out( );
 
         AsyncPort<ReplayRawFrame> monitor;
+        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
         class IllegalMarkOutError : public std::exception {
             const char *what( ) const throw() { 

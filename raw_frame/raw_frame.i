@@ -17,28 +17,18 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+%{
+    #include "raw_frame.h"
+%}
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
-
-class ReplayIngest : public Thread {
+%nodefaultctor RawFrame;
+class RawFrame {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
-
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
+        enum PixelFormat { 
+            UNDEF,
+            RGB8, YCbCr8, CbYCrY8422, 
+            RGBAn8, BGRAn8, YCbCrAn8 
+        };
+        RawFrame(coord_t w, coord_t h, PixelFormat pf);
+        virtual ~RawFrame( );
 };
-
-#endif
-

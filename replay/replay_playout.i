@@ -17,28 +17,21 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+%{
+    #include "replay_playout.h"
+%}
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
+%include "typemaps.i"
 
-class ReplayIngest : public Thread {
-    public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
+class ReplayPlayout : public Thread {
+    ReplayPlayout(OutputAdapter *INPUT);
+    ~ReplayPlayout( );
 
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
+    void roll_shot(const ReplayShot &INPUT);
+    void stop( );
+    AsyncPort<ReplayRawFrame> *get_monitor( );
 };
 
-#endif
+%rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
+%rename("monitor") ReplayPlayout::get_monitor( );
 

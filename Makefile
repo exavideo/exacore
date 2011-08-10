@@ -15,18 +15,18 @@ ASM=yasm -f elf64 -g dwarf2
 
 all: do_all_targets
 
-EXTERNAL_INCLUDES = \
-	-I $(DECKLINK_SDK_PATH) \
+EXTERNAL_INCLUDES += \
+	-I$(DECKLINK_SDK_PATH) \
 
 SUBDIR_INCLUDES = \
-	-I mjpeg/ \
-	-I common/ \
-	-I raw_frame/ \
-	-I thread/ \
-	-I drivers/ \
-	-I graphics/ \
-	-I replay/ \
-	-I display_surface \
+	-Imjpeg/ \
+	-Icommon/ \
+	-Iraw_frame/ \
+	-Ithread/ \
+	-Idrivers/ \
+	-Igraphics/ \
+	-Ireplay/ \
+	-Idisplay_surface \
 
 include $(shell find . -iname 'subdir.mk')
 include $(shell find . -iname 'targets.mk')
@@ -50,7 +50,7 @@ include $(all_DEPS)
 	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $^
 
 %.rbcpp : %.i
-	$(SWIG) -Wall -c++ -ruby -o $@ $^
+	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $^
 
 # And one for assembly files
 %.o : %.asm

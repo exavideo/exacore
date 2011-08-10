@@ -21,15 +21,19 @@ replay/replay_test: $(replay_replay_test_OBJECTS)
 
 all_TARGETS += replay/replay_test
 
-replay_swig_test_OBJECTS = \
+replay_replay_so_OBJECTS = \
 	$(common_OBJECTS) \
 	$(mjpeg_OBJECTS) \
 	$(raw_frame_OBJECTS) \
 	$(thread_OBJECTS) \
 	$(display_surface_OBJECTS) \
 	replay/replay_buffer.o \
-	replay/swig_test.rbo 
+	replay/replay_ingest.o \
+	replay/replay_preview.o \
+	replay/replay_playout.o \
+	replay/replay_multiviewer.o \
+	replay/replay_global.rbo 
 
-replay/swig_test.so: $(replay_swig_test_OBJECTS)
+replay/replay.so: $(replay_replay_so_OBJECTS)
 	# maybe???
 	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread
