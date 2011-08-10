@@ -1,5 +1,8 @@
 .*.swp
 *.o
+*.rbcpp
+*.rbo
+*.so
 test_files/*
 *.d
 local.mk
