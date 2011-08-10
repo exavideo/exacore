@@ -35,7 +35,6 @@ class ReplayMultiviewer : public Thread {
 
         struct SourceParams {
             AsyncPort<ReplayRawFrame> *source;
-            const char *source_name;
             coord_t x, y;
         };
 
