@@ -2,9 +2,13 @@
 # Defaults should work well for a 64-bit build on AMD hardware. 
 # 32-bit is not supported for the time being!
 
+SWIG=swig
 CXX=g++
 CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC
+# don't use -Werror for swig-generated code
+SWIG_CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO -fPIC
 LDFLAGS=-g -O3 -march=k8 
+RUBY_INCLUDES=
 ASM=yasm -f elf64 -g dwarf2
 
 -include local.mk
@@ -41,6 +45,12 @@ include $(all_DEPS)
 %.o : %.cpp
 	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -MM -MF $@.d $^
 	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $^ 
+
+%.rbo: %.rbcpp
+	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $^
+
+%.rbcpp : %.i
+	$(SWIG) -Wall -c++ -ruby -o $@ $^
 
 # And one for assembly files
 %.o : %.asm
