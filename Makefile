@@ -8,7 +8,7 @@ CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC
 # don't use -Werror for swig-generated code
 SWIG_CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO -fPIC
 LDFLAGS=-g -O3 -march=k8 
-RUBY_INCLUDES=
+RUBY_INCLUDES=`ruby ruby_cflags.rb`
 ASM=yasm -f elf64 -g dwarf2
 
 -include local.mk
