@@ -59,7 +59,9 @@ include $(all_DEPS)
 do_all_targets: $(all_TARGETS)
 
 clean:
-	find . -iname '*.o' | xargs rm
-	rm -f $(all_TARGETS)
+	-find . -iname '*.o' | xargs rm
+	-find . -iname '*.rbo' | xargs rm
+	-find . -iname '*.rbcpp' | xargs rm
+	-rm -f $(all_TARGETS)
 
 .PHONY: all do_all_targets clean
