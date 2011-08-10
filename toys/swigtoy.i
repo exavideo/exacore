@@ -18,6 +18,10 @@
         void blech(std::string &out) {
             out = "blech";
         }
+
+        void blargh(std::string &out) {
+            out.assign("abc\0def\0gh", 10);
+        }
     };
 %}
 
@@ -31,4 +35,5 @@ class MyClass {
         virtual const char *goodbye( );
 
         void blech(std::string &OUTPUT);
+        void blargh(std::string &OUTPUT);
 };
