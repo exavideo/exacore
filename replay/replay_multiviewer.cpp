@@ -23,10 +23,10 @@
 
 ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     dpy = dpy_;
-    large_font = new FreetypeFont("../fonts/Inconsolata.ttf");
+    large_font = new FreetypeFont("../fonts/Inconsolata.otf");
     large_font->set_size(30);
-    small_font = new FreetypeFont("../fonts/Inconsolata.ttf");
-    large_font->set_size(10);
+    small_font = new FreetypeFont("../fonts/Inconsolata.otf");
+    small_font->set_size(20);
 }
 
 ReplayMultiviewer::~ReplayMultiviewer( ) {
@@ -87,7 +87,7 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
             /*
              * render the second source name on top of the primary
              */
-            text = small_font->render_string(f->source_name);
+            text = small_font->render_string(f->source_name2);
             xt = w / 2 - text->w( ) / 2;
             yt = yt - text->h( );
             f->frame_data->draw->alpha_key(xt, yt, text, 255);

@@ -43,7 +43,7 @@ include $(all_DEPS)
 
 # Generic rule for compiling C++ object files.
 %.o : %.cpp
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -MM -MF $@.d $^
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d $^
 	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $^ 
 
 %.rbo: %.rbcpp
