@@ -21,6 +21,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+Rational::Rational( ) {
+    _num = 0;
+    _denom = 1;
+}
+
 Rational::Rational(int number) {
     _num = number;
     _denom = 1;

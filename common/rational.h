@@ -31,6 +31,7 @@ class RationalDivisionByZeroException : public virtual std::exception {
  */
 class Rational {
     public:
+        Rational( );
         Rational(int number);
         Rational(int num, int denom);
         Rational(const Rational& r);
