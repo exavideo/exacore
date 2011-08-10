@@ -36,3 +36,5 @@ class ReplayMultiviewer : public Thread {
     void add_source(const SourceParams &INPUT);
     void start( );
 };
+
+%rename("real_add_source") ReplayMultiviewer::add_source(const SourceParams &);

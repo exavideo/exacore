@@ -27,6 +27,8 @@ replay_replay_so_OBJECTS = \
 	$(raw_frame_OBJECTS) \
 	$(thread_OBJECTS) \
 	$(display_surface_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(graphics_OBJECTS) \
 	replay/replay_buffer.o \
 	replay/replay_ingest.o \
 	replay/replay_preview.o \
@@ -36,4 +38,6 @@ replay_replay_so_OBJECTS = \
 
 replay/replay.so: $(replay_replay_so_OBJECTS)
 	# maybe???
-	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread
+	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
+
+all_TARGETS += replay/replay.so
