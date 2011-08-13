@@ -22,6 +22,7 @@
 %}
 
 class FramebufferDisplaySurface : public DisplaySurface {
-    FramebufferDisplaySurface(const char * = "/dev/fb0");
-    ~FramebufferDisplaySurface( );
+    public:
+        FramebufferDisplaySurface(const char * = "/dev/fb0");
+        ~FramebufferDisplaySurface( );
 };

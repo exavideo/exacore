@@ -94,7 +94,6 @@ module Replay
             @last_item_id
         end
 
-        def 
     end
 
     class ShotGroup < Array
@@ -165,11 +164,11 @@ module Replay
             id = @shot_groups.insert(shot_group)
             shot_group.name = "Shot #{id}"
 
-            shot_group, id
+            [shot_group, id]
         end
 
         def shot_group(id)
-            @shot_groups[id] || fail "invalid shot group ID"
+            @shot_groups[id] || fail("invalid shot group ID")
         end
     end
 end
