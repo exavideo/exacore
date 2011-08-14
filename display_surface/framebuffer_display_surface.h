@@ -37,7 +37,6 @@ class FramebufferDisplaySurface : public DisplaySurface {
         struct fb_var_screeninfo _old_vinfo;
 
         uint8_t *_real_data;
-        uint8_t *_real_data2;
         size_t screensize;
 };
 
