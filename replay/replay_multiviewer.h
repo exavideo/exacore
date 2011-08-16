@@ -28,17 +28,18 @@
 
 class FreetypeFont;
 
+struct ReplayMultiviewerSourceParams {
+    AsyncPort<ReplayRawFrame> *source;
+    coord_t x, y;
+};
+
 class ReplayMultiviewer : public Thread {
     public:
         ReplayMultiviewer(DisplaySurface *dpy_);
         ~ReplayMultiviewer( );
 
-        struct SourceParams {
-            AsyncPort<ReplayRawFrame> *source;
-            coord_t x, y;
-        };
 
-        void add_source(const SourceParams &params);
+        void add_source(const ReplayMultiviewerSourceParams &params);
         void start( );
 
     protected:
@@ -49,7 +50,7 @@ class ReplayMultiviewer : public Thread {
         FreetypeFont *large_font;
         FreetypeFont *small_font;
 
-        std::vector<SourceParams> sources;
+        std::vector<ReplayMultiviewerSourceParams> sources;
 };
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * Copyright 2011 Exavideo LLC.
  * 
-* This file is part of openreplay.
+ * This file is part of openreplay.
  * 
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,14 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ReplayBuffer swig interface */
+#ifndef _EVDEV_H
+#define _EVDEV_H
 
-%rename("name") ReplayBuffer::get_name( );
-
-class ReplayBuffer {
-    public:
-        ReplayBuffer(const char *, size_t, size_t, const char * = "(unnamed)");
-        ~ReplayBuffer( );
-
-        enum whence_t { ZERO, START, END };
-
-        ReplayShot *make_shot(timecode_t, whence_t = END);
-
-        const char *get_name( );
+struct InputEvent {
+    int type, code, value;
 };
+
+int read_event(int fd, struct InputEvent &evt);
+
+#endif
 

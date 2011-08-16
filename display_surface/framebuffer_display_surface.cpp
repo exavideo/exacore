@@ -53,6 +53,8 @@ FramebufferDisplaySurface::FramebufferDisplaySurface(const char *fb) {
 
     fprintf(stderr, "bits_per_pixel: %d\n", _vinfo.bits_per_pixel);
 
+    screensize = _vinfo.bits_per_pixel * _vinfo.xres_virtual 
+            * _vinfo.yres_virtual / 8;
 
     fprintf(stderr, "trying to mmap: %d bytes", (int) (screensize));
     _real_data = (uint8_t *) mmap(0, screensize, PROT_READ | PROT_WRITE, 

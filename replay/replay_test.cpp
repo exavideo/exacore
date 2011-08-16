@@ -48,21 +48,18 @@ int main( ) {
     /* start ingest and playout threads */
     ReplayIngest ingest(iadp, &buf);
     mvsrc.source = &ingest.monitor;
-    mvsrc.source_name = "Source 1";
     mvsrc.x = 0;
     mvsrc.y = 540;
     mv.add_source(mvsrc);
 
     ReplayPreview preview;
     mvsrc.source = &preview.monitor;
-    mvsrc.source_name = "Preview";
     mvsrc.x = 0;
     mvsrc.y = 0;
     mv.add_source(mvsrc);
 
     ReplayPlayout playout(oadp);
     mvsrc.source = &playout.monitor;
-    mvsrc.source_name = "Program";
     mvsrc.x = 960;
     mvsrc.y = 0;
     mv.add_source(mvsrc);
@@ -89,7 +86,7 @@ int main( ) {
             ReplayShot shot;
             preview.mark_in( );
             preview.get_shot(shot);
-            playout.roll_shot(&shot);
+            playout.roll_shot(shot);
         } else if (evt.type == 2 && evt.code == 7) {
             /* seek preview */
             if (last_value != -1) {

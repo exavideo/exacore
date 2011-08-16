@@ -38,13 +38,18 @@ ReplayPlayout::~ReplayPlayout( ) {
 void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     MutexLock l(m);
     current_source = shot.source;
-    field_rate = Rational(1,12);
+    field_rate = Rational(1,1);
     current_pos = Rational((int) shot.start);
 }
 
 void ReplayPlayout::stop( ) {
     MutexLock l(m);
     field_rate = Rational(0);
+}
+
+void ReplayPlayout::set_speed(int num, int denom) {
+    MutexLock l(m);
+    field_rate = Rational(num, denom);
 }
 
 void ReplayPlayout::run_thread( ) {

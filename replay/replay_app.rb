@@ -1,5 +1,4 @@
 require 'rubygems'
-require 'backports'
 require_relative 'replay'
 
 class Integer
@@ -20,7 +19,7 @@ module Replay
     class ReplaySource
         def initialize(opts={})
             buf_size = opts[:buf_size] || 20.gigabytes
-            frame_size = opts[:frame_size] || 256.kilobytes
+            frame_size = opts[:frame_size] || 512.kilobytes
             input = opts[:input] || fail("Cannot have a source with no input")
             file = opts[:file] || fail("Cannot have a source with no file")
             name = opts[:name] || file
@@ -41,7 +40,7 @@ module Replay
     class ReplayMultiviewer
         # throw a Ruby-ish frontend on the ugly C++
         def add_source(opts={})
-            params = ReplayMultiviewer::SourceParams.new
+            params = ReplayMultiviewerSourceParams.new
             params.source = opts[:port] || fail("Need some kind of input")
             params.x = opts[:x] || 0
             params.y = opts[:y] || 0
@@ -53,7 +52,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422)
         end
     end
 
@@ -90,13 +89,13 @@ module Replay
         def insert(item)
             @last_item_id = @next_item_id
             self[@next_item_id] = item
-            @item_id += 1
+            @next_item_id += 1
             @last_item_id
         end
 
     end
 
-    class ShotGroup < Array
+    class ReplayEvent < Array
         attr_accessor :name
     end
 
@@ -104,7 +103,9 @@ module Replay
         def initialize
             @sources = []
 
-            @shot_groups = UniqueList.new
+            @events = UniqueList.new
+
+            @current_event = nil
 
             @dpys = FramebufferDisplaySurface.new
             @multiviewer = ReplayMultiviewer.new(@dpys)
@@ -154,21 +155,58 @@ module Replay
             @multiviewer.start
         end
 
-        def capture_shot_group
-            shot_group = ShotGroup.new
+        def capture_event
+            event = ReplayEvent.new
             @sources.each do |source|
                 shot = source.make_shot_now
-                shot_group << shot
+                event << shot
             end
 
-            id = @shot_groups.insert(shot_group)
-            shot_group.name = "Shot #{id}"
+            id = @events.insert(event)
+            event.name = "Event #{id}"
 
-            [shot_group, id]
+            @current_event = event
+            preview_camera(0)
+
+            [event, id]
         end
 
-        def shot_group(id)
-            @shot_groups[id] || fail("invalid shot group ID")
+        def event(id)
+            @events[id] || fail("invalid event ID")
+        end
+
+        def current_event=(id)
+            @current_event = events[id]
+        end
+
+        def _pvw
+            @preview
+        end
+
+        def preview_shot(event_id, source_id)
+            @preview.shot = events[id][source_id]
+        end
+
+        def preview_camera(source_id)
+            if @current_event
+                @preview.shot = @current_event[source_id]
+            end
+        end
+
+        def seek_preview(n_frames)
+            @preview.seek(n_frames)
+        end
+
+        def roll_start_from_preview
+            @program.shot = @preview.shot
+        end
+
+        def roll_stop
+            @program.stop
+        end
+
+        def roll_speed(num,denom)
+            @program.set_speed(num, denom)
         end
     end
 end

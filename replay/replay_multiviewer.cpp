@@ -34,7 +34,8 @@ ReplayMultiviewer::~ReplayMultiviewer( ) {
     delete small_font;
 }
 
-void ReplayMultiviewer::add_source(const SourceParams &params) {
+void ReplayMultiviewer::add_source(
+        const ReplayMultiviewerSourceParams &params) {
     sources.push_back(params);
 }
 
@@ -45,7 +46,7 @@ void ReplayMultiviewer::start( ) {
 void ReplayMultiviewer::run_thread( ) {
     for (;;) {
         for (unsigned int i = 0; i < sources.size( ); i++) {
-            const SourceParams &src = sources[i];
+            const ReplayMultiviewerSourceParams &src = sources[i];
             ReplayRawFrame *f = src.source->get( );
             if (f != NULL) {
                 render_text(f);

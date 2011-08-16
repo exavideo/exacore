@@ -1,7 +1,7 @@
 /*
  * Copyright 2011 Exavideo LLC.
  * 
-* This file is part of openreplay.
+ * This file is part of openreplay.
  * 
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,26 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* ReplayBuffer swig interface */
+#include <linux/input.h>
+#include "posix_util.h"
+#include "evdev.h"
 
-%rename("name") ReplayBuffer::get_name( );
+/* Wrapper to allow easy reading of events into Ruby */
+int read_event(int fd, struct InputEvent &evt) {
+    struct input_event real_evt;
+    ssize_t ret;
 
-class ReplayBuffer {
-    public:
-        ReplayBuffer(const char *, size_t, size_t, const char * = "(unnamed)");
-        ~ReplayBuffer( );
+    ret = read_all(fd, &real_evt, sizeof(real_evt)); 
+    
+    if (ret < 0) {
+        throw POSIXError("read_event");
+    } else if (ret == 0) {
+        return 0;
+    } else {
+        evt.type = real_evt.type;
+        evt.code = real_evt.code;
+        evt.value = real_evt.value;
+    }
 
-        enum whence_t { ZERO, START, END };
-
-        ReplayShot *make_shot(timecode_t, whence_t = END);
-
-        const char *get_name( );
-};
-
+    return 1;
+}

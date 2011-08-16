@@ -23,17 +23,21 @@
     #include "replay_multiviewer.h"
 %}
 
+
+%include "types.i"
+%rename("real_add_source") ReplayMultiviewer::add_source(const ReplayMultiviewerSourceParams &);
+
 class ReplayMultiviewer : public Thread {
-    ReplayMultiviewer(DisplaySurface *);
-    ~ReplayMultiviewer( );
+    public:
+        ReplayMultiviewer(DisplaySurface *);
+        ~ReplayMultiviewer( );
 
-    struct SourceParams {
-        AsyncPort<ReplayRawFrame> *source;
-        coord_t x, y;
-    };
-
-    void add_source(const SourceParams &INPUT);
-    void start( );
+        void add_source(const ReplayMultiviewerSourceParams &INPUT);
+        void start( );
 };
 
-%rename("real_add_source") ReplayMultiviewer::add_source(const SourceParams &);
+struct ReplayMultiviewerSourceParams {
+    AsyncPort<ReplayRawFrame> *source;
+    coord_t x, y;
+};
+

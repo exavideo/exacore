@@ -23,15 +23,18 @@
 
 %include "typemaps.i"
 
-class ReplayPlayout : public Thread {
-    ReplayPlayout(OutputAdapter *INPUT);
-    ~ReplayPlayout( );
-
-    void roll_shot(const ReplayShot &INPUT);
-    void stop( );
-    AsyncPort<ReplayRawFrame> *get_monitor( );
-};
-
 %rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
 %rename("monitor") ReplayPlayout::get_monitor( );
+
+class ReplayPlayout : public Thread {
+    public:
+        ReplayPlayout(OutputAdapter *INPUT);
+        ~ReplayPlayout( );
+
+        void roll_shot(const ReplayShot &INPUT);
+        void stop( );
+        void set_speed(int,int);
+        AsyncPort<ReplayRawFrame> *get_monitor( );
+};
+
 

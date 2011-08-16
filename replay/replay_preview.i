@@ -21,6 +21,10 @@
     #include "replay_preview.h"
 %}
 
+%rename("shot") ReplayPreview::get_shot(ReplayShot&);
+%rename("shot=") ReplayPreview::change_shot(const ReplayShot&);
+%rename("monitor") ReplayPreview::get_monitor( );
+
 class ReplayPreview : public Thread {
     public:
         ReplayPreview( );
@@ -35,6 +39,3 @@ class ReplayPreview : public Thread {
         AsyncPort<ReplayRawFrame> *get_monitor( );
 };
 
-%rename("shot") ReplayPreview::get_shot(ReplayShot&);
-%rename("shot=") ReplayPreview::change_shot(const ReplayShot&);
-%rename("monitor") ReplayPreview::get_monitor( );

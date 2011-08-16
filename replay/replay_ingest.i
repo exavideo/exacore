@@ -21,10 +21,12 @@
     #include "replay_ingest.h"
 %}
 
+%rename("monitor") ReplayIngest::get_monitor( );
+
 class ReplayIngest : public Thread {
-    ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT);
-    ~ReplayIngest( );
-    AsyncPort<ReplayRawFrame> *get_monitor( );
+    public:
+        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT);
+        ~ReplayIngest( );
+        AsyncPort<ReplayRawFrame> *get_monitor( );
 };
 
-%rename("monitor") ReplayIngest::get_monitor( );
