@@ -1,3 +1,5 @@
+require 'rubygems'
+require 'backports'
 require_relative 'replay_app'
 require_relative '../input/shuttlepro'
 require "irb"
@@ -82,10 +84,13 @@ class ReplayControl < ShuttleProInput
             @app.capture_event
         end
     end
+
+    def start_irb
+        #IRB.start_session(binding())
+        @app.start_irb
+    end
 end
 
 control = ReplayControl.new(app)
-
-# drop to the IRB shell for manual poking!
-IRB.start_session(binding())
+control.start_irb
 

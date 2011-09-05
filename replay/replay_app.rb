@@ -218,5 +218,9 @@ module Replay
         def roll_speed(num,denom)
             @program.set_speed(num, denom)
         end
+
+        def start_irb
+            IRB.start_session(binding())
+        end
     end
 end
