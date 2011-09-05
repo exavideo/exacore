@@ -38,6 +38,8 @@ private
         evt = Input::InputEvent.new
 
         while true
+            # wait until data is readable (allowing other threads to run)
+            IO.select([@device])
             if Input::read_event(@device.fileno, evt) != 0
                 puts "event received"
                 if evt.type == 2 and evt.code == 7
