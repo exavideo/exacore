@@ -21,7 +21,9 @@
     #include "replay_preview.h"
 %}
 
-%rename("shot") ReplayPreview::get_shot(ReplayShot&);
+%include "typemaps.i"
+
+// %rename("shot") ReplayPreview::get_shot(ReplayShot&);
 %rename("shot=") ReplayPreview::change_shot(const ReplayShot&);
 %rename("monitor") ReplayPreview::get_monitor( );
 

@@ -37,6 +37,15 @@ module Replay
         end
     end
 
+    class ReplayPreview
+        def shot
+            # workaround for swig not handling output params properly
+            sh = ReplayShot.new
+            get_shot(sh)
+            sh
+        end
+    end
+
     class ReplayMultiviewer
         # throw a Ruby-ish frontend on the ugly C++
         def add_source(opts={})
@@ -198,6 +207,7 @@ module Replay
         end
 
         def roll_start_from_preview
+            @preview.mark_in
             @program.shot = @preview.shot
         end
 
