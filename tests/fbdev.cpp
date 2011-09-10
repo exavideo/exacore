@@ -62,24 +62,6 @@ int main( ) {
 
     fprintf(stderr, "xres_virtual=%d yres_virtual=%d yoffset=%d\n", vinfo2.xres_virtual, vinfo2.yres_virtual, vinfo2.yoffset);
 
-    /* page flip! */
-    vinfo.yoffset = vinfo.yres;
-    if (ioctl(fd, FBIOPAN_DISPLAY, &vinfo) != 0) {
-        throw POSIXError("FBIOPUT_VSCREENINFO pageflip");
-    }
-
-    if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo2) != 0) {
-        throw POSIXError("FBIOGET_VSCREENINFO");
-    }
-
-    fprintf(stderr, "xres_virtual=%d yres_virtual=%d yoffset=%d\n", vinfo2.xres_virtual, vinfo2.yres_virtual, vinfo2.yoffset);
-
-    sleep(1);
-
-    if (ioctl(fd, FBIOPUT_VSCREENINFO, &vinfo_cache) != 0) {
-        throw POSIXError("FBIOPUT_VSCREENINFO return to cache");
-    }
-
     close(fd);
     return 0;
 }

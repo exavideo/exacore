@@ -1,0 +1,5 @@
+apt-get install build-essential librsvg2-dev libcairo2-dev libfreetype6-dev yasm libjpeg8-dev swig
+
+Install rvm; rvm install 1.9.2; rvm --default use 1.9.2
+
+Install libjpeg_turbo!

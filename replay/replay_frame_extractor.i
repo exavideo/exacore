@@ -21,12 +21,15 @@
     #include "replay_frame_extractor.h"
 %}
 
+%include "typemaps.i"
+%include "std_string.i"
+
 class ReplayFrameExtractor {
     public:
         ReplayFrameExtractor( );
         ~ReplayFrameExtractor( );
         void extract_scaled_jpeg(const ReplayShot &, timecode_t, 
-                std::string, int);
+                std::string &OUTPUT, int);
         void extract_raw_jpeg(const ReplayShot &, timecode_t, 
-                std::string);
+                std::string &OUTPUT);
 };

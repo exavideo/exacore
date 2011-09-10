@@ -121,7 +121,7 @@ test_fbdev_OBJECTS = \
 	tests/fbdev.o
 
 tests/fbdev: $(test_fbdev_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/fbdev    
 

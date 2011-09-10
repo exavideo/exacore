@@ -20,6 +20,9 @@
 #include "replay_buffer.h"
 #include "posix_util.h"
 
+#include "thread.h"
+#include "pipe.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -30,9 +33,41 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+
+struct msync_req {
+    void *base;
+    size_t size;
+};
+
+class ReplayBuffer::MsyncBackground : public Thread {
+    public:
+        MsyncBackground( ) : request_queue(256) {
+            start_thread( );        
+        };
+
+        ~MsyncBackground( ) {
+        
+        };
+
+        Pipe<msync_req> request_queue;
+
+    protected:
+        void run_thread( ) {
+            msync_req req;
+
+            for (;;) {
+                req = request_queue.get( );
+                fprintf(stderr, "msync %p(%d)\n", req.base, (int)req.size);
+                msync(req.base, req.size, MS_SYNC);
+            }
+        };
+};
+
 ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
         size_t frame_size, const char *name) {
     int error;
+
+    mst = new MsyncBackground( );
 
     /* open and allocate buffer file */
     fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
@@ -115,6 +150,26 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
 }
 
 void ReplayBuffer::finish_frame_write( ) {
+    unsigned int frame_index = tc_current % n_frames;
+
+    unsigned int block_index = frame_index & ~0x3fU;
+    unsigned int block_size = frame_size * 0x40;
+
+    /* have our background thread msync() this stuff */
+    if ((frame_index & 0x3fU) == 0x3fU) {
+        void *data_ptr = data + block_index * frame_size;
+        msync_req req;
+        req.base = data_ptr;
+        req.size = block_size;
+        mst->request_queue.put(req);
+    }
+
+    /* 
+     * force the issue of re-syncing these pages to disk 
+     * so pdflush doesn't block the whole process at a bad time
+     */
+    //msync(data_ptr, frame_size, MS_SYNC);
+    
     MutexLock l(m);
     tc_current++;
 }

@@ -47,6 +47,9 @@ class ReplayBuffer {
         const char *get_name( );
 
     private:
+        class MsyncBackground;
+        MsyncBackground *mst;
+
         char *name;
         int fd;
 
