@@ -2,6 +2,7 @@
 *.o
 *.rbcpp
 *.rbo
+*.rbc
 *.so
 test_files/*
 *.d
