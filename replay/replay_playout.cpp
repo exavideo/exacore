@@ -38,7 +38,8 @@ ReplayPlayout::~ReplayPlayout( ) {
 void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     MutexLock l(m);
     current_source = shot.source;
-    field_rate = Rational(1,1);
+    /* 1/2 frame of timecode between output fields */
+    field_rate = Rational(1, 2);
     current_pos = Rational((int) shot.start);
 }
 
@@ -49,7 +50,8 @@ void ReplayPlayout::stop( ) {
 
 void ReplayPlayout::set_speed(int num, int denom) {
     MutexLock l(m);
-    field_rate = Rational(num, denom);
+    // divide by two; this is the timecode increment from one *field* to the next
+    field_rate = Rational(num, denom) * Rational(1, 2);
 }
 
 void ReplayPlayout::run_thread( ) {
