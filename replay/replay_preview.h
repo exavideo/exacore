@@ -51,6 +51,7 @@ class ReplayPreview : public Thread {
     protected:
         void run_thread( );
         void wait_update(ReplayFrameData &rfd);
+        void find_closest_valid_frame( );
 
         ReplayShot current_shot;
         timecode_t current_pos;

@@ -45,17 +45,21 @@ private
                 if evt.type == 2 and evt.code == 7
                     jog = evt.value
                     if @last_jog
-                        # this is kludgy because it has to account for wrap.
-                        if jog == 0 and @last_jog == 255
-                            on_jog(1)
-                        elsif jog == 255 and @last_jog == 0
-                            on_jog(-1)
-                        elsif jog - @last_jog == 1
-                            on_jog(1)
-                        elsif jog - @last_jog == -1
-                            on_jog(-1)
+                        # jog > last_jog means that we are going clockwise.
+                        # last_jog > jog means that we are going counter-clockwise.
+                        # The problem is that all of this is modulo 256. So, applying
+                        # Occam's razor, we figure out what the rotation would be
+                        # in both directions, and take whichever works out to a 
+                        # smaller rotation. :)
+                        cw_rotation = (jog - @last_jog) % 256
+                        ccw_rotation = (@last_jog - jog) % 256
+                        
+                        puts "cw_rotation: #{cw_rotation} ccw_rotation: #{ccw_rotation}"
+                        
+                        if (cw_rotation < ccw_rotation)
+                            on_jog(cw_rotation)
                         else
-                            puts "warning: jog dial misbehaving?"
+                            on_jog(-ccw_rotation)
                         end
                     end
                     @last_jog = jog

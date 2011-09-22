@@ -93,9 +93,22 @@ void ReplayPreview::run_thread( ) {
             monitor.put(monitor_frame);
         } catch (ReplayFrameNotFoundException &e) {
             fprintf(stderr, "replay preview: frame not found\n");
-            /* FIXME: put some indication up on the monitor (or get back on the end) */;
+            find_closest_valid_frame( );
         }
     }
+}
+
+void ReplayPreview::find_closest_valid_frame( ) {
+    MutexLock l(m);
+    if (current_pos < 0) {
+        current_pos = 0;
+    } else {
+        ReplayShot *buf_end = current_shot.source->make_shot(0);
+        current_pos = buf_end->start;
+        delete buf_end;
+    }
+
+    update_monitor = true;
 }
 
 void ReplayPreview::wait_update(ReplayFrameData &rfd) {
@@ -103,7 +116,6 @@ void ReplayPreview::wait_update(ReplayFrameData &rfd) {
     
     /* wait until there is some work to be done */
     while (!update_monitor || current_shot.source == NULL) {
-        update_monitor = false;
         updated.wait(m);
     }
 

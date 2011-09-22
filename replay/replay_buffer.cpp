@@ -150,6 +150,7 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
 }
 
 void ReplayBuffer::finish_frame_write( ) {
+    MutexLock l(m);
     unsigned int frame_index = tc_current % n_frames;
 
     unsigned int block_index = frame_index & ~0x3fU;
@@ -170,7 +171,6 @@ void ReplayBuffer::finish_frame_write( ) {
      */
     //msync(data_ptr, frame_size, MS_SYNC);
     
-    MutexLock l(m);
     tc_current++;
 }
 
