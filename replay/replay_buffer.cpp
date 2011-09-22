@@ -69,6 +69,8 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
 
     mst = new MsyncBackground( );
 
+    _field_dominance = RawFrame::UNKNOWN;
+
     /* open and allocate buffer file */
     fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
     if (fd < 0) {

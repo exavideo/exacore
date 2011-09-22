@@ -35,6 +35,14 @@ class RawFrame {
             RGB8, YCbCr8, CbYCrY8422, 
             RGBAn8, BGRAn8, YCbCrAn8 
         };
+
+        enum FieldDominance {
+            UNKNOWN,
+            TOP_FIELD_FIRST,
+            BOTTOM_FIELD_FIRST,
+            PROGRESSIVE,
+        };
+
         RawFrame(coord_t w, coord_t h, PixelFormat pf);
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
         virtual ~RawFrame( );
@@ -52,6 +60,9 @@ class RawFrame {
         /* This is the size of a whole frame */
         size_t size( ) const { return _pitch * _h; }
         PixelFormat pixel_format( ) const { return _pixel_format; }
+
+        FieldDominance field_dominance( ) const { return _field_dominance; }
+        void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
@@ -85,6 +96,8 @@ class RawFrame {
         void make_unpacker( );
         void make_draw_ops( );
         void make_converter( );
+        
+        FieldDominance _field_dominance;
 };
 
 #define CHECK(x) check((void *)(x))

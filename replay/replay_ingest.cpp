@@ -44,6 +44,11 @@ void ReplayIngest::run_thread( ) {
         /* obtain frame from input adapter */
         input = iadp->output_pipe( ).get( );
 
+        /* set field dominance if necessary */
+        if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
+            buf->set_field_dominance(input->field_dominance( ));
+        }
+
         /* encode to M-JPEG */
         enc.encode_to(input, dest.data_ptr, dest.data_size);
         buf->finish_frame_write( );

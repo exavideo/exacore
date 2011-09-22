@@ -44,11 +44,16 @@ class ReplayBuffer {
 
         void get_readable_frame(timecode_t tc, ReplayFrameData &frame_data);
 
+        RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
+        void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }
+
         const char *get_name( );
 
     private:
         class MsyncBackground;
         MsyncBackground *mst;
+
+        RawFrame::FieldDominance _field_dominance;
 
         char *name;
         int fd;

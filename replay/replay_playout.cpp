@@ -108,11 +108,10 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         tc = current_pos.integer_part( );
         current_source->get_readable_frame(tc, f1);
 
-        /* FIXME: this assumes bottom-field-first format */
         if (current_pos.fractional_part( ).less_than_one_half( )) {
-            f1.use_top_field = false;  
+            f1.use_first_field = true;
         } else {
-            f1.use_top_field = true;
+            f1.use_first_field = false;  
         }
 
         current_pos += field_rate;
@@ -121,9 +120,9 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         current_source->get_readable_frame(tc, f2);
         
         if (current_pos.fractional_part( ).less_than_one_half( )) {
-            f2.use_top_field = false;
+            f2.use_first_field = true;
         } else {
-            f2.use_top_field = true;
+            f2.use_first_field = false;
         }
 
         current_pos += field_rate;
@@ -134,10 +133,23 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
     }
 }
 
+static coord_t field_start_scan(bool want_first, RawFrame::FieldDominance dom) {
+    if (want_first && dom == RawFrame::BOTTOM_FIELD_FIRST) {
+        return 1;
+    } else if (!want_first && dom == RawFrame::BOTTOM_FIELD_FIRST) {
+        return 0;
+    } else if (want_first) {
+        return 0;    
+    } else {
+        return 1;
+    }
+}
 
 void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         ReplayFrameData &cache_data, RawFrame *&cache_frame,
         bool is_first_field) {
+
+    coord_t srcline, dstline;
 
     /* decode the field data if we don't have it cached */
     if (field.data_ptr != cache_data.data_ptr) {
@@ -146,32 +158,16 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         cache_data = field;
     }
 
-    /* FIXME: this logic assumes bottom-field first video */
-    /* FIXME: need to implement scanline interpolation for case 3 and 4 */
-    /* FIXME: all this memcpy-ing is looking ugly (but maybe hard to avoid) */
-    if (!is_first_field && field.use_top_field) {
-        /* case 1: copying a top field to a top field */
-        for (coord_t i = 0; i < cache_frame->h( ); i += 2) {
-            memcpy(out->scanline(i), cache_frame->scanline(i), 
-                    cache_frame->pitch( )); 
-        }
-    } else if (is_first_field && !field.use_top_field) {
-        /* case 2: copying a bottom field to a bottom field */
-        for (coord_t i = 1; i < cache_frame->h( ); i += 2) {
-            memcpy(out->scanline(i), cache_frame->scanline(i),
-                    cache_frame->pitch( ));
-        }
-    } else if (is_first_field && field.use_top_field) {
-        /* case 3: copying a top field into a bottom field */
-        for (coord_t i = 0; i < cache_frame->h( ); i += 2) {
-            memcpy(out->scanline(i + 1), cache_frame->scanline(i),
-                    cache_frame->pitch( ));
-        }
-    } else if (!is_first_field && !field.use_top_field) {
-        /* case 4: copying a bottom field into a top field */
-        for (coord_t i = 1; i < cache_frame->h( ); i += 2) {
-            memcpy(out->scanline(i - 1), cache_frame->scanline(i),
-                    cache_frame->pitch( ));
-        }
+    /* figure which lines we're taking and where they're going */
+    srcline = field_start_scan(field.use_first_field, 
+            field.source->field_dominance( ));
+    dstline = field_start_scan(is_first_field, oadp->output_dominance( ));
+
+    /* copy the scanlines to the destination frame */
+    while (srcline < cache_frame->h( ) && dstline < out->h( )) {
+        memcpy(out->scanline(dstline), cache_frame->scanline(srcline),
+                cache_frame->pitch( ));
+        dstline += 2;
+        srcline += 2;
     }
 }       

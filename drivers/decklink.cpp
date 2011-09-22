@@ -108,6 +108,43 @@ static BMDPixelFormat convert_pf(RawFrame::PixelFormat in_pf) {
     }
 }
 
+/* lookup the field dominance corresponding to this BMDDisplayMode */
+static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode, 
+        IDeckLinkDisplayModeIterator *iterator) {
+    IDeckLinkDisplayMode *imode;
+
+    if (iterator->Next(&imode) != S_OK) {
+        throw std::runtime_error("DeckLink: failed to iterate display modes");
+    }
+
+    while (imode) {
+        BMDFieldDominance fd = imode->GetFieldDominance( );
+        BMDDisplayMode thismode = imode->GetDisplayMode( );
+        imode->Release( );
+
+        if (thismode == mode) {
+            switch (fd) {
+                case bmdLowerFieldFirst:
+                    return RawFrame::BOTTOM_FIELD_FIRST;
+                case bmdUpperFieldFirst:
+                    return RawFrame::TOP_FIELD_FIRST;
+                case bmdProgressiveFrame:
+                case bmdProgressiveSegmentedFrame:
+                    return RawFrame::PROGRESSIVE;
+                default:
+                    return RawFrame::UNKNOWN;
+            }
+        }
+
+        if (iterator->Next(&imode) != S_OK) {
+            throw std::runtime_error("failed to iterate display modes");
+        }
+    }
+
+    /* no modes matched so we don't know dominance */
+    return RawFrame::UNKNOWN; 
+}
+
 /* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
 class DecklinkInputRawFrame : public RawFrame {
     public:
@@ -263,6 +300,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         Pipe<RawFrame *> &input_pipe( ) { return in_pipe; }
         Pipe<AudioPacket *> *audio_input_pipe( ) { return audio_in_pipe; }
+
+        RawFrame::FieldDominance output_dominance( ) { return dominance; }
     
     protected:        
         IDeckLink *deckLink;
@@ -279,6 +318,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         Pipe<RawFrame *> in_pipe;
 
         RawFrame::PixelFormat pf;
+        RawFrame::FieldDominance dominance;
         BMDPixelFormat bpf;
 
         volatile int audio_preroll_done;
@@ -289,6 +329,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         uint32_t samples_written_from_current_audio_pkt;
 
         void open_card( ) {
+            IDeckLinkDisplayModeIterator *it;
+
             /* get the DeckLinkOutput interface */
             if (deckLink->QueryInterface(IID_IDeckLinkOutput, 
                     (void **)&deckLinkOutput) != S_OK) {
@@ -306,7 +348,19 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
-            if (deckLinkOutput->EnableVideoOutput(norms[norm].mode, 
+            /* attempt to determine field dominance */
+            if (deckLinkOutput->GetDisplayModeIterator(&it) != S_OK) {
+                throw std::runtime_error(
+                    "DeckLink output: failed to get display mode iterator"
+                );
+            }
+            
+            dominance = find_dominance(norms[norm].mode, it);
+
+            it->Release( );
+
+            /* and we're off to the races */
+            if (deckLinkOutput->EnableVideoOutput(norms[norm].mode,
                     bmdVideoOutputFlagDefault) != S_OK) {
                 
                 throw std::runtime_error(
@@ -574,13 +628,8 @@ class DeckLinkInputAdapter : public InputAdapter,
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
                     out = new DecklinkInputRawFrame(in, pf);
+                    out->set_field_dominance(dominance);
                     
-                    if (in->GetBytes(&data) != S_OK) {
-                        throw std::runtime_error(
-                            "DeckLink input: GetBytes failed"
-                        );
-                    }
-
                     if (out_pipe.can_put( )) {
                         out_pipe.put(out);
                     } else {
@@ -621,6 +670,8 @@ class DeckLinkInputAdapter : public InputAdapter,
         Pipe<RawFrame *> out_pipe;
 
         RawFrame::PixelFormat pf;
+        RawFrame::FieldDominance dominance;
+
         BMDPixelFormat bpf;
 
         unsigned int audio_rate;
@@ -629,6 +680,8 @@ class DeckLinkInputAdapter : public InputAdapter,
         Pipe<AudioPacket *> *audio_pipe;
 
         void open_input(unsigned int norm) {
+            IDeckLinkDisplayModeIterator *it;
+
             assert(deckLink != NULL);
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
 
@@ -639,6 +692,16 @@ class DeckLinkInputAdapter : public InputAdapter,
                     "DeckLink input: failed to get IDeckLinkInput"
                 );
             }
+
+            if (deckLinkInput->GetDisplayModeIterator(&it) != S_OK) {
+                throw std::runtime_error(
+                    "DeckLink input: failed to get display mode iterator"
+                );
+            }
+            
+            dominance = find_dominance(norms[norm].mode, it);
+
+            it->Release( );
 
             if (deckLinkInput->EnableVideoInput(norms[norm].mode,
                     bpf, 0) != S_OK) {

@@ -33,6 +33,7 @@ RawFrame::RawFrame( ) {
     _h = 0;
     _pitch = 0;
     _data = NULL;
+    _field_dominance = UNKNOWN;
     _global_alpha = 0xff;
     pack = NULL;
     unpack = NULL;
@@ -45,6 +46,7 @@ RawFrame::RawFrame(PixelFormat pf) {
 }
 
 void RawFrame::initialize_pf(PixelFormat pf) {
+    _field_dominance = UNKNOWN;
     _pixel_format = pf;
     _global_alpha = 0xff;
     make_ops( );
@@ -54,6 +56,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _w = w;
     _h = h;
     _global_alpha = 0xff;
+    _field_dominance = UNKNOWN;
     _pixel_format = pf;
     _pitch = minpitch( );
     alloc( );
@@ -64,6 +67,7 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
     _w = w;
     _h = h;
     _global_alpha = 0xff;
+    _field_dominance = UNKNOWN;
     _pixel_format = pf;
     _pitch = pitch;
     if (_pitch < minpitch( )) {

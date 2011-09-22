@@ -47,7 +47,7 @@ struct ReplayFrameData {
     timecode_t pos;
     void *data_ptr;
     size_t data_size;
-    bool use_top_field;
+    bool use_first_field;
 };
 
 /*
