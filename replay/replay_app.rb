@@ -67,8 +67,29 @@ module Replay
 
     class ReplayShot
         def preview
-            # eventually, rig this to some sort of JPEG preview extraction
-            ''
+            @@previewer ||= ReplayFrameExtractor.new
+            @@previewer.extract_raw_jpeg(self, 0)
+        end
+
+        def make_json
+            {
+                :source => source.persist_id,
+                :source_name => source.name,
+                :start => start,
+                :length => length
+            }
+        end     
+
+        def self.from_json(jsonStr)
+            data = JSON.parse(jsonStr)
+            shot = self.new
+
+            p data
+            shot.source = Object.from_persist_id(data["source"])
+            shot.start = data["start"] if data["start"]
+            shot.length = data["length"] if data["length"]
+
+            shot
         end
     end
 
@@ -156,67 +177,29 @@ module Replay
             end
         end
 
-        def source(i)
-            @sources[i]
-        end
 
         def start
             @multiviewer.start
         end
 
-        def capture_event
-            event = ReplayEvent.new
-            @sources.each do |source|
-                shot = source.make_shot_now
-                event << shot
-            end
-
-            id = @events.insert(event)
-            event.name = "Event #{id}"
-
-            @current_event = event
-            preview_camera(0)
-
-            [event, id]
-        end
-
-        def event(id)
-            @events[id] || fail("invalid event ID")
-        end
-
-        def current_event=(id)
-            @current_event = events[id]
-        end
-
-        def _pvw
+        def preview
             @preview
         end
 
-        def preview_shot(event_id, source_id)
-            @preview.shot = events[id][source_id]
+        def program
+            @program
         end
 
-        def preview_camera(source_id)
-            if @current_event
-                @preview.shot = @current_event[source_id]
+        def source(i)
+            @sources[i]
+        end
+
+        def each_source
+            if block_given?
+                @sources.each { yield }
+            else 
+                @sources.each
             end
-        end
-
-        def seek_preview(n_frames)
-            @preview.seek(n_frames)
-        end
-
-        def roll_start_from_preview
-            @preview.mark_in
-            @program.shot = @preview.shot
-        end
-
-        def roll_stop
-            @program.stop
-        end
-
-        def roll_speed(num,denom)
-            @program.set_speed(num, denom)
         end
 
         def start_irb
