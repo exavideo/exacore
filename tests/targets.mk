@@ -10,6 +10,15 @@ test_mjpeg_422_encode_OBJECTS = \
 tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
 
+test_mjpeg_422_encode_bench_OBJECTS = \
+	$(common_OBJECTS) \
+	$(mjpeg_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/mjpeg_422_encode_bench.o
+
+tests/mjpeg_422_encode_bench: $(test_mjpeg_422_encode_bench_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
+
 all_TARGETS += tests/mjpeg_422_encode    
 
 test_mjpeg_422_decode_OBJECTS = \
