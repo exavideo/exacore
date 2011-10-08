@@ -29,13 +29,20 @@
 #include "rational.h"
 #include "mjpeg_codec.h"
 
+#include <list>
+
 class ReplayPlayout : public Thread {
     public:
         ReplayPlayout(OutputAdapter *oadp_);
         ~ReplayPlayout( );
 
+        /* Roll a shot and clear the queue of shots to follow. */
         void roll_shot(const ReplayShot &shot);
+        /* Queue a shot to roll after the current shot passes its end */
+        void queue_shot(const ReplayShot &shot);
+        /* Stop the playout right now */
         void stop( );
+        /* Adjust the playout rate */
         void set_speed(int num, int denom);
 
         AsyncPort<ReplayRawFrame> monitor;
@@ -50,15 +57,21 @@ class ReplayPlayout : public Thread {
                 ReplayFrameData &cache_data, RawFrame *&cache_frame,
                 bool is_first_field);
 
+        void roll_next_shot( );
+
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
         Rational current_pos;
         Rational field_rate;
+        timecode_t shot_end;
+
+        std::list<ReplayShot> next_shots;
 
         Mutex m;
 
         Mjpeg422Decoder dec;
+
 };
 
 #endif

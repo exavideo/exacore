@@ -41,6 +41,28 @@ void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     /* 1/2 frame of timecode between output fields */
     field_rate = Rational(1, 2);
     current_pos = Rational((int) shot.start);
+    shot_end = shot.start + shot.length;
+
+    /* clear out queued shots */
+    next_shots.clear( );
+}
+
+void ReplayPlayout::roll_next_shot( ) {
+    /* no mutex lock, so only call this when mutex is already locked */
+    if (!next_shots.empty( )) {
+        const ReplayShot &shot = next_shots.front( );
+        current_source = shot.source;
+        current_pos = Rational((int) shot.start);
+        shot_end = shot.start + shot.length;
+        next_shots.pop_front( );
+    } else {
+        shot_end = 0;
+    }
+}
+
+void ReplayPlayout::queue_shot(const ReplayShot &shot) {
+    MutexLock l(m);
+    next_shots.push_back(shot);
 }
 
 void ReplayPlayout::stop( ) {
@@ -126,6 +148,11 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         }
 
         current_pos += field_rate;
+
+        if (current_pos.integer_part( ) > shot_end && !next_shots.empty( ) 
+                && shot_end > 0) {
+            roll_next_shot( );
+        }
     } else {
         f1.data_ptr = NULL;
         f2.data_ptr = NULL;

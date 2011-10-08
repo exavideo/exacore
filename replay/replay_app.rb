@@ -80,8 +80,14 @@ module Replay
             }
         end     
 
-        def self.from_json(jsonStr)
-            data = JSON.parse(jsonStr)
+        def self.from_json(json)
+            # check if our JSON is hash-like already, if so don't parse again
+            if json.respond_to? :each_pair
+                data = json
+            else
+                data = JSON.parse(json)
+            end
+
             shot = self.new
 
             p data
@@ -93,49 +99,9 @@ module Replay
         end
     end
 
-    class UniqueList < Hash
-        def initialize
-            super
-
-            # The id of the next item to be added.
-            @next_item_id = 0
-
-            # The item most recently added to the list.
-            @last_item_id = nil
-        end
-
-        def each_in_order
-            keys.sort.each do |i|
-                yield self[i]
-            end
-        end
-
-        def each_in_reverse_order
-            keys.sort { |a, b| b <=> a }.each do |i|
-                yield self[i]
-            end
-        end
-
-        def insert(item)
-            @last_item_id = @next_item_id
-            self[@next_item_id] = item
-            @next_item_id += 1
-            @last_item_id
-        end
-
-    end
-
-    class ReplayEvent < Array
-        attr_accessor :name
-    end
-
     class ReplayApp
         def initialize
             @sources = []
-
-            @events = UniqueList.new
-
-            @current_event = nil
 
             @dpys = FramebufferDisplaySurface.new
             @multiviewer = ReplayMultiviewer.new(@dpys)
@@ -150,9 +116,6 @@ module Replay
                     :x => 0, :y => 0)
             @multiviewer.add_source(:port => @program.monitor,
                     :x => 960, :y => 0)
-
-            @preview_shot = nil
-            @program_shot = nil
 
 
             # FIXME hard coded defaults

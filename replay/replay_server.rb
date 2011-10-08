@@ -2,6 +2,7 @@ require 'rubygems'
 require 'patchbay'
 require 'irb'
 require 'json'
+require 'thin'
 
 require '/home/armena/object_ids'
 
@@ -74,10 +75,16 @@ class ReplayLocalControl < ShuttleProInput
 
     def on_button_down(button)
         case button
+        when 256
+            @app.preview.mark_in
         when 257
             @app.program.stop
-        when 259
+        when 258
+            @app.preview.mark_in
             @app.program.shot = @app.preview.shot
+            send_preview_to_web_interface
+        when 259
+            @app.preview.mark_out
         when 260
             preview_source 0
         when 261
@@ -91,7 +98,8 @@ class ReplayLocalControl < ShuttleProInput
         when 269
             capture_event
         when 270
-            send_event_to_web_interface
+            send_preview_to_web_interface
+            #send_event_to_web_interface
         end
     end
 
@@ -111,9 +119,35 @@ class ReplayLocalControl < ShuttleProInput
         end
     end
 
+    def send_preview_to_web_interface
+        shot_target.send_shot(@app.preview.shot)
+    end
+
     def start_irb
         #IRB.start_session(binding())
         @app.start_irb
+    end
+end
+
+class MjpegIterator
+    def initialize(source, start, length)
+        @source = source
+        @pos = start
+        @length = length
+    end
+
+    def each
+        shot = Replay::ReplayShot.new
+        shot.source = @source
+        length = @length
+        pos = @pos
+
+        while length > 0
+            shot.start = pos
+            yield shot.preview
+            length -= 1
+            pos += 1
+        end
     end
 end
 
@@ -147,6 +181,18 @@ class ReplayServer < Patchbay
         render :json => ''
     end
 
+    # Roll the first shot right now, and roll the rest after it's done.
+    put '/roll_queue.json' do
+        unless inbound_shots.empty?
+            replay_app.program.shot = inbound_shots.shift
+            inbound_shots.each do |shot|
+                replay_app.program.queue_shot(shot)
+            end
+        end
+
+        render :json => ''
+    end
+
     # Preview the start of a shot.
     get '/shots/:id/preview.jpg' do
         render :jpg => shots[params[:id].to_i].preview
@@ -170,10 +216,18 @@ class ReplayServer < Patchbay
 
     # Preview a given timecode for a given source.
     get '/sources/:id/:timecode/preview.jpg' do
-        shot = ReplayShot.new
+        shot = Replay::ReplayShot.new
         shot.source = Object.from_persist_id(params[:id].to_i)
         shot.start = params[:timecode].to_i
         render :jpg => shot.preview
+    end
+
+    get '/sources/:id/:start/:length/video.mjpg' do
+        source = Object.from_persist_id(params[:id].to_i)
+        start = params[:start].to_i
+        length = params[:length].to_i
+
+        render :mjpg => MjpegIterator.new(source, start, length)
     end
 
     self.files_dir = "public_html/"
@@ -201,12 +255,24 @@ private
 
         params[:inbound_shot]
     end
+
+    def inbound_shots
+        unless params[:inbound_shots]
+            inp = environment['rack.input']
+            inp.rewind
+            shots_json = JSON.parse(inp.read)
+            params[:inbound_shots] = shots_json.map { |json| Replay::ReplayShot.from_json(json) }
+        end
+
+        params[:inbound_shots]
+    end
 end
 
 server = ReplayServer.new
 control = ReplayLocalControl.new(app)
 control.shot_target = server
 server.replay_app = app
-Thread.new { server.run }
+Thread.new { server.run(:Host => '::0', :Port => 3000) }
+Thin::Logging.debug = true
 control.start_irb
 
