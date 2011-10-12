@@ -4,7 +4,8 @@
 
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC
+CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC 
+
 # don't use -Werror for swig-generated code
 SWIG_CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO -fPIC
 LDFLAGS=-g -O3 -march=k8 
@@ -40,6 +41,10 @@ include $(shell find . -iname 'targets.mk')
 # is forced anyway.
 all_DEPS = $(shell find . -iname '*.d')
 include $(all_DEPS)
+
+ifeq ($(SKIP_X86_64_ASM),1)
+	CXXFLAGS += -DSKIP_ASSEMBLY_ROUTINES
+endif
 
 # Generic rule for compiling C++ object files.
 %.o : %.cpp
