@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby 
 
+require 'rubygems'
 require 'sinatra/base'
+require 'thin'
+
+Thin::Logging.silent = true
 
 IN = 1
 OUT = 2
