@@ -4,16 +4,26 @@ require 'irb'
 require 'json'
 require 'thin'
 
-require '/home/armena/object_ids'
+require_relative 'object_ids'
 
 require_relative 'replay_app'
 require_relative '../input/shuttlepro'
 
-iadp = Replay::create_decklink_input_adapter(1, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp1 = Replay::create_decklink_input_adapter(1, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp2 = Replay::create_decklink_input_adapter(2, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp3 = Replay::create_decklink_input_adapter(3, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp4 = Replay::create_decklink_input_adapter(4, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp5 = Replay::create_decklink_input_adapter(5, 0, 0, Replay::RawFrame::CbYCrY8422)
+iadp6 = Replay::create_decklink_input_adapter(6, 0, 0, Replay::RawFrame::CbYCrY8422)
 
 app = Replay::ReplayApp.new
 
-app.add_source(:input => iadp, :file => 'd1', :name => 'CAM 1')
+app.add_source(:input => iadp1, :file => '/mnt/cam1/d1', :name => 'CAM 1')
+app.add_source(:input => iadp2, :file => '/mnt/cam2/d2', :name => 'CAM 2')
+app.add_source(:input => iadp3, :file => '/mnt/cam3/d3', :name => 'CAM 3')
+app.add_source(:input => iadp4, :file => '/mnt/cam4/d4', :name => 'CAM 4')
+app.add_source(:input => iadp5, :file => '/root/d5', :name => 'HYPERMOTION')
+app.add_source(:input => iadp6, :file => '/root/d6', :name => 'CAM 6')
 app.start
 
 module IRB # :nodoc:
@@ -42,6 +52,7 @@ end
 class ReplayLocalControl < ShuttleProInput
     def initialize(app)
         @app = app
+        @shifted = 0
         @current_event = @app.each_source.map { |src| nil }
         @current_preview_source = 0
         super()
@@ -86,20 +97,34 @@ class ReplayLocalControl < ShuttleProInput
         when 259
             @app.preview.mark_out
         when 260
-            preview_source 0
+            if @shifted == 1
+                preview_source 4
+            else
+                preview_source 0
+            end
         when 261
-            preview_source 1
+            if @shifted == 1
+                preview_source 5
+            else
+                preview_source 1
+            end
         when 262
             preview_source 2
         when 263
             preview_source 3
         when 264
-            preview_source 4
+            @shifted = 2
         when 269
             capture_event
         when 270
             send_preview_to_web_interface
             #send_event_to_web_interface
+        end
+
+        if @shifted == 2
+            @shifted = 1
+        elsif @shifted == 1
+            @shifted = 0
         end
     end
 
