@@ -18,7 +18,7 @@ end
 module Replay
     class ReplaySource
         def initialize(opts={})
-            buf_size = opts[:buf_size] || 20.gigabytes
+            buf_size = opts[:buf_size] || 75.gigabytes
             frame_size = opts[:frame_size] || 512.kilobytes
             input = opts[:input] || fail("Cannot have a source with no input")
             file = opts[:file] || fail("Cannot have a source with no file")
@@ -61,7 +61,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            Replay::create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter(7, 0, RawFrame::CbYCrY8422)
         end
     end
 

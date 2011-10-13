@@ -39,7 +39,7 @@ void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     MutexLock l(m);
     current_source = shot.source;
     /* 1/2 frame of timecode between output fields */
-    field_rate = Rational(1, 2);
+    field_rate = Rational(3, 8);
     current_pos = Rational((int) shot.start);
     shot_end = shot.start + shot.length;
 
