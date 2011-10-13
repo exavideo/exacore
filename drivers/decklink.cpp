@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#define IN_PIPE_SIZE 4
+#define IN_PIPE_SIZE 32
 #define OUT_PIPE_SIZE 8 
 
 struct decklink_norm {

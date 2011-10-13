@@ -83,7 +83,7 @@ void Mjpeg422Encoder::libjpeg_init( ) {
 
     cinfo.input_components = 3;
     jpeg_set_defaults(&cinfo);
-    jpeg_set_quality(&cinfo, 40, false);
+    jpeg_set_quality(&cinfo, 70, false);
     jpeg_set_colorspace(&cinfo, JCS_YCbCr);
 
     cinfo.raw_data_in = TRUE;

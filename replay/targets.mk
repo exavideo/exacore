@@ -16,11 +16,6 @@ replay_replay_test_OBJECTS = \
     replay/replay_multiviewer.o \
     replay/replay_test.o
 
-replay/replay_test: $(replay_replay_test_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
-
-all_TARGETS += replay/replay_test
-
 replay_replay_so_OBJECTS = \
 	$(common_OBJECTS) \
 	$(mjpeg_OBJECTS) \
