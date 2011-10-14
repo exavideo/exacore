@@ -44,6 +44,8 @@ include $(all_DEPS)
 
 ifeq ($(SKIP_X86_64_ASM),1)
 	CXXFLAGS += -DSKIP_ASSEMBLY_ROUTINES
+else
+	CXXFLAGS += -DX86_64
 endif
 
 # Generic rule for compiling C++ object files.
