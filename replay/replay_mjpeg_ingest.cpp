@@ -105,7 +105,9 @@ void ReplayMjpegIngest::run_thread( ) {
 
 int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
     ssize_t ret;
-    size_t i, jpgsize;
+    size_t i, jpgend, jpgstart;
+    bool success_flag;
+
     for (;;) {
         /* try to read more data into the buffer */
         if (buf_fill < buf_size) {
@@ -118,20 +120,36 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
             buf_fill += ret;
         }
 
+        jpgstart = (size_t) -1;
+
         /* scan the buffer for a JPEG end marker (0xffd9) */
         for (i = 0; i < buf_fill - 1; i++) {
+            if (jpegbuf[i] == 0xff && jpegbuf[i+1] == 0xd8) {
+                jpgstart = i;
+            }
+
             if (jpegbuf[i] == 0xff && jpegbuf[i+1] == 0xd9) {
-                jpgsize = i+2;
+                jpgend = i+2;
+                
+                success_flag = false;
 
-                /* copy JPEG data to frame buffer */
-                memcpy(dest.data_ptr, jpegbuf, jpgsize);
+                if (jpgstart != (size_t) -1) {
+                    /* copy JPEG data to frame buffer */
+                    memcpy(dest.data_ptr, jpegbuf+jpgstart, jpgend-jpgstart);
+                    success_flag = true;
+                }
 
-                /* move down data following the JPEG */
-                memmove(jpegbuf, jpegbuf+jpgsize, buf_fill-jpgsize);
-                buf_fill -= jpgsize;
+                /* move down data following the JPEG (or just discard data) */
+                memmove(jpegbuf, jpegbuf+jpgend, buf_fill-jpgend);
+                buf_fill -= jpgend;
             
                 /* done! */
-                return 1;
+                if (success_flag) {
+                    return 1;
+                } else {
+                    /* stop scanning for JPEGs and load buffer again */
+                    break; 
+                }
             }
         }
 
