@@ -55,7 +55,7 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
         buf_size = BUFSIZE;
         buf_fill = 0;
 
-        run_thread( );
+        start_thread( );
     }
 }
 
@@ -119,7 +119,7 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
         }
 
         /* scan the buffer for a JPEG end marker (0xffd9) */
-        for (i = 0; i < buf_fill; i++) {
+        for (i = 0; i < buf_fill - 1; i++) {
             if (jpegbuf[i] == 0xff && jpegbuf[i+1] == 0xd9) {
                 jpgsize = i+2;
 

@@ -20,12 +20,19 @@ module Replay
         def initialize(opts={})
             buf_size = opts[:buf_size] || 75.gigabytes
             frame_size = opts[:frame_size] || 512.kilobytes
-            input = opts[:input] || fail("Cannot have a source with no input")
+            input = opts[:input]
+            mjpeg_cmd = opts[:mjpeg_cmd]
             file = opts[:file] || fail("Cannot have a source with no file")
             name = opts[:name] || file
 
             @buffer = ReplayBuffer.new(file, buf_size, frame_size, name)
-            @ingest = ReplayIngest.new(input, @buffer)
+            if input
+                @ingest = ReplayIngest.new(input, @buffer)
+            elsif mjpeg_cmd
+                @ingest = ReplayMjpegIngest.new(mjpeg_cmd, @buffer)
+            else
+                fail "need some input source"
+            end
         end
 
         def make_shot_now
