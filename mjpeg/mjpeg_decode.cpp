@@ -75,8 +75,19 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
     cinfo.dct_method = JDCT_FASTEST;
     cinfo.raw_data_out = TRUE;
 
-    cinfo.scale_num = 1;
-    cinfo.scale_denom = scale_down;
+    /* less than 20, assume it's a ratio... otherwise, assume a max. width */
+    if (scale_down < 20) {
+        cinfo.scale_num = 1;
+        cinfo.scale_denom = scale_down;
+    } else {
+        /* crudely fit decompressed results into specified width */
+        cinfo.scale_num = 1;
+        cinfo.scale_denom = 1;
+
+        while (cinfo.image_width / cinfo.scale_denom > scale_down) {
+            scale_denom++;
+        }
+    }
 
 
     if (cinfo.num_components != 3) {
