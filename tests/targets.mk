@@ -43,6 +43,16 @@ tests/mjpeg_422_decode_scaled: $(test_mjpeg_422_decode_scaled_OBJECTS)
 
 all_TARGETS += tests/mjpeg_422_decode_scaled    
 
+test_CbYCrY8422_scan_double_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/CbYCrY8422_scan_double.o
+
+tests/CbYCrY8422_scan_double: $(test_CbYCrY8422_scan_double_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+all_TARGETS += tests/mjpeg_422_decode_scaled    
+
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \

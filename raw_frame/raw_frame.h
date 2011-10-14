@@ -134,6 +134,7 @@ class RawFrameUnpacker {
             do_BGRAn8 = NULL;
             do_BGRAn8_scale_1_2 = NULL;
             do_BGRAn8_scale_1_4 = NULL;
+            do_CbYCrY8422_scan_double = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
@@ -162,6 +163,12 @@ class RawFrameUnpacker {
             do_BGRAn8_scale_1_4(f->size( ), f->data( ), data, f->pitch( ));
         }
 
+        void CbYCrY8422_scan_double(uint8_t *data) {
+            CHECK(do_CbYCrY8422_scan_double);
+            do_CbYCrY8422_scan_double(f->size( ), f->data( ), 
+                    data, f->pitch( ));
+        }
+
     protected:
         void check(void *ptr) {
             if (ptr == NULL) {
@@ -183,6 +190,8 @@ class RawFrameUnpacker {
         void (*do_BGRAn8_scale_1_2)(size_t, uint8_t *, 
                 uint8_t *, unsigned int);
         void (*do_BGRAn8_scale_1_4)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
+        void (*do_CbYCrY8422_scan_double)(size_t, uint8_t *, 
                 uint8_t *, unsigned int);
 };
 
@@ -207,6 +216,13 @@ class RawFrameConverter {
             RawFrame *ret = new RawFrame(f->w( ) / 4, f->h( ) / 4, 
                     RawFrame::BGRAn8);
             f->unpack->BGRAn8_scale_1_4(ret->data( ));
+            return ret;
+        }
+
+        RawFrame *CbYCrY8422_scan_double( ) {
+            RawFrame *ret = new RawFrame(f->w( ) * 2, f->h( ) * 2,
+                    RawFrame::CbYCrY8422);
+            f->unpack->CbYCrY8422_scan_double(ret->data( ));
             return ret;
         }
 
