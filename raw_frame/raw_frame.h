@@ -219,6 +219,28 @@ class RawFrameConverter {
             return ret;
         }
 
+        RawFrame *BGRAn8_540p( ) {
+            if (f->w( ) == 960 && f->h( ) == 540) {
+                return BGRAn8( );
+            } else if (f->w( ) == 1920 && f->h( ) == 1080) {
+                return BGRAn8_scale_1_2( );
+            } else {
+                return NULL; /* fast conversion not supported */
+            }
+        }
+
+        RawFrame *BGRAn8_270p( ) {
+            if (f->w( ) == 480 && f->h( ) >= 270) {
+                return BGRAn8( );       
+            } else if (f->w( ) == 960 && f->h( ) >= 540) {
+                return BGRAn8_scale_1_2( );
+            } else if (f->w( ) == 1920 && f->h( ) >= 1080) {
+                return BGRAn8_scale_1_4( );
+            } else {
+                return NULL; /* fast conversion not supported */
+            }
+        }
+
         RawFrame *CbYCrY8422_scan_double( ) {
             RawFrame *ret = new RawFrame(f->w( ) * 2, f->h( ) * 2,
                     RawFrame::CbYCrY8422);
@@ -226,6 +248,13 @@ class RawFrameConverter {
             return ret;
         }
 
+        RawFrame *CbYCrY8422_1080( ) {
+            if (f->w( ) == 960 && f->h( ) >= 540) {
+                return CbYCrY8422_scan_double( ); 
+            } else {
+                return NULL;
+            }
+        }
     
     protected:
         RawFrame *f;

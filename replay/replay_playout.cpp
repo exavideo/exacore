@@ -177,11 +177,19 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         bool is_first_field) {
 
     coord_t srcline, dstline;
+    RawFrame *tmp;
 
     /* decode the field data if we don't have it cached */
     if (field.data_ptr != cache_data.data_ptr) {
         delete cache_frame;
         cache_frame = dec.decode(field.data_ptr, field.data_size);
+        /* Scale up video to 1920x1080 */
+        /* FIXME this assumes we always want 1920x1080 output */
+        if (cache_frame->w( ) < 1920) {
+            tmp = cache_frame->CbYCrY8422_1080( ); 
+            delete cache_frame;
+            cache_frame = tmp;
+        }
         cache_data = field;
     }
 
