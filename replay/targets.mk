@@ -11,6 +11,7 @@ replay_replay_test_OBJECTS = \
     $(graphics_OBJECTS) \
     replay/replay_buffer.o \
     replay/replay_ingest.o \
+    replay/replay_mjpeg_ingest.o \
     replay/replay_preview.o \
     replay/replay_playout.o \
     replay/replay_multiviewer.o \
@@ -26,6 +27,7 @@ replay_replay_so_OBJECTS = \
 	$(graphics_OBJECTS) \
 	replay/replay_buffer.o \
 	replay/replay_ingest.o \
+        replay/replay_mjpeg_ingest.o \
 	replay/replay_preview.o \
 	replay/replay_playout.o \
 	replay/replay_multiviewer.o \

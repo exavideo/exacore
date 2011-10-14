@@ -24,22 +24,25 @@
 #include "async_port.h"
 #include "adapter.h"
 #include "replay_data.h"
-#include "replay_buffer.h"
+#include "replay_ingest.h"
 
-class ReplayIngest : public Thread {
+class ReplayMjpegIngest : public ReplayIngest {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
+        ReplayMjpegIngest(const char *cmd, ReplayBuffer *buf_);
+        ~ReplayMjpegIngest( );
 
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
     protected:
         void run_thread( );
         
         InputAdapter *iadp;
         ReplayBuffer *buf;
+        int child_fd;
+        pid_t child_pid;
 
-        ReplayIngest() { };
+        void read_mjpeg_data(ReplayFrameData &dest);
+        uint8_t *buf;
+        size_t buf_size;
+        size_t buf_fill;
 };
 
 #endif

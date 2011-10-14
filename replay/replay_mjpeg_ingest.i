@@ -17,30 +17,16 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+%{
+    #include "replay_ingest.h"
+    #include "replay_mjpeg_ingest.h"
+%}
 
-#include "thread.h"
-#include "async_port.h"
-#include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
+%rename("monitor") ReplayMjpegIngest::get_monitor( );
 
-class ReplayIngest : public Thread {
+class ReplayMjpegIngest : public ReplayIngest {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
-        ~ReplayIngest( );
-
-        AsyncPort<ReplayRawFrame> monitor;
-        AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-    protected:
-        void run_thread( );
-        
-        InputAdapter *iadp;
-        ReplayBuffer *buf;
-
-        ReplayIngest() { };
+        ReplayMjpegIngest(const char *INPUT, ReplayBuffer *INPUT);
+        ~ReplayMjpegIngest( );
 };
-
-#endif
 
