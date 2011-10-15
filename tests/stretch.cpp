@@ -26,6 +26,36 @@
 #include "posix_util.h"
 #include "cpu_dispatch.h"
 
+int16_t *y_offset_lookup_table;
+int16_t *y_interp_lookup_table;
+int16_t *c_offset_lookup_table;
+int16_t *c_interp_lookup_table;
+
+void build_lookup_tables(void) {
+    int i;
+
+    y_interp_lookup_table = new int16_t[1920];
+    y_offset_lookup_table = new int16_t[1920];
+    c_interp_lookup_table = new int16_t[1920];
+    c_offset_lookup_table = new int16_t[1920];
+
+    for (i = 0; i < 1920; i++) {
+        /* compute the "stretching" function */  
+        float opos = (i / 1919.0f) * 2.0f - 1.0f; /* output position on [-1..1] */
+        float ipos = (4.0f * opos - powf(opos, 3.0f)) / 3.0f; /* input position on [-1..1] */
+        float iofs = (ipos + 1.0f) / 2.0f * 719.0f; /* input position on [0,720) */
+        float interp = iofs - floorf(iofs);
+
+        y_offset_lookup_table[i] = 2 * floorf(iofs) + 1;
+        y_interp_lookup_table[i] = 256 * interp;
+
+        if (i % 2 == 0) {
+            /* adjust the values for the 2x-subsampled chroma */
+            c_offset_lookup_table[i] = 2 * (floorf(iofs / 2.0f) * 2);
+            c_interp_lookup_table[i] = iofs / 2.0f - floorf(iofs / 2.0f);
+        }
+    }
+}
 
 void interpolate_scanline(uint8_t *out, uint8_t *in1, uint8_t *in2, int frac2) {
     for (int i = 0; i < 2*1920; i++) {
@@ -38,45 +68,47 @@ void interpolate_scanline(uint8_t *out, uint8_t *in1, uint8_t *in2, int frac2) {
 }
 
 void upscale_scanline(uint8_t *out, uint8_t *in1) {
-    for (int i = 0; i < 1920; i++) {
-        float opos = (i / 1919.0f) * 2.0f - 1.0f; /* range from -1..1 */
-        float ipos = (4.0f*opos - powf(opos,3.0f)) / 3.0f;
-        float iofs = (ipos + 1.0f) / 2.0f * 720.0f;
-        float interp = iofs - floorf(iofs);
-        int iofs0 = floorf(iofs);
-        uint8_t y_in0 = in1[2*iofs0 + 1];
-        uint8_t y_in1;
-        uint8_t &out_luma = out[2*i + 1];
+    uint16_t interp, y_in0, y_in1, cbin0, crin0, cbin1, crin1, ofs;
 
-        if (iofs0 < 719) {
-            y_in1 = in1[2*iofs0 + 3];
+    for (int i = 0; i < 1920; i++) {
+        /* use lookup table to find out which two pixels to look at */
+        ofs = y_offset_lookup_table[i];
+        /* fetch luma value from the left pixel */
+        y_in0 = in1[ofs];
+
+        /* 
+         * fetch luma value from right pixel
+         * (or reuse left one if at an edge)
+         */
+        if (ofs < 1438) {
+            y_in1 = in1[ofs + 2];
         } else {
             y_in1 = y_in0;
         }
 
-        out_luma = (uint8_t) (y_in1 * interp + y_in0 * (1.0f - interp));
-
+        /* fetch linear interpolation value from lookup table */
+        interp = y_interp_lookup_table[i];
+        /* do luma interpolation */
+        out[2*i+1] = (y_in0 * (256 - interp) + y_in1 * interp) / 256;
+    
+        /* if this sample has cosited chroma samples deal with those here */
         if (i % 2 == 0) {
-            int cofs0 = floorf(iofs/2.0f) * 2;
-            float interp = iofs / 2.0f - floorf(iofs / 2.0f);
-            uint8_t cbin0 = in1[2*cofs0];
-            uint8_t crin0 = in1[2*cofs0+2];
-            uint8_t cbin1, crin1;
-            uint8_t &out_cb = out[2*i];
-            uint8_t &out_cr = out[2*i+2];
+            ofs = c_offset_lookup_table[i];
+            cbin0 = in1[ofs];
+            crin0 = in1[ofs+2];
 
-            if (cofs0 < 718) {
-                cbin1 = in1[2*cofs0+4];
-                crin1 = in1[2*cofs0+6];
+            if (ofs < 1436) {
+                cbin1 = in1[ofs+4];
+                crin1 = in1[ofs+6];
             } else {
                 cbin1 = cbin0;
                 crin1 = crin0;
             }
 
 
-            /* do chroma interpolation... eventually */
-            out_cb = (cbin1 * interp + cbin0 * (1.0f - interp));
-            out_cr = (crin1 * interp + crin0 * (1.0f - interp));
+            interp = c_interp_lookup_table[i];
+            out[2*i] = (cbin1 * interp + cbin0 * (256 - interp)) / 256;
+            out[2*i+2] = (crin1 * interp + crin0 * (256 - interp)) / 256;
         }
     }
 }
@@ -108,6 +140,8 @@ int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "-n") == 0) {
         cpu_force_no_simd( );
     }
+
+    build_lookup_tables( );
 
     /* Read 1080p UYVY422 frames on stdin. Dump M-JPEG stream on stdout. */
     RawFrame frame(720, 480, RawFrame::CbYCrY8422);
