@@ -39,6 +39,7 @@ class CharacterGenerator : public Thread {
         void set_x(coord_t x) { _x = x; }
         void set_y(coord_t y) { _y = y; }
         void set_position(coord_t x, coord_t y) { _x = x; _y = y; }
+        virtual unsigned int dirty_level( ) { return 0; }
 
     protected:
         CharacterGenerator(int dummy); /* construct without starting thread */

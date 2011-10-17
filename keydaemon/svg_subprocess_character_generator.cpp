@@ -24,8 +24,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(const char *cmd)
-        : CharacterGenerator(1) {
+SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(
+    const char *cmd, unsigned int dirty_level
+) : CharacterGenerator(1), _dirty_level(dirty_level) {
 
     _cmd = strdup(cmd);
     send_fd = -1;

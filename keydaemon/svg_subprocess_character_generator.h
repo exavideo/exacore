@@ -24,9 +24,10 @@
 
 class SvgSubprocessCharacterGenerator : public CharacterGenerator {
     public:
-        SvgSubprocessCharacterGenerator(const char *cmd);
+        SvgSubprocessCharacterGenerator(const char *cmd, 
+                unsigned int dirty_level = 0);
         ~SvgSubprocessCharacterGenerator( );
-
+        unsigned int dirty_level( ) { return _dirty_level; }
     protected:
         virtual void run_thread( );
         void do_fork( );
@@ -37,6 +38,7 @@ class SvgSubprocessCharacterGenerator : public CharacterGenerator {
         char *_cmd;
 
         int send_fd, recv_fd;
+        unsigned int _dirty_level;
 };
 
 #endif

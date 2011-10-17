@@ -37,7 +37,8 @@ class Keyer {
     protected:
         std::vector<Data_Object<CharacterGenerator> *> cgs;
         Data_Object<InputAdapter> *iadp;
-        Data_Object<OutputAdapter> *oadp;
+        std::vector<Data_Object<OutputAdapter> *> oadps;
+        std::vector<bool> flags;
 
         void do_mark(void) {
             unsigned int i;
@@ -46,26 +47,37 @@ class Keyer {
                 cgs[i]->mark( );
             }
 
+            for (i = 0; i < oadps.size( ); i++) {
+                oadps[i]->mark( );
+            }
+
             if (iadp != NULL) {
                 iadp->mark( );
             }
-            
-            if (oadp != NULL) {
-                oadp->mark( );
+        }
+
+        void clear_all_flags( ) {
+            unsigned int i;
+
+            for (i = 0; i < flags.size( ); i++) {
+                flags[i] = false;
             }
         }
 
     public:
         Keyer( ) {
             iadp = NULL;
-            oadp = NULL;
         }
 
         ~Keyer( ) {
             unsigned int i;
 
             delete iadp;
-            delete oadp;
+
+            for (i = 0; i < oadps.size( ); i++) {
+                delete oadps[i];
+            }
+
             for (i = 0; i < cgs.size( ); i++) {
                 delete cgs[i];
             }
@@ -80,15 +92,12 @@ class Keyer {
         }
 
         void output(Object oadp_) {
-            if (oadp != NULL) {
-                throw std::runtime_error("cannot define multiple outputs");
-            }
-
-            oadp = new Data_Object<OutputAdapter>(oadp_);
+            oadps.push_back(new Data_Object<OutputAdapter>(oadp_));
         }
 
         void cg(Object cg) {
             cgs.push_back(new Data_Object<CharacterGenerator>(cg));
+            flags.push_back(false);
         }
 
         void run( ) {
@@ -99,7 +108,7 @@ class Keyer {
                 throw std::runtime_error("cannot run with no input adapter");
             }
 
-            if (oadp == NULL) {
+            if (oadps.size( ) == 0) {
                 throw std::runtime_error("cannot run with no output adapter");
             }
 
@@ -114,30 +123,58 @@ class Keyer {
                     /* get incoming frame */
                     frame = (*iadp)->output_pipe( ).get( );
 
-                    /* get overlay from each CG */
-                    for (unsigned int i = 0; i < cgs.size( ); i++) {
-                        Data_Object<CharacterGenerator> cg = *(cgs[i]);
-                        
-                        if (!cg->output_pipe( ).data_ready( )) {
-                            fprintf(stderr, "not keying this frame on account of staleness\n");
-                            continue;
+                    clear_all_flags( ); /* we haven't keyed anything yet */
+
+                    for (unsigned int j = 0; j < oadps.size( ). j++) {
+                        /* get overlay from each CG */
+                        for (unsigned int i = 0; i < cgs.size( ); i++) {
+                            Data_Object<CharacterGenerator> cg = *(cgs[i]);
+
+                            /*
+                             * dirty_level determines which outputs will
+                             * get keyed with this CG's output
+                             * so skip this CG if its dirty level is higher
+                             * than that of the output.
+                             * (For now, the output dirty level is just the
+                             * order in which the output was added.
+                             *
+                             * Also, if the key was already added in an
+                             * earlier pass, skip it.
+                             */
+                            if (cg->dirty_level( ) > j || flags[i]) {
+                                continue;
+                            }
+                            
+                            if (!cg->output_pipe( ).data_ready( )) {
+                                fprintf(stderr, "not keying this frame on account of staleness\n");
+                                continue;
+                            }
+
+                            cgout = cg->output_pipe( ).get( );
+
+                            /*
+                             * If no overlay is being rendered by this CG right now, the CG
+                             * will output a NULL frame. We can safely ignore those.
+                             */
+                            if (cgout != NULL) {
+                                frame->draw->alpha_key(cg->x( ), cg->y( ), 
+                                        cgout, cgout->global_alpha( ));
+                                delete cgout;
+                            }
+                            /* 
+                             * mark this CG as "done" so we don't waste
+                             * time later on subsequent passes 
+                             */
+                            flags[i] = true;
                         }
 
-                        cgout = cg->output_pipe( ).get( );
-
-                        /*
-                         * If no overlay is being rendered by this CG right now, the CG
-                         * will output a NULL frame. We can safely ignore those.
-                         */
-                        if (cgout != NULL) {
-                            frame->draw->alpha_key(cg->x( ), cg->y( ), 
-                                    cgout, cgout->global_alpha( ));
-                            delete cgout;
-                        }
+                        /* Lastly, send output to the output adapter. */
+                        (*oadps[j])->input_pipe( ).put(
+                            frame->convert->CbYCrY8422( )
+                        );
                     }
 
-                    /* Lastly, send output to the output adapter. */
-                    (*oadp)->input_pipe( ).put(frame);
+                    delete frame;
                 }
             } catch (BrokenPipe &) {
                 fprintf(stderr, "Unexpected component shutdown\n");
@@ -187,6 +224,7 @@ class SvgSubprocessCGConfigProxy : public CGConfigProxy {
     public:
         SvgSubprocessCGConfigProxy( ) {
             _cmd = NULL;
+            _dirty_level = 0;
         }
 
         void command(const char *cmd) {
@@ -197,11 +235,15 @@ class SvgSubprocessCGConfigProxy : public CGConfigProxy {
             _cmd = strdup(cmd);
         }
 
+        void dirty_level(unsigned int dl) {
+            _dirty_level = dl;
+        }
+
         CharacterGenerator *construct( ) {
             if (_cmd == NULL) {
                 throw std::runtime_error("command not specified");
             }
-            CharacterGenerator *cg = new SvgSubprocessCharacterGenerator(_cmd);
+            CharacterGenerator *cg = new SvgSubprocessCharacterGenerator(_cmd, _dirty_level);
             base_configure(cg);
             return cg;
         }
@@ -211,7 +253,7 @@ class SvgSubprocessCGConfigProxy : public CGConfigProxy {
         }
     protected:
         char *_cmd;
-
+        unsigned int _dirty_level;
 };
 
 /* 
@@ -263,5 +305,6 @@ extern "C" void Init_keyer( ) {
         .define_class<SvgSubprocessCGConfigProxy, CGConfigProxy>
                 ("SvgSubprocessCGConfigProxy")
             .define_constructor(Constructor<SvgSubprocessCGConfigProxy>( ))
-            .define_method("command", &SvgSubprocessCGConfigProxy::command);
+            .define_method("command", &SvgSubprocessCGConfigProxy::command)
+            .define_method("dirty_level", &SvgSubprocessCGConfigProxy::dirty_level);
 }
