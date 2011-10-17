@@ -17,8 +17,8 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_INGEST_H
-#define _REPLAY_INGEST_H
+#ifndef _REPLAY_MJPEG_INGEST_H
+#define _REPLAY_MJPEG_INGEST_H
 
 #include "thread.h"
 #include "async_port.h"
@@ -39,8 +39,8 @@ class ReplayMjpegIngest : public ReplayIngest {
         int child_fd;
         pid_t child_pid;
 
-        void read_mjpeg_data(ReplayFrameData &dest);
-        uint8_t *buf;
+        int read_mjpeg_data(ReplayFrameData &dest);
+        uint8_t *jpegbuf;
         size_t buf_size;
         size_t buf_fill;
 };

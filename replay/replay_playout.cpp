@@ -186,7 +186,7 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
         /* Scale up video to 1920x1080 */
         /* FIXME this assumes we always want 1920x1080 output */
         if (cache_frame->w( ) < 1920) {
-            tmp = cache_frame->CbYCrY8422_1080( ); 
+            tmp = cache_frame->convert->CbYCrY8422_1080( ); 
             delete cache_frame;
             cache_frame = tmp;
         }

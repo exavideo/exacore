@@ -17,7 +17,7 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "replay_ingest.h"
+#include "replay_mjpeg_ingest.h"
 #include "mjpeg_codec.h"
 #include <assert.h>
 #include <string.h>
@@ -51,11 +51,11 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
         close(pipefd[1]);
         child_fd = pipefd[0];
 
-        buf = new uint8_t[BUFSIZE];
+        jpegbuf = new uint8_t[BUFSIZE];
         buf_size = BUFSIZE;
         buf_fill = 0;
 
-        run_thread( );
+        start_thread( );
     }
 }
 
@@ -91,7 +91,7 @@ void ReplayMjpegIngest::run_thread( ) {
 
         /* scale down frame to send to monitor */
         monitor_frame = new ReplayRawFrame(
-            decoded_monitor->convert->BGRAn8( );
+            decoded_monitor->convert->BGRAn8( )
         );
         delete decoded_monitor;
         
@@ -100,18 +100,18 @@ void ReplayMjpegIngest::run_thread( ) {
         monitor_frame->tc = dest.pos;
 
         monitor.put(monitor_frame);
-        
-        delete input;
     }
 }
 
 int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
     ssize_t ret;
-    size_t i, jpgsize;
+    size_t i, jpgend, jpgstart;
+    bool success_flag;
+
     for (;;) {
         /* try to read more data into the buffer */
         if (buf_fill < buf_size) {
-            ret = read(child_fd, buf + buf_fill, buf_size - buf_fill);
+            ret = read(child_fd, jpegbuf + buf_fill, buf_size - buf_fill);
             if (ret < 0) {
                 throw POSIXError("ReplayMjpegIngest read()");
             } else if (ret == 0) {
@@ -120,20 +120,36 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
             buf_fill += ret;
         }
 
+        jpgstart = (size_t) -1;
+
         /* scan the buffer for a JPEG end marker (0xffd9) */
-        for (i = 0; i < buf_fill; i++) {
-            if (buf[i] == 0xff && buf[i+1] == 0xd9) {
-                jpgsize = i+2;
+        for (i = 0; i < buf_fill - 1; i++) {
+            if (jpegbuf[i] == 0xff && jpegbuf[i+1] == 0xd8) {
+                jpgstart = i;
+            }
 
-                /* copy JPEG data to frame buffer */
-                memcpy(dest.data_ptr, buf, jpgsize);
+            if (jpegbuf[i] == 0xff && jpegbuf[i+1] == 0xd9) {
+                jpgend = i+2;
+                
+                success_flag = false;
 
-                /* move down data following the JPEG */
-                memmove(buf, buf+jpgsize, buf_fill-jpgsize);
-                buf_fill -= jpgsize;
+                if (jpgstart != (size_t) -1) {
+                    /* copy JPEG data to frame buffer */
+                    memcpy(dest.data_ptr, jpegbuf+jpgstart, jpgend-jpgstart);
+                    success_flag = true;
+                }
+
+                /* move down data following the JPEG (or just discard data) */
+                memmove(jpegbuf, jpegbuf+jpgend, buf_fill-jpgend);
+                buf_fill -= jpgend;
             
                 /* done! */
-                return 1;
+                if (success_flag) {
+                    return 1;
+                } else {
+                    /* stop scanning for JPEGs and load buffer again */
+                    break; 
+                }
             }
         }
 

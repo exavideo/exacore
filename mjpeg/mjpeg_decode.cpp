@@ -84,8 +84,8 @@ RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
         cinfo.scale_num = 1;
         cinfo.scale_denom = 1;
 
-        while (cinfo.image_width / cinfo.scale_denom > scale_down) {
-            scale_denom++;
+        while ((int)(cinfo.image_width / cinfo.scale_denom) > scale_down) {
+            cinfo.scale_denom++;
         }
     }
 
