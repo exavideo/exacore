@@ -125,7 +125,7 @@ class Keyer {
 
                     clear_all_flags( ); /* we haven't keyed anything yet */
 
-                    for (unsigned int j = 0; j < oadps.size( ). j++) {
+                    for (unsigned int j = 0; j < oadps.size( ); j++) {
                         /* get overlay from each CG */
                         for (unsigned int i = 0; i < cgs.size( ); i++) {
                             Data_Object<CharacterGenerator> cg = *(cgs[i]);

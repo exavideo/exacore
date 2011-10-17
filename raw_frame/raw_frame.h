@@ -244,6 +244,7 @@ class RawFrameConverter {
         RawFrame *CbYCrY8422( ) {
             RawFrame *ret = match_frame(RawFrame::CbYCrY8422);
             f->unpack->CbYCrY8422(ret->data( ));
+            return ret;
         }
         
         RawFrame *CbYCrY8422_scan_double( ) {
