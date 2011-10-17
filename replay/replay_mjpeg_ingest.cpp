@@ -42,6 +42,7 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
         throw POSIXError("ReplayMjpegIngest fork()");
     } else if (child_pid == 0) {
         close(pipefd[0]);
+        close(STDIN_FILENO);
         dup2(pipefd[1], STDOUT_FILENO);
         execlp("sh", "sh", "-c", cmd, NULL);
         /* we should never get here */
