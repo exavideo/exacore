@@ -17,9 +17,11 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class InputAdapter;
-class OutputAdapter;
+%include "raw_frame.i"
 
-%include "decklink.i"
-%include "v4l2_input.i"
+%{
+    #include "v4l2_input.h"
+%}
+
+InputAdapter *create_v4l2_upscaled_input_adapter(const char *device);
 

@@ -24,6 +24,7 @@ replay_replay_so_OBJECTS = \
 	$(thread_OBJECTS) \
 	$(display_surface_OBJECTS) \
 	$(drivers_decklink_OBJECTS) \
+        $(drivers_v4l2_OBJECTS) \
 	$(graphics_OBJECTS) \
 	replay/replay_buffer.o \
 	replay/replay_ingest.o \
