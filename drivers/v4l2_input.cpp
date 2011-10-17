@@ -73,8 +73,11 @@ static void upscale_scanline(uint8_t *dst_scanline, uint8_t *src_scanline) {
 
 /* interpolate a scanline between two other scanlines */
 void interpolate_scanline(uint8_t *dst, uint8_t *s1, uint8_t *s2, int interp) {
+    uint16_t i1, i2;
     for (coord_t i = 0; i < 2*1920; i++) {
-        dst[i] = (s1[i] * (3 - interp) + s2[i] * interp) / 3;
+        i1 = s1[i];
+        i2 = s2[i];
+        dst[i] = (i1 * (3 - interp) + i2 * interp) / 3;
     }
 }
 
@@ -85,8 +88,10 @@ void do_upscale(RawFrame *out, uint8_t *in) {
     /* pass 1: up-scale all scanlines that are direct copies */
     for (coord_t i = 0; i < 180; i++) {
         /* keep interlaced pairs together */
-        upscale_scanline(out->scanline(6*i), in + 1280 * (2*i + offset));        
-        upscale_scanline(out->scanline(6*i + 1), in + 1280 * (2*i+1 + offset));
+        uint8_t *even = in + 1280 * (2*i + offset);
+        uint8_t *odd = even + 1280; 
+        upscale_scanline(out->scanline(6*i), even);
+        upscale_scanline(out->scanline(6*i + 1), odd);
     }
 
     /* pass 2: interpolate scanlines in between */
@@ -164,6 +169,7 @@ V4L2UpscaledInputAdapter::V4L2UpscaledInputAdapter(const char *device)
     set_image_format( );
     map_frame_buffers( );
     queue_all_buffers( );
+    stream_on( );
     start_thread( );    
 }
 
@@ -175,19 +181,21 @@ V4L2UpscaledInputAdapter::V4L2UpscaledInputAdapter(
 }
 
 V4L2UpscaledInputAdapter::~V4L2UpscaledInputAdapter( ) {
+    stream_off( );
     cleanup_frame_buffers( );
     close(fd);
 }
 
 void V4L2UpscaledInputAdapter::xioctl(int ioc, void *data) {
     if (ioctl(fd, ioc, data) == -1) {
-        perror("ioctl");
-        exit(1);
+        throw POSIXError("ioctl");
     }
 }
 
 void V4L2UpscaledInputAdapter::dump_image_format( ) {
     struct v4l2_format format;
+
+    memset(&format, 0, sizeof(format));
 
     format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
@@ -203,12 +211,19 @@ void V4L2UpscaledInputAdapter::dump_image_format( ) {
 
 void V4L2UpscaledInputAdapter::set_image_format( ) {
     struct v4l2_format format;
+    
+    /* make sure we are in NTSC mode */
+    v4l2_std_id standard = V4L2_STD_NTSC_M;
+    xioctl(VIDIOC_S_STD, &standard);
+
+    /* set up desired image size */
+    memset(&format, 0, sizeof(format));
 
     format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
     xioctl(VIDIOC_G_FMT, &format);
 
-    format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+    format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
     format.fmt.pix.width = 640;
     format.fmt.pix.height = 480;
 
@@ -252,6 +267,8 @@ void V4L2UpscaledInputAdapter::map_frame_buffers( ) {
 void V4L2UpscaledInputAdapter::queue_buffer(int bufno) {
     struct v4l2_buffer buf;
 
+    memset(&buf, 0, sizeof(buf));
+
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
     buf.index = bufno;
@@ -261,6 +278,8 @@ void V4L2UpscaledInputAdapter::queue_buffer(int bufno) {
 
 int V4L2UpscaledInputAdapter::dequeue_buffer(size_t &bufsize) {
     struct v4l2_buffer buf;
+
+    memset(&buf, 0, sizeof(buf));
 
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     buf.memory = V4L2_MEMORY_MMAP;
@@ -308,13 +327,15 @@ void V4L2UpscaledInputAdapter::run_thread( ) {
         bufno = dequeue_buffer(bufsize);
         
         out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-        do_upscale(out, (uint8_t *) buffers[bufno].start); 
         if (out_pipe.can_put( )) {
+            do_upscale(out, (uint8_t *) buffers[bufno].start); 
             out_pipe.put(out);
         } else {
             fprintf(stderr, "V4L2 in: dropping input frame on floor\n");
             delete out;
         }
+
+        queue_buffer(bufno);
 
     }
 }

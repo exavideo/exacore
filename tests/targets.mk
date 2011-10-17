@@ -83,7 +83,18 @@ test_decklink_output_random_OBJECTS = \
 tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
 
-all_TARGETS += tests/decklink_output_random    
+test_v4l2_input_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_v4l2_OBJECTS) \
+	$(thread_OBJECTS) \
+        $(mjpeg_OBJECTS) \
+	tests/v4l2_input.o
+
+tests/v4l2_input: $(test_v4l2_input_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
+all_TARGETS += tests/v4l2_input    
 
 test_decklink_output_random_audio_OBJECTS = \
 	$(common_OBJECTS) \
