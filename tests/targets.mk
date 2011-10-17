@@ -63,6 +63,16 @@ tests/stretch: $(test_stretch_OBJECTS)
 
 all_TARGETS += tests/stretch    
 
+test_scan_triple_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/scan_triple.o
+
+tests/scan_triple: $(test_scan_triple_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+all_TARGETS += tests/scan_triple    
+
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \
