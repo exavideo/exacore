@@ -15,6 +15,7 @@ $svgdata = ''
 $trans_i = 0
 $trans_nframes = 0
 $trans_state = DOWN
+$dirty_level = 0
 
 # talk to stdio
 Thread.new do
@@ -52,7 +53,7 @@ Thread.new do
                 end
             end
 
-            alphastr = [ alpha ].pack('C')
+            alphastr = [ alpha, $dirty_level ].pack('CC')
 
             STDOUT.write(size)
             STDOUT.write(alphastr)
@@ -99,6 +100,13 @@ class KeyerServer < Sinatra::Base
             else
                 503 # service unavailable
             end
+        end
+    end
+
+    post '/dirty_level/:n' do
+        Thread.exclusive do
+            $dirty_level = params[:n].to_ik
+            204 # no content
         end
     end
 

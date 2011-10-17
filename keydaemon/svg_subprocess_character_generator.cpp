@@ -137,6 +137,8 @@ void SvgSubprocessCharacterGenerator::run_thread( ) {
         /* get the SVG */
         svg_size = read_item_from_fd<uint32_t>(recv_fd);
         alpha = read_item_from_fd<uint8_t>(recv_fd);
+        _dirty_level = read_item_from_fd<uint8_t>(recv_fd);
+
         if (svg_size > 0) {
             svg_data = read_svg(svg_size);
 

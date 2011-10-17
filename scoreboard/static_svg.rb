@@ -11,7 +11,7 @@ while true
         break
     end
 
-    size = [ template.length ].pack('L')
+    size = [ template.length, 255, 0 ].pack('LCC')
 
     STDOUT.write(size)
     STDOUT.write(template)
