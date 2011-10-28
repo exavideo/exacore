@@ -30,6 +30,9 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+#define _GNU_SOURCE
+#include <getopt.h>
+
 char *parse_command(const char *cmd, int vpfd, int apfd) {
     size_t len = strlen(cmd);
     size_t out_len = 2*len;
@@ -191,22 +194,46 @@ class SenderThread : public Thread {
         int _out_fd;
 };
 
+void usage(const char *argv0) {
+    fprintf(stderr, "usage: %s [-c n] 'command'\n", argv0);
+    fprintf(stderr, "in 'command':\n");
+    fprintf(stderr, "%%a = audio pipe fd\n");
+    fprintf(stderr, "%%v = video pipe fd\n");
+}
 
 int main(int argc, const char **argv) {
     InputAdapter *iadp;
-    int vpfd, apfd;
+    int vpfd, apfd, opt;
     pid_t child;
 
     Pipe<AudioPacket *> *apipe;
 
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s 'command'\n", argv[0]);
-        fprintf(stderr, "in 'command':\n");
-        fprintf(stderr, "%%a = audio pipe fd\n");
-        fprintf(stderr, "%%v = video pipe fd\n");
+    static struct option options[] = {
+        { "card", 1, 0, 'c' },
+        { 0, 0, 0, 0 }
     }
 
-    child = start_subprocess(argv[1], vpfd, apfd);
+    int card = 0;
+
+    /* argument processing */
+    while ((opt = getopt_long(argc, argv, "c:", options, NULL)) != -1) {
+        switch (opt) {
+            case 'c':
+                card = atoi(optarg);
+                break;
+
+            default:
+                usage(argv[0]);
+                exit(1);
+        }
+    }
+
+    if (argc - optind != 1) {
+        usage(argv[0]);
+        exit(1);
+    }
+
+    child = start_subprocess(argv[optind], vpfd, apfd);
 
     if (child == -1) {
         return 1;
@@ -222,7 +249,7 @@ int main(int argc, const char **argv) {
         dummy_audio->write_to_fd(apfd);
     }
 
-    iadp = create_decklink_input_adapter_with_audio(0, 0, 0, 
+    iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
             RawFrame::CbYCrY8422);
     apipe = iadp->audio_output_pipe( );
 
