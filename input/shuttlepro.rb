@@ -3,7 +3,12 @@ require_relative 'input'
 class ShuttleProInput
     def initialize
         @last_jog = nil
-        @device = File.open("/dev/shuttlepro")
+        #@device = File.open("/dev/shuttlepro")
+
+        # search for ShuttlePRO devices
+        devices = Dir.glob('/dev/input/by-id/usb-Contour*')
+        fail "No ShuttlePRO found" if devices.length == 0
+        @device = File.open(devices[0])
 
         Thread.new { 
             begin
