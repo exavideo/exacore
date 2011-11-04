@@ -61,6 +61,7 @@ class CbYCrY8422Unpacker : public RawFrameUnpacker {
             } else {
                 do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
             }
+            do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
 #endif
             
             /* Non CPU-dispatched routines */
