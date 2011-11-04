@@ -145,45 +145,6 @@ static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode,
     return RawFrame::UNKNOWN; 
 }
 
-/* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
-class DecklinkInputRawFrame : public RawFrame {
-    public:
-        DecklinkInputRawFrame(IDeckLinkVideoFrame *frame, 
-                RawFrame::PixelFormat pf) : RawFrame(pf) {
-
-            void *dp;
-
-            assert(frame != NULL);
-
-            _frame = frame;
-
-            _frame->AddRef( ); 
-
-            if (_frame->GetBytes(&dp) != S_OK) {
-                throw std::runtime_error("Cannot get pointer to raw data");
-            }
-
-            _data = (uint8_t *) dp;
-            _w = _frame->GetWidth( );
-            _h = _frame->GetHeight( );
-            _pitch = _frame->GetRowBytes( );            
-        }
-
-        virtual ~DecklinkInputRawFrame( ) {
-            _frame->Release( );
-            _frame = NULL;
-            _data = NULL;
-        }
-    protected:
-        IDeckLinkVideoFrame *_frame;
-
-        virtual void alloc( ) {
-            throw std::runtime_error(
-                "Cannot allocate a DecklinkInputRawFrame"
-            );
-        }
-};
-
 class DeckLinkOutputAdapter : public OutputAdapter, 
         public IDeckLinkVideoOutputCallback,
         public IDeckLinkAudioOutputCallback {
@@ -622,13 +583,25 @@ class DeckLinkInputAdapter : public InputAdapter,
             RawFrame *out;
             AudioPacket *audio_out;
             void *data;
+            uint8_t *bytes;
+            size_t i, spitch, h;
 
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
-                    out = new DecklinkInputRawFrame(in, pf);
+                    out = new RawFrame(in->GetWidth(), in->GetHeight(), pf);
                     out->set_field_dominance(dominance);
+                    spitch = in->GetRowBytes( );
+                    h = in->GetHeight( );
+                    in->GetBytes(&data);
+
+                    bytes = (uint8_t *) data;
+
+                    for (i = 0; i < h; i++) {
+                        memcpy(out->scanline(i), bytes, out->pitch( ));
+                        bytes += spitch;
+                    }
                     
                     if (out_pipe.can_put( )) {
                         out_pipe.put(out);
