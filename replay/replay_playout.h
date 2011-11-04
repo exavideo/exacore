@@ -30,6 +30,7 @@
 #include "mjpeg_codec.h"
 
 #include <list>
+#include <vector>
 
 class ReplayPlayout : public Thread {
     public:
@@ -48,6 +49,9 @@ class ReplayPlayout : public Thread {
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
+        unsigned int add_svg_dsk(const std::string &svg, 
+            coord_t xoffset = 0, coord_t yoffset = 0);
+
     protected:
         void run_thread( );
         void get_and_advance_current_fields(ReplayFrameData &f1, 
@@ -59,6 +63,8 @@ class ReplayPlayout : public Thread {
 
         void roll_next_shot( );
 
+        void apply_dsks(RawFrame *target);
+
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
@@ -66,9 +72,17 @@ class ReplayPlayout : public Thread {
         Rational field_rate;
         timecode_t shot_end;
 
+        struct dsk {
+            RawFrame *key;
+            coord_t x;
+            coord_t y;
+        };
+
         std::list<ReplayShot> next_shots;
+        std::vector<dsk> dsks;
 
         Mutex m;
+        Mutex dskm;
 
         Mjpeg422Decoder dec;
 

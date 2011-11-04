@@ -31,6 +31,8 @@ class ReplayPlayout : public Thread {
         ReplayPlayout(OutputAdapter *INPUT);
         ~ReplayPlayout( );
 
+        unsigned int add_svg_dsk(const std::string &INPUT,
+            coord_t, coord_t);
         void roll_shot(const ReplayShot &INPUT);
         void queue_shot(const ReplayShot &INPUT);
         void stop( );

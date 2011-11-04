@@ -19,6 +19,7 @@
 
 #include "replay_playout.h"
 #include "raw_frame.h"
+#include "rsvg_frame.h"
 #include "mjpeg_codec.h"
 #include <string.h>
 
@@ -76,6 +77,18 @@ void ReplayPlayout::set_speed(int num, int denom) {
     field_rate = Rational(num, denom) * Rational(1, 2);
 }
 
+unsigned int ReplayPlayout::add_svg_dsk(const std::string &svg,
+        coord_t xoffset, coord_t yoffset) {
+    struct dsk the_dsk;
+
+    the_dsk.x = xoffset;
+    the_dsk.y = yoffset;
+    the_dsk.key = RsvgFrame::render_svg(svg.c_str( ), svg.size( ));
+
+    dsks.push_back(the_dsk);
+    return dsks.size( ) - 1;
+}
+
 void ReplayPlayout::run_thread( ) {
     ReplayRawFrame *monitor_frame;
 
@@ -98,6 +111,8 @@ void ReplayPlayout::run_thread( ) {
             decode_field(out, rfd2, rfd_cache, f_cache, false);
         }
 
+        apply_dsks(out);
+
         /* scale down to BGRAn8 and send to monitor port */
         monitor_frame = new ReplayRawFrame(
             out->convert->BGRAn8_scale_1_2( )
@@ -117,6 +132,14 @@ void ReplayPlayout::run_thread( ) {
 
         /* send the full CbYCrY frame to output */
         oadp->input_pipe( ).put(out);
+    }
+}
+
+void ReplayPlayout::apply_dsks(RawFrame *target) {
+    unsigned int i;
+
+    for (i = 0; i < dsks.size( ); i++) {
+        target->draw->alpha_key(dsks[i].x, dsks[i].y, dsks[i].key, 255);
     }
 }
 
