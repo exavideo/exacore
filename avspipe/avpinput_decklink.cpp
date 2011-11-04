@@ -30,7 +30,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define _GNU_SOURCE
 #include <getopt.h>
 
 char *parse_command(const char *cmd, int vpfd, int apfd) {
@@ -201,7 +200,7 @@ void usage(const char *argv0) {
     fprintf(stderr, "%%v = video pipe fd\n");
 }
 
-int main(int argc, const char **argv) {
+int main(int argc, char * const *argv) {
     InputAdapter *iadp;
     int vpfd, apfd, opt;
     pid_t child;
@@ -211,7 +210,7 @@ int main(int argc, const char **argv) {
     static struct option options[] = {
         { "card", 1, 0, 'c' },
         { 0, 0, 0, 0 }
-    }
+    };
 
     int card = 0;
 
