@@ -8,4 +8,4 @@
 %include "replay_playout.i"
 %include "replay_ingest.i"
 %include "replay_mjpeg_ingest.i"
-
+%include "replay_gamedata.i"

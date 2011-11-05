@@ -25,6 +25,7 @@
 #include "raw_frame.h"
 #include "posix_util.h"
 #include "cpu_dispatch.h"
+#include <string>
 
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "-n") == 0) {
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
     Mjpeg422Decoder dec(1920, 1080);
 
     ssize_t ret;
+    std::string comment;
 
 
     for (;;) {
@@ -48,8 +50,13 @@ int main(int argc, char **argv) {
         } else if (ret == 0) {
             break;
         } else {
+            enc.set_comment("Hello JPEG world!");
             enc.encode(&frame);
             RawFrame *out = dec.decode(enc.get_data( ), enc.get_data_size( ));
+
+            comment = "                      ";
+            dec.get_comment(comment);
+            fprintf(stderr, "comment: %s\n", comment.c_str( ));
 
             if (out->write_to_fd(STDOUT_FILENO) < 0) {
                 perror("write_to_fd");

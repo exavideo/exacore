@@ -25,6 +25,8 @@
 #include "jpeglib.h"
 #include "raw_frame.h"
 
+#include <string>
+
 class Mjpeg422Encoder {
     public:
         Mjpeg422Encoder(coord_t w_, coord_t h_, 
@@ -33,6 +35,9 @@ class Mjpeg422Encoder {
         void encode_to(RawFrame *f, void *buf, size_t size);
         void *get_data(void) { return jpeg_data; }
         size_t get_data_size(void) { return jpeg_finished_size; }
+
+        void set_comment(const std::string &com);
+
         ~Mjpeg422Encoder( );
     protected:
         void libjpeg_init( );
@@ -47,12 +52,15 @@ class Mjpeg422Encoder {
         struct jpeg_error_mgr jerr;
 
         JSAMPARRAY y_scans, cb_scans, cr_scans;
+
+        std::string comment;
 };
 
 class Mjpeg422Decoder {
     public:
         Mjpeg422Decoder(coord_t maxw_, coord_t maxh_);
         RawFrame *decode(void *data, size_t size, int scale_down = 1);
+        void get_comment(std::string &comment);
         ~Mjpeg422Decoder( );
 
     protected:
@@ -64,5 +72,7 @@ class Mjpeg422Decoder {
 
         struct jpeg_decompress_struct cinfo;
         struct jpeg_error_mgr jerr;
+
+        std::string comment;
 };
 #endif

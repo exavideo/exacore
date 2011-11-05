@@ -100,6 +100,10 @@ void Mjpeg422Encoder::libjpeg_init( ) {
     cinfo.comp_info[2].h_samp_factor = 1;
 }
 
+void Mjpeg422Encoder::set_comment(const std::string &com) {
+    comment = com;
+}
+
 void Mjpeg422Encoder::encode(RawFrame *f) {
     size_t jpeg_size = jpeg_alloc_size;
 
@@ -112,6 +116,10 @@ void Mjpeg422Encoder::encode(RawFrame *f) {
     jpeg_mem_dest(&cinfo, jpeg_data, &jpeg_size);
     jpeg_start_compress(&cinfo, TRUE);
 
+    /* write JPEG comment */
+    jpeg_write_marker(&cinfo, JPEG_COM, (JOCTET *) comment.c_str( ),
+            comment.length( ) + 1);
+    
     while (scanlines_consumed < h) {
         planes[0] = y_scans + scanlines_consumed;
         planes[1] = cb_scans + scanlines_consumed;
@@ -135,6 +143,10 @@ void Mjpeg422Encoder::encode_to(RawFrame *f, void *buf, size_t size) {
    
     jpeg_mem_dest(&cinfo, buf, &size);
     jpeg_start_compress(&cinfo, TRUE);
+
+    /* write JPEG comment */
+    jpeg_write_marker(&cinfo, JPEG_COM, (JOCTET *) comment.c_str( ),
+            comment.length( ) + 1);
 
     while (scanlines_consumed < h) {
         planes[0] = y_scans + scanlines_consumed;

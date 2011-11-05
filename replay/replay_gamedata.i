@@ -18,16 +18,21 @@
  */
 
 %{
-    #include "replay_ingest.h"
+    #include "replay_gamedata.h"  
 %}
 
-%rename("monitor") ReplayIngest::get_monitor( );
+%include "std_string.i"
 
-class ReplayIngest : public Thread {
+%rename("clock=") ReplayGameData::set_clock(const std::string &INPUT);
+
+class ReplayGameData {
     public:
-        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT,
-            ReplayGameData *INPUT = NULL);
-        ~ReplayIngest( );
-        AsyncPort<ReplayRawFrame> *get_monitor( );
+        ReplayGameData( );
+        ReplayGameData(const std::string &com);
+        ~ReplayGameData( );
+
+        void set_clock(const std::string &INPUT);
+        void get_clock(std::string &OUTPUT);
+        void as_jpeg_comment(std::string &OUTPUT);
 };
 

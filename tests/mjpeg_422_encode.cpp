@@ -46,6 +46,7 @@ int main(int argc, char **argv) {
         } else if (ret == 0) {
             break;
         } else {
+            enc.set_comment("Hello World!");
             enc.encode(&frame);
             ret = write_all(STDOUT_FILENO, 
                     enc.get_data( ), enc.get_data_size( ));

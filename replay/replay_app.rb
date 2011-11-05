@@ -24,10 +24,13 @@ module Replay
             mjpeg_cmd = opts[:mjpeg_cmd]
             file = opts[:file] || fail("Cannot have a source with no file")
             name = opts[:name] || file
+            game_data = opts[:game_data] || \
+                fail("Cannot create source without game data");
 
             @buffer = ReplayBuffer.new(file, buf_size, frame_size, name)
+
             if input
-                @ingest = ReplayIngest.new(input, @buffer)
+                @ingest = ReplayIngest.new(input, @buffer, game_data)
             elsif mjpeg_cmd
                 @ingest = ReplayMjpegIngest.new(mjpeg_cmd, @buffer)
             else
@@ -115,6 +118,7 @@ module Replay
 
             config = ReplayConfig.new # something something something
 
+            @game_data = ReplayGameData.new
             @program = ReplayPlayout.new(config.make_output_adapter)
             @preview = ReplayPreview.new
 
@@ -134,6 +138,7 @@ module Replay
         end
 
         def add_source(opts={})
+            opts.merge!({ :game_data => @game_data })
             source = ReplaySource.new(opts)
             @sources << source
 
@@ -152,13 +157,7 @@ module Replay
             @multiviewer.start
         end
 
-        def preview
-            @preview
-        end
-
-        def program
-            @program
-        end
+        attr_reader :preview, :program, :game_data
 
         def source(i)
             @sources[i]

@@ -17,17 +17,31 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_ingest.h"
-%}
+#include "replay_gamedata.h"
 
-%rename("monitor") ReplayIngest::get_monitor( );
+ReplayGameData::ReplayGameData( ) {
+    clock = ":01.2";
+}
 
-class ReplayIngest : public Thread {
-    public:
-        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT,
-            ReplayGameData *INPUT = NULL);
-        ~ReplayIngest( );
-        AsyncPort<ReplayRawFrame> *get_monitor( );
-};
+ReplayGameData::ReplayGameData(const std::string &com) {
+    clock = com;
+}
 
+ReplayGameData::~ReplayGameData( ) {
+
+}
+
+void ReplayGameData::set_clock(const std::string &new_clock) {
+    MutexLock l(m);
+    clock = new_clock;
+}
+
+void ReplayGameData::get_clock(std::string &clock_value) {
+    MutexLock l(m);
+    clock_value = clock;
+}
+
+void ReplayGameData::as_jpeg_comment(std::string &com) {
+    MutexLock l(m);
+    com = clock;
+}

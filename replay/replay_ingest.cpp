@@ -21,9 +21,11 @@
 #include "mjpeg_codec.h"
 #include <assert.h>
 
-ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_) {
+ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_,
+        ReplayGameData *gds) {
     iadp = iadp_;
     buf = buf_;
+    gd = gds;
     start_thread( );
 }
 
@@ -35,6 +37,7 @@ void ReplayIngest::run_thread( ) {
     RawFrame *input;
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
+    std::string com;
     Mjpeg422Encoder enc(1920, 1080); /* FIXME: hard coded frame size */
 
     for (;;) {
@@ -47,6 +50,12 @@ void ReplayIngest::run_thread( ) {
         /* set field dominance if necessary */
         if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
             buf->set_field_dominance(input->field_dominance( ));
+        }
+
+        if (gd != NULL) {
+            gd->as_jpeg_comment(com);
+            fprintf(stderr, "com=%s\n", com.c_str( ));
+            enc.set_comment(com);
         }
 
         /* encode to M-JPEG */

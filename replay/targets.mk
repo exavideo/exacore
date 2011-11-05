@@ -33,6 +33,7 @@ replay_replay_so_OBJECTS = \
 	replay/replay_playout.o \
 	replay/replay_multiviewer.o \
 	replay/replay_frame_extractor.o \
+        replay/replay_gamedata.o \
 	replay/replay_global.rbo 
 
 replay/replay.so: $(replay_replay_so_OBJECTS)

@@ -25,10 +25,12 @@
 #include "adapter.h"
 #include "replay_data.h"
 #include "replay_buffer.h"
+#include "replay_gamedata.h"
 
 class ReplayIngest : public Thread {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
+        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_, 
+                ReplayGameData *gds = NULL);
         ~ReplayIngest( );
 
         AsyncPort<ReplayRawFrame> monitor;
@@ -38,6 +40,8 @@ class ReplayIngest : public Thread {
         
         InputAdapter *iadp;
         ReplayBuffer *buf;
+
+        ReplayGameData *gd;
 
         ReplayIngest() { };
 };
