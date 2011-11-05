@@ -3,9 +3,9 @@ graphics_OBJECTS = \
 	graphics/rsvg_frame.o \
     graphics/freetype_font.o
 
-CXXFLAGS += $(shell pkg-config librsvg-2.0 --cflags)
-CXXFLAGS += $(shell pkg-config cairo --cflags)
-CXXFLAGS += $(shell freetype-config --cflags)
+EXTERNAL_INCLUDES += $(shell pkg-config librsvg-2.0 --cflags)
+EXTERNAL_INCLUDES += $(shell pkg-config cairo --cflags)
+EXTERNAL_INCLUDES += $(shell freetype-config --cflags)
 
 graphics_LIBS  = $(shell pkg-config librsvg-2.0 --libs)
 graphics_LIBS += $(shell pkg-config cairo --libs) 

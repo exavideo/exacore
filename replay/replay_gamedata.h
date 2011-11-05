@@ -33,6 +33,7 @@ class ReplayGameData {
         void get_clock(std::string &clock_value);
 
         void as_jpeg_comment(std::string &com);
+        void from_jpeg_comment(const std::string &com);
     protected:
         std::string clock;
         Mutex m;

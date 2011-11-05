@@ -26,7 +26,15 @@ app.add_source(:input => iadp1, :file => '/mnt/cam1/d1', :name => 'CAM 1')
 #app.add_source(:input => iadp4, :file => '/mnt/cam4/d4', :name => 'CAM 4')
 #app.add_source(:input => iadp5, :file => '/root/d5', :name => 'HYPERMOTION')
 #app.add_source(:input => iadp6, :file => '/root/d6', :name => 'CAM 6')
+
+# set up replay graphic
 app.program.add_svg_dsk(IO.read('/root/instantreplay.svg'), 0, 0)
+app.program.add_svg_dsk(IO.read('/root/clock.svg'), 1600, 50)
+app.program.position_clock(1688, 78)
+
+# show the clock
+app.program.show_clock
+
 app.start
 
 module IRB # :nodoc:

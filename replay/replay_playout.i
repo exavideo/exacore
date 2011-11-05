@@ -33,6 +33,11 @@ class ReplayPlayout : public Thread {
 
         unsigned int add_svg_dsk(const std::string &INPUT,
             coord_t, coord_t);
+
+        void show_clock( );
+        void hide_clock( );
+        void position_clock(coord_t, coord_t);
+
         void roll_shot(const ReplayShot &INPUT);
         void queue_shot(const ReplayShot &INPUT);
         void stop( );

@@ -25,6 +25,7 @@
 #include "adapter.h"
 #include "replay_data.h"
 #include "replay_buffer.h"
+#include "replay_gamedata.h"
 #include "async_port.h"
 #include "rational.h"
 #include "mjpeg_codec.h"
@@ -46,6 +47,10 @@ class ReplayPlayout : public Thread {
         /* Adjust the playout rate */
         void set_speed(int num, int denom);
 
+        void show_clock( );
+        void hide_clock( );
+        void position_clock(coord_t x, coord_t y);
+
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
@@ -64,6 +69,7 @@ class ReplayPlayout : public Thread {
         void roll_next_shot( );
 
         void apply_dsks(RawFrame *target);
+        void add_clock(RawFrame *target);
 
         OutputAdapter *oadp;
 
@@ -83,9 +89,15 @@ class ReplayPlayout : public Thread {
 
         Mutex m;
         Mutex dskm;
+        Mutex clockm;
 
         Mjpeg422Decoder dec;
 
+        bool render_clock;
+        coord_t clock_x;
+        coord_t clock_y;
+
+        ReplayGameData game_data;
 };
 
 #endif

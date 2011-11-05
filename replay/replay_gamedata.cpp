@@ -45,3 +45,8 @@ void ReplayGameData::as_jpeg_comment(std::string &com) {
     MutexLock l(m);
     com = clock;
 }
+
+void ReplayGameData::from_jpeg_comment(const std::string &com) {
+    MutexLock l(m);
+    clock = com;
+}

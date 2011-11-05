@@ -54,7 +54,6 @@ void ReplayIngest::run_thread( ) {
 
         if (gd != NULL) {
             gd->as_jpeg_comment(com);
-            fprintf(stderr, "com=%s\n", com.c_str( ));
             enc.set_comment(com);
         }
 

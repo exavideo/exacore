@@ -21,6 +21,7 @@
 #include "raw_frame.h"
 #include "rsvg_frame.h"
 #include "mjpeg_codec.h"
+#include "cairo_frame.h"
 #include <string.h>
 
 /* FIXME hardcoded 1920x1080 decoding */
@@ -29,6 +30,11 @@ ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) :
     oadp = oadp_;
     current_source = NULL;
     running = false;
+
+    render_clock = false;
+    clock_x = 0;
+    clock_y = 0;
+
     start_thread( );
 }
 
@@ -79,6 +85,8 @@ void ReplayPlayout::set_speed(int num, int denom) {
 
 unsigned int ReplayPlayout::add_svg_dsk(const std::string &svg,
         coord_t xoffset, coord_t yoffset) {
+    MutexLock l(dskm);
+
     struct dsk the_dsk;
 
     the_dsk.x = xoffset;
@@ -87,6 +95,22 @@ unsigned int ReplayPlayout::add_svg_dsk(const std::string &svg,
 
     dsks.push_back(the_dsk);
     return dsks.size( ) - 1;
+}
+
+void ReplayPlayout::show_clock( ) {
+    MutexLock l(clockm);
+    render_clock = true;
+}
+
+void ReplayPlayout::hide_clock( ) {
+    MutexLock l(clockm);
+    render_clock = false;
+}
+
+void ReplayPlayout::position_clock(coord_t x, coord_t y) {
+    MutexLock l(clockm);
+    clock_x = x;
+    clock_y = y;
 }
 
 void ReplayPlayout::run_thread( ) {
@@ -113,6 +137,8 @@ void ReplayPlayout::run_thread( ) {
 
         apply_dsks(out);
 
+        add_clock(out);
+
         /* scale down to BGRAn8 and send to monitor port */
         monitor_frame = new ReplayRawFrame(
             out->convert->BGRAn8_scale_1_2( )
@@ -135,8 +161,54 @@ void ReplayPlayout::run_thread( ) {
     }
 }
 
+void ReplayPlayout::add_clock(RawFrame *target) {
+    std::string clock;
+    game_data.get_clock(clock);
+    coord_t _x, _y;
+    bool _render;
+    CairoFrame *crf;
+    cairo_t *cr;
+    cairo_text_extents_t extents;
+
+    { MutexLock l(clockm);
+        _x = clock_x;
+        _y = clock_y;
+        _render = render_clock;
+    }
+
+    if (_render && clock.length( ) > 0) {
+        /* Render font with Cairo - freetype is brain dead?? */
+        /* FIXME: kind of arbitrary numbers */
+        crf = new CairoFrame(400, 400); 
+        memset(crf->data( ), 0, crf->size( ));
+        cr = crf->cairo_create( );
+
+        cairo_select_font_face(cr, "Gotham FWN Narrow",
+                CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size(cr, 40.0);
+        
+        cairo_text_extents(cr, clock.c_str( ), &extents);
+
+
+        cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+        /* put text in top left corner */
+        cairo_move_to(cr, 0.0, extents.height);
+
+        cairo_show_text(cr, clock.c_str( ));
+
+        cairo_destroy(cr);
+
+        /* center text about provided point */
+        target->draw->alpha_key(_x - (coord_t)(extents.width / 2), 
+                _y - (coord_t)(extents.height / 2), crf, 255);
+        delete crf;
+    }
+
+}
+
 void ReplayPlayout::apply_dsks(RawFrame *target) {
     unsigned int i;
+    MutexLock l(dskm);
 
     for (i = 0; i < dsks.size( ); i++) {
         target->draw->alpha_key(dsks[i].x, dsks[i].y, dsks[i].key, 255);
@@ -201,11 +273,17 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
 
     coord_t srcline, dstline;
     RawFrame *tmp;
+    std::string com;
 
     /* decode the field data if we don't have it cached */
     if (field.data_ptr != cache_data.data_ptr) {
         delete cache_frame;
         cache_frame = dec.decode(field.data_ptr, field.data_size);
+
+        /* load game state data if available */
+        dec.get_comment(com);
+        game_data.from_jpeg_comment(com);
+
         /* Scale up video to 1920x1080 */
         /* FIXME this assumes we always want 1920x1080 output */
         if (cache_frame->w( ) < 1920) {
