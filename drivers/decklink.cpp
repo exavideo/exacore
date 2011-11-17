@@ -27,7 +27,7 @@
 #include <string.h>
 
 #define IN_PIPE_SIZE 32
-#define OUT_PIPE_SIZE 8 
+#define OUT_PIPE_SIZE 32 
 
 struct decklink_norm {
     const char *name;
@@ -245,6 +245,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                         }
                     } else if (audio_in_pipe->data_ready( )) {
                         current_audio_pkt = audio_in_pipe->get( );
+                        samples_written_from_current_audio_pkt = 0;
                     } else {
                         /* 
                          * current audio packet is NULL.
@@ -339,6 +340,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             /* FIXME magic 29.97 related number */
             /* Set up empty audio packet for prerolling */
             current_audio_pkt = new AudioPacket(48000, n_channels, 2, 6404);
+            samples_written_from_current_audio_pkt = 0;
 
             assert(deckLinkOutput != NULL);
 
@@ -442,6 +444,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 input = in_pipe.get( );
             } else if (last_frame != NULL) {
                 /* use the stale frame */
+                fprintf(stderr, "DeckLink: stale frame\n");
                 input = last_frame;
             } else {
                 /* this should likewise be a black frame */
