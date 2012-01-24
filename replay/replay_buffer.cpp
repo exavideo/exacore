@@ -57,7 +57,6 @@ class ReplayBuffer::MsyncBackground : public Thread {
 
             for (;;) {
                 req = request_queue.get( );
-                fprintf(stderr, "msync %p(%d)\n", req.base, (int)req.size);
                 msync(req.base, req.size, MS_SYNC);
             }
         };
