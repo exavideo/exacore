@@ -238,6 +238,35 @@ class SenderThread : public Thread {
         _Allocator _allocator;
 };
 
+template <class SendableThing>
+class WriterThread : public Thread {
+    public:
+        WriterThread(Pipe<SendableThing *> *fpipe, int in_fd) {
+            assert(fpipe != NULL);
+            assert(in_fd >= 0);
+
+            _fpipe = fpipe;
+            _in_fd = in_fd;
+
+            start_thread( );
+        }
+    protected:
+        void run_thread(void) {
+            SendableThing *thing;
+            for (;;) {
+                thing = _fpipe->get( );
+
+                if (thing->write_to_fd(_in_fd) == 0) {
+                    break;
+                }
+
+                delete thing;
+            }
+        }
+
+        Pipe<SendableThing *> *_fpipe;
+        int _in_fd;
+};
 
 void usage(const char *argv0) {
     fprintf(stderr, "usage: %s [-c n] 'command'\n", argv0);
@@ -247,26 +276,58 @@ void usage(const char *argv0) {
     fprintf(stderr, "%%v = video pipe fd\n");
 }
 
+pid_t run_subshell(const char *cmd, int &stdin_fd) {
+    int pipefd[2];
+    pid_t child;
+
+    if (pipe(pipefd) != 0) {
+        throw POSIXError("pipe");
+    }
+
+    child = fork( );
+    if (child == -1) {
+        throw POSIXError("fork");
+    } else if (child == 0) {
+        close(pipefd[1]);
+        dup2(pipefd[0], STDIN_FILENO);
+        execl("/bin/sh", "/bin/sh", "-c", cmd, NULL);
+        
+        perror("execl");
+        exit(1);
+    } else {
+        close(pipefd[0]);
+        stdin_fd = pipefd[1];
+        return child;
+    }
+}
+
 int main(int argc, char *argv[]) {
     OutputAdapter *oadp;
     int vpfd, apfd;
     pid_t child;
 
     Pipe<AudioPacket *> *apipe;
-
+    int aplay_pipe;
+    
     static struct option options[] = {
+        { "aplay", 0, 0, 'a' },
         { "card", 1, 0, 'c' },
         { 0, 0, 0, 0 }
     };
 
     int card = 0;
+    int aplay = 0;
     int opt;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "c:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "ac:", options, NULL)) != -1) {
         switch (opt) {
             case 'c':
                 card = atoi(optarg);
+                break;
+
+            case 'a':
+                aplay = 1;
                 break;
 
             default:
@@ -286,20 +347,38 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    oadp = create_decklink_output_adapter_with_audio(card, 0, 
-            RawFrame::CbYCrY8422);
-    apipe = oadp->audio_input_pipe( );
+    if (aplay) {
+        oadp = create_decklink_output_adapter(card, 0, RawFrame::CbYCrY8422);
+        apipe = new Pipe<AudioPacket *>(16);
+        run_subshell("aplay -c 2 -r 48000 -f s16_le", aplay_pipe);
+    } else {
+        oadp = create_decklink_output_adapter_with_audio(card, 0, 
+                RawFrame::CbYCrY8422);
+        apipe = oadp->audio_input_pipe( );
+    }
 
     /* start video and audio sender threads */
     Thread *video_th = new SenderThread<RawFrame, RawFrame1080Allocator>
             (&(oadp->input_pipe( )), vpfd);
-    Thread *audio_th = new SenderThread<AudioPacket, NTSCSyncAudioAllocator>
+
+    if (aplay) {
+        Thread *audio_th = new SenderThread<AudioPacket, NTSCSyncAudioAllocator>
             (apipe, apfd);
 
-    /* wait on child process */
-    while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 
+        Thread *audio_writer_thread = new WriterThread<AudioPacket>(apipe, aplay_pipe);
+        while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 
+        delete audio_th;
+        delete audio_writer_thread;
+
+    } else {
+        Thread *audio_th = new SenderThread<AudioPacket, NTSCSyncAudioAllocator>
+                (apipe, apfd);
+
+        /* wait on child process */
+        while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 
+        delete audio_th;
+    }
 
     /* done! */
     delete video_th;
-    delete audio_th;
 }
