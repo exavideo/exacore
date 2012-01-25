@@ -28,6 +28,7 @@ SUBDIR_INCLUDES = \
 	-Idrivers/ \
 	-Igraphics/ \
 	-Ireplay/ \
+	-Iavspipe/ \
 	-Idisplay_surface \
 
 include $(shell find . -iname 'subdir.mk')
