@@ -18,8 +18,8 @@ end
 module Replay
     class ReplaySource
         def initialize(opts={})
-            buf_size = opts[:buf_size] || 75.gigabytes
-            frame_size = opts[:frame_size] || 512.kilobytes
+            buf_size = opts[:buf_size] || 60.gigabytes
+            frame_size = opts[:frame_size] || 768.kilobytes
             input = opts[:input]
             mjpeg_cmd = opts[:mjpeg_cmd]
             file = opts[:file] || fail("Cannot have a source with no file")

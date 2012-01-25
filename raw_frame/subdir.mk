@@ -3,6 +3,7 @@ raw_frame_OBJECTS = \
     raw_frame/audio_packet.o \
     raw_frame/convert/CbYCrY8422_YCbCr8P422_default.o \
     raw_frame/convert/CbYCrY8422_CbYCrY8422_scan_double.o \
+    raw_frame/convert/CbYCrY8422_CbYCrY8422_scan_triple.o \
     raw_frame/convert/CbYCrY8422_CbYCrY8422_default.o \
     raw_frame/convert/YCbCr8P422_CbYCrY8422_default.o \
     raw_frame/convert/CbYCrY8422_BGRAn8_default.o \

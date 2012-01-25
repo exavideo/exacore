@@ -46,7 +46,6 @@ private
             # wait until data is readable (allowing other threads to run)
             IO.select([@device])
             if Input::read_event(@device.fileno, evt) != 0
-                puts "event received"
                 if evt.type == 2 and evt.code == 7
                     jog = evt.value
                     if @last_jog
@@ -58,8 +57,6 @@ private
                         # smaller rotation. :)
                         cw_rotation = (jog - @last_jog) % 256
                         ccw_rotation = (@last_jog - jog) % 256
-                        
-                        puts "cw_rotation: #{cw_rotation} ccw_rotation: #{ccw_rotation}"
                         
                         if (cw_rotation < ccw_rotation)
                             on_jog(cw_rotation)
@@ -82,8 +79,6 @@ private
                     else
                         on_button_down(evt.code)
                     end
-                else
-                    puts "unknown event??"
                 end
             else
                 puts "read error from shuttle controller!"

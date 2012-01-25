@@ -49,6 +49,8 @@ void CbYCrY8422_CbYCrY8422_scan_double(size_t, uint8_t *,
 void CbYCrY8422_CbYCrY8422_scale_1_4(size_t, uint8_t *,
         uint8_t *, unsigned int);
 
+void CbYCrY8422_CbYCrY8422_scan_triple(size_t, uint8_t *,
+        uint8_t *, unsigned int);
 
 class CbYCrY8422Unpacker : public RawFrameUnpacker {
     public:
@@ -74,6 +76,7 @@ class CbYCrY8422Unpacker : public RawFrameUnpacker {
             do_BGRAn8_scale_1_4 = CbYCrY8422_BGRAn8_scale_1_4_default;
             do_CbYCrY8422_scan_double = CbYCrY8422_CbYCrY8422_scan_double;
             do_CbYCrY8422_scale_1_4 = CbYCrY8422_CbYCrY8422_scale_1_4;
+            do_CbYCrY8422_scan_triple = CbYCrY8422_CbYCrY8422_scan_triple;
         }
 };
 
