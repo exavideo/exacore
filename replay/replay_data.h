@@ -90,7 +90,7 @@ struct ReplayFrameData {
     friend class ReplayBuffer;
 protected:
     struct aux_data {
-        uint8_t thumbnail[40960];
+        uint8_t thumbnail[81920];
         uint8_t game_data[4096];
     };
 
