@@ -29,6 +29,7 @@
 #include "async_port.h"
 #include "rational.h"
 #include "mjpeg_codec.h"
+#include "avspipe_input_adapter.h"
 
 #include <list>
 #include <vector>
@@ -46,6 +47,9 @@ class ReplayPlayout : public Thread {
         void stop( );
         /* Adjust the playout rate */
         void set_speed(int num, int denom);
+
+        /* Play input from a pipe */
+        void avspipe_playout(const char *cmd);
 
         void show_clock( );
         void hide_clock( );
@@ -74,6 +78,8 @@ class ReplayPlayout : public Thread {
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
+        AvspipeInputAdapter *next_avspipe;
+
         Rational current_pos;
         Rational field_rate;
         timecode_t shot_end;
