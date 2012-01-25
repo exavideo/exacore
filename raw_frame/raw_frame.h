@@ -75,6 +75,7 @@ class RawFrame {
         RawFrameDrawOps *draw;
         RawFrameConverter *convert;
 
+
     protected:
         coord_t _w, _h;
         size_t _pitch;
@@ -135,6 +136,7 @@ class RawFrameUnpacker {
             do_BGRAn8_scale_1_2 = NULL;
             do_BGRAn8_scale_1_4 = NULL;
             do_CbYCrY8422_scan_double = NULL;
+            do_CbYCrY8422_scale_1_4 = NULL;
             do_CbYCrY8422_scan_triple = NULL;
         }
     
@@ -170,6 +172,12 @@ class RawFrameUnpacker {
                     data, f->pitch( ));
         }
 
+        void CbYCrY8422_scale_1_4(uint8_t *data) {
+            CHECK(do_CbYCrY8422_scale_1_4);
+            do_CbYCrY8422_scale_1_4(f->size( ), f->data( ),
+                    data, f->pitch( ));
+        }
+
         void CbYCrY8422_scan_triple(uint8_t *data) {
             CHECK(do_CbYCrY8422_scan_double);
             do_CbYCrY8422_scan_triple(f->size( ), f->data( ), 
@@ -199,6 +207,8 @@ class RawFrameUnpacker {
         void (*do_BGRAn8_scale_1_4)(size_t, uint8_t *, 
                 uint8_t *, unsigned int);
         void (*do_CbYCrY8422_scan_double)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
+        void (*do_CbYCrY8422_scale_1_4)(size_t, uint8_t *, 
                 uint8_t *, unsigned int);
         void (*do_CbYCrY8422_scan_triple)(size_t, uint8_t *,
                 uint8_t *, unsigned int);
@@ -276,6 +286,21 @@ class RawFrameConverter {
             } else {
                 return NULL;
             }
+        }
+
+        RawFrame *CbYCrY8422_scaled(coord_t w, coord_t h) {
+            if (w == f->w( ) / 4 && h == f->h( ) / 4) {
+                return CbYCrY8422_scale_1_4( );
+            } else {
+                return NULL;
+            }
+        }
+
+        RawFrame *CbYCrY8422_scale_1_4( ) {
+            RawFrame *ret = new RawFrame(f->w( ) / 4, f->h( ) / 4,
+                    RawFrame::CbYCrY8422);
+            f->unpack->CbYCrY8422_scale_1_4(ret->data( ));
+            return ret;
         }
     
     protected:

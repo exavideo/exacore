@@ -17,34 +17,25 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_playout.h"
-%}
+#ifndef _AVSPIPE_ALLOCATORS_H
+#define _AVSPIPE_ALLOCATORS_H
 
-%include "typemaps.i"
+#include "raw_frame.h"
+#include "audio_packet.h"
 
-%rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
-%rename("monitor") ReplayPlayout::get_monitor( );
-
-class ReplayPlayout : public Thread {
+class AvspipeRawFrame1080Allocator {
     public:
-        ReplayPlayout(OutputAdapter *INPUT);
-        ~ReplayPlayout( );
-
-        unsigned int add_svg_dsk(const std::string &INPUT,
-            coord_t, coord_t);
-
-        void show_clock( );
-        void hide_clock( );
-        void position_clock(coord_t, coord_t);
-
-        void avspipe_playout(const char *cmd);
-
-        void roll_shot(const ReplayShot &INPUT);
-        void queue_shot(const ReplayShot &INPUT);
-        void stop( );
-        void set_speed(int,int);
-        AsyncPort<ReplayRawFrame> *get_monitor( );
+        AvspipeRawFrame1080Allocator( );
+        virtual RawFrame *allocate( ); 
 };
 
+class AvspipeNTSCSyncAudioAllocator {
+    public:
+        AvspipeNTSCSyncAudioAllocator( );
+        virtual AudioPacket *allocate( );
 
+    protected:
+        int frame;
+};
+
+#endif

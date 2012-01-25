@@ -34,7 +34,7 @@ ReplayIngest::~ReplayIngest( ) {
 }
 
 void ReplayIngest::run_thread( ) {
-    RawFrame *input;
+    RawFrame *input, *thumb;
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     std::string com;
@@ -58,7 +58,13 @@ void ReplayIngest::run_thread( ) {
         }
 
         /* encode to M-JPEG */
-        enc.encode_to(input, dest.data_ptr, dest.data_size);
+        enc.encode_to(input, dest.main_jpeg( ), dest.main_jpeg_size( ));
+
+        /* scale input and make JPEG thumbnail */
+        thumb = input->convert->CbYCrY8422_scaled(480, 270);
+        enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
+        delete thumb;
+
         buf->finish_frame_write( );
 
         /* scale down frame to send to monitor */

@@ -29,6 +29,7 @@ ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) :
         current_pos(0), field_rate(0), dec(1920, 1080) {
     oadp = oadp_;
     current_source = NULL;
+    next_avspipe = NULL;
     running = false;
 
     render_clock = false;
@@ -76,6 +77,8 @@ void ReplayPlayout::queue_shot(const ReplayShot &shot) {
 void ReplayPlayout::stop( ) {
     MutexLock l(m);
     field_rate = Rational(0);
+
+    next_avspipe = NULL;
 }
 
 void ReplayPlayout::set_speed(int num, int denom) {
@@ -122,44 +125,92 @@ void ReplayPlayout::run_thread( ) {
     ReplayFrameData rfd_cache;
     RawFrame *f_cache = NULL;
     RawFrame *out = NULL;
-    rfd_cache.data_ptr = NULL;
+
+    AvspipeInputAdapter *current_avspipe = NULL;
+    timecode_t avs_tc = 0;
+                          
 
     for (;;) {
-        get_and_advance_current_fields(rfd1, rfd2, pos);
-        
-        out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+        { MutexLock l(m);
+            if (next_avspipe != current_avspipe) {
+                if (current_avspipe) {
+                    delete current_avspipe;
+                }
 
-        if (rfd1.data_ptr == NULL) {
-            /* out = something... */
-        } else {
-            decode_field(out, rfd1, rfd_cache, f_cache, true);
-            decode_field(out, rfd2, rfd_cache, f_cache, false);
+                current_avspipe = next_avspipe;
+                avs_tc = 0;
+            }
         }
 
-        apply_dsks(out);
+        if (current_avspipe == NULL) {
+            get_and_advance_current_fields(rfd1, rfd2, pos);
+            
+            out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 
-        add_clock(out);
+            if (!rfd1.valid( )) {
+                /* out = something... */
+            } else {
+                decode_field(out, rfd1, rfd_cache, f_cache, true);
+                decode_field(out, rfd2, rfd_cache, f_cache, false);
+            }
 
-        /* scale down to BGRAn8 and send to monitor port */
-        monitor_frame = new ReplayRawFrame(
-            out->convert->BGRAn8_scale_1_2( )
-        );
+            apply_dsks(out);
 
-        /* fill in timecode and other goodies for monitor */
-        monitor_frame->source_name = "Program";
-        if (rfd1.data_ptr != NULL) {
-            monitor_frame->source_name2 = rfd1.source->get_name( );
-            monitor_frame->tc = pos.integer_part( );
-            monitor_frame->fractional_tc = pos.fractional_part( );
+            add_clock(out);
+
+            /* scale down to BGRAn8 and send to monitor port */
+            monitor_frame = new ReplayRawFrame(
+                out->convert->BGRAn8_scale_1_2( )
+            );
+
+            /* fill in timecode and other goodies for monitor */
+            monitor_frame->source_name = "Program";
+            if (rfd1.valid( )) {
+                monitor_frame->source_name2 = rfd1.source->get_name( );
+                monitor_frame->tc = pos.integer_part( );
+                monitor_frame->fractional_tc = pos.fractional_part( );
+            } else {
+                monitor_frame->source_name2 = "No Clip";
+            }
+
+            monitor.put(monitor_frame);
+
+            /* send the full CbYCrY frame to output */
+            oadp->input_pipe( ).put(out);
         } else {
-            monitor_frame->source_name2 = "No Clip";
+            try {
+                out = current_avspipe->output_pipe( ).get( );
+                monitor_frame = new ReplayRawFrame(
+                    out->convert->BGRAn8_scale_1_2( )
+                );
+
+                monitor_frame->tc = avs_tc;
+                monitor_frame->source_name = "Program";
+                monitor_frame->source_name2 = "AVSPIPE Rollout";
+                oadp->input_pipe( ).put(out);
+
+                avs_tc++;
+            } catch (BrokenPipe &ex) {
+                delete current_avspipe;
+                current_avspipe = NULL;
+                { MutexLock l(m);
+                    next_avspipe = NULL;
+                }
+            }
         }
-
-        monitor.put(monitor_frame);
-
-        /* send the full CbYCrY frame to output */
-        oadp->input_pipe( ).put(out);
     }
+}
+
+void ReplayPlayout::avspipe_playout(const char *cmd) {
+    MutexLock l(m);
+
+    /* FIXME this is a bit racey */
+    if (next_avspipe != NULL) {
+        return;
+    }
+
+    next_avspipe = new AvspipeInputAdapter(cmd, true);
+
 }
 
 void ReplayPlayout::add_clock(RawFrame *target) {
@@ -253,8 +304,8 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
             roll_next_shot( );
         }
     } else {
-        f1.data_ptr = NULL;
-        f2.data_ptr = NULL;
+        f1.clear( );
+        f2.clear( );
         tc = 0;
     }
 }
@@ -280,11 +331,12 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
     std::string com;
 
     /* decode the field data if we don't have it cached */
-    if (field.data_ptr != cache_data.data_ptr) {
+    if (field.main_jpeg( ) != cache_data.main_jpeg( )) {
         delete cache_frame;
-        cache_frame = dec.decode(field.data_ptr, field.data_size);
+        cache_frame = dec.decode(field.main_jpeg( ), field.main_jpeg_size( ));
 
         /* load game state data if available */
+        /* FIXME this should coome from field aux data */
         dec.get_comment(com);
         game_data.from_jpeg_comment(com);
 

@@ -66,6 +66,7 @@ ReplayMjpegIngest::~ReplayMjpegIngest( ) {
 
 void ReplayMjpegIngest::run_thread( ) {
     Mjpeg422Decoder dec(1920, 1080);
+    Mjpeg422Encoder thm_enc(1920, 1080);
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     RawFrame *decoded_monitor;
@@ -86,14 +87,21 @@ void ReplayMjpegIngest::run_thread( ) {
         }
 
         /* decode JPEG for monitor */
-        decoded_monitor = dec.decode(dest.data_ptr, dest.data_size, 480);
+        decoded_monitor = dec.decode(dest.main_jpeg( ), 
+                dest.main_jpeg_size( ), 480);
         
+        /* encode thumbnail */
+        thm_enc.encode_to(decoded_monitor, dest.thumb_jpeg( ),
+                dest.thumb_jpeg_size( ));
+
         buf->finish_frame_write( );
 
         /* scale down frame to send to monitor */
         monitor_frame = new ReplayRawFrame(
             decoded_monitor->convert->BGRAn8( )
         );
+
+
         delete decoded_monitor;
         
         /* fill in monitor status info */
@@ -136,7 +144,8 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
 
                 if (jpgstart != (size_t) -1) {
                     /* copy JPEG data to frame buffer */
-                    memcpy(dest.data_ptr, jpegbuf+jpgstart, jpgend-jpgstart);
+                    memcpy(dest.main_jpeg( ), jpegbuf+jpgstart, 
+                            jpgend-jpgstart);
                     success_flag = true;
                 }
 

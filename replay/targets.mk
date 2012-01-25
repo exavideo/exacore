@@ -26,6 +26,7 @@ replay_replay_so_OBJECTS = \
 	$(drivers_decklink_OBJECTS) \
         $(drivers_v4l2_OBJECTS) \
 	$(graphics_OBJECTS) \
+        $(avspipe_OBJECTS) \
 	replay/replay_buffer.o \
 	replay/replay_ingest.o \
         replay/replay_mjpeg_ingest.o \
