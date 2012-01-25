@@ -86,7 +86,8 @@ void ReplayMjpegIngest::run_thread( ) {
         }
 
         /* decode JPEG for monitor */
-        decoded_monitor = dec.decode(dest.data_ptr, dest.data_size, 480);
+        decoded_monitor = dec.decode(dest.main_jpeg( ), 
+                dest.main_jpeg_size( ), 480);
         
         buf->finish_frame_write( );
 
@@ -136,7 +137,8 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
 
                 if (jpgstart != (size_t) -1) {
                     /* copy JPEG data to frame buffer */
-                    memcpy(dest.data_ptr, jpegbuf+jpgstart, jpgend-jpgstart);
+                    memcpy(dest.main_jpeg( ), jpegbuf+jpgstart, 
+                            jpgend-jpgstart);
                     success_flag = true;
                 }
 

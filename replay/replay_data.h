@@ -45,9 +45,63 @@ struct ReplayShot {
 struct ReplayFrameData {
     ReplayBuffer *source;
     timecode_t pos;
+    bool use_first_field;
+
+    ReplayFrameData( ) {
+        data_ptr = NULL;
+        data_size = 0;
+    }
+
+    ReplayFrameData(const ReplayFrameData &from) {
+        data_ptr = from.data_ptr;
+        data_size = from.data_size;
+    }
+
+    const ReplayFrameData &operator=(const ReplayFrameData &from) {
+        data_ptr = from.data_ptr;
+        data_size = from.data_size;
+        return *this;
+    }
+
+    void *main_jpeg( ) {
+        return data_ptr;    
+    }
+
+    size_t main_jpeg_size( ) {
+        return data_size - sizeof(aux_data);
+    }
+
+    void *thumb_jpeg( ) {
+        return aux( )->thumbnail;
+    }
+
+    size_t thumb_jpeg_size( ) {
+        return sizeof(aux( )->thumbnail);
+    }
+
+    bool valid( ) {
+        return (data_ptr != NULL);
+    }
+
+    void clear( ) {
+        data_ptr = NULL;
+    }
+
+    friend class ReplayBuffer;
+protected:
+    struct aux_data {
+        uint8_t thumbnail[40960];
+        uint8_t game_data[4096];
+    };
+
+    struct aux_data *aux( ) {
+        /* FIXME: maybe nonportable due to alignment? */
+        return (aux_data *)
+                ((uint8_t *)data_ptr + data_size - sizeof(aux_data));
+    }
+
     void *data_ptr;
     size_t data_size;
-    bool use_first_field;
 };
 
 /*

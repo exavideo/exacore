@@ -121,14 +121,13 @@ void ReplayPlayout::run_thread( ) {
     ReplayFrameData rfd_cache;
     RawFrame *f_cache = NULL;
     RawFrame *out = NULL;
-    rfd_cache.data_ptr = NULL;
 
     for (;;) {
         get_and_advance_current_fields(rfd1, rfd2, pos);
         
         out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 
-        if (rfd1.data_ptr == NULL) {
+        if (!rfd1.valid( )) {
             /* out = something... */
         } else {
             decode_field(out, rfd1, rfd_cache, f_cache, true);
@@ -146,7 +145,7 @@ void ReplayPlayout::run_thread( ) {
 
         /* fill in timecode and other goodies for monitor */
         monitor_frame->source_name = "Program";
-        if (rfd1.data_ptr != NULL) {
+        if (rfd1.valid( )) {
             monitor_frame->source_name2 = rfd1.source->get_name( );
             monitor_frame->tc = pos.integer_part( );
             monitor_frame->fractional_tc = pos.fractional_part( );
@@ -249,8 +248,8 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
             roll_next_shot( );
         }
     } else {
-        f1.data_ptr = NULL;
-        f2.data_ptr = NULL;
+        f1.clear( );
+        f2.clear( );
         tc = 0;
     }
 }
@@ -276,11 +275,12 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
     std::string com;
 
     /* decode the field data if we don't have it cached */
-    if (field.data_ptr != cache_data.data_ptr) {
+    if (field.main_jpeg( ) != cache_data.main_jpeg( )) {
         delete cache_frame;
-        cache_frame = dec.decode(field.data_ptr, field.data_size);
+        cache_frame = dec.decode(field.main_jpeg( ), field.main_jpeg_size( ));
 
         /* load game state data if available */
+        /* FIXME this should coome from field aux data */
         dec.get_comment(com);
         game_data.from_jpeg_comment(com);
 

@@ -79,7 +79,8 @@ void ReplayPreview::run_thread( ) {
             wait_update(rfd);
 
             /* decode at 960 max width */
-            new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 960);
+            new_frame = dec.decode(rfd.main_jpeg( ), 
+                    rfd.main_jpeg_size( ), 960);
 
             /* send to multiview */
             monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));

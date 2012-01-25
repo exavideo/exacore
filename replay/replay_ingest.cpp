@@ -58,7 +58,7 @@ void ReplayIngest::run_thread( ) {
         }
 
         /* encode to M-JPEG */
-        enc.encode_to(input, dest.data_ptr, dest.data_size);
+        enc.encode_to(input, dest.main_jpeg( ), dest.main_jpeg_size( ));
         buf->finish_frame_write( );
 
         /* scale down frame to send to monitor */

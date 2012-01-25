@@ -34,8 +34,9 @@ void ReplayFrameExtractor::extract_raw_jpeg(const ReplayShot &shot,
     ReplayFrameData rfd;
 
     shot.source->get_readable_frame(shot.start + offset, rfd);
-    uint8_t *data = (uint8_t *) rfd.data_ptr;
-    for (size_t i = 0; i < rfd.data_size - 1; i++) {
+    uint8_t *data = (uint8_t *) rfd.main_jpeg( );
+    size_t size = rfd.main_jpeg_size( );
+    for (size_t i = 0; i < size - 1; i++) {
         if (data[i] == 0xff && data[i + 1] == 0xd9) {
             jpeg.assign((char *)data, i + 2);
             return;
@@ -51,7 +52,8 @@ void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
     ReplayFrameData rfd;
     shot.source->get_readable_frame(shot.start + offset, rfd);
 
-    RawFrame *rf = dec.decode(rfd.data_ptr, rfd.data_size, scale_down);
+    RawFrame *rf = dec.decode(rfd.main_jpeg( ), 
+            rfd.main_jpeg_size( ), scale_down);
     enc.encode(rf);
     delete rf;
 
