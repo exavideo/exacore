@@ -2,17 +2,18 @@
 # Defaults should work well for a 64-bit build on AMD hardware. 
 # 32-bit is not supported for the time being!
 
+-include local.mk
+
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC 
+CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC 
 
 # don't use -Werror for swig-generated code
-SWIG_CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO -fPIC
-LDFLAGS=-g -O3 -march=k8 
+SWIG_CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -fPIC
+LDFLAGS=-g $(LOCAL_LDFLAGS)
 RUBY_INCLUDES=`ruby ruby_cflags.rb`
 ASM=yasm -f elf64 -g dwarf2
 
--include local.mk
 
 all: do_all_targets
 
