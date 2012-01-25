@@ -27,7 +27,7 @@
 #include <string.h>
 
 #define IN_PIPE_SIZE 32
-#define OUT_PIPE_SIZE 32 
+#define OUT_PIPE_SIZE 10 
 
 struct decklink_norm {
     const char *name;
@@ -169,7 +169,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             deckLink = find_card(card_index);
             configure_card( );
             open_card( );
-            preroll_video_frames(4);
+            preroll_video_frames(16);
 
             if (enable_audio) {
                 setup_audio( );
@@ -177,8 +177,34 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             start_video( );
 
+            //thread_priority_hack( );
+
             fprintf(stderr, "DeckLink: initialized using norm %s\n", 
                     norms[norm].name);
+        }
+
+        void thread_priority_hack( ) {            
+            /* abuse the crap out of the DeckLink API pointers... */
+            struct sched_param param;
+            param.sched_priority = 20;
+            uint8_t *dlmem = (uint8_t *)deckLink;
+
+            /* these offsets were found via GDB and could change at any time! */
+            pthread_t thread_a = *(pthread_t *)(dlmem + 0x110);
+            pthread_t thread_b = *(pthread_t *)(dlmem + 0x230);
+
+
+            /* change the threads to round-robin scheduler */
+            if (pthread_setschedparam(thread_a, SCHED_FIFO, &param) != 0) {
+                perror("pthread_setschedparam");
+                fprintf(stderr, "cannot set FIFO scheduler for DL-A thread");
+            }
+            
+            if (pthread_setschedparam(thread_b, SCHED_FIFO, &param) != 0) {
+                perror("pthread_setschedparam");
+                fprintf(stderr, "cannot set RR scheduler for DL-B thread");
+            }
+
         }
 
         /* DeckLink callbacks */

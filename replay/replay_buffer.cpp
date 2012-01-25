@@ -20,7 +20,6 @@
 #include "replay_buffer.h"
 #include "posix_util.h"
 
-#include "thread.h"
 #include "pipe.h"
 
 #include <sys/types.h>
@@ -94,9 +93,13 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
     this->frame_size = frame_size;
     this->n_frames = buffer_size / frame_size;
     this->name = strdup(name);
+
     if (this->name == NULL) {
         throw std::runtime_error("allocation failure");
     }
+
+    this->locks = new int[this->n_frames];
+    memset(locks, 0, this->n_frames * sizeof(int));
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
@@ -109,6 +112,8 @@ ReplayBuffer::~ReplayBuffer( ) {
     }
 
     free(name);
+
+    delete locks;
 }
 
 ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
@@ -148,6 +153,8 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
     frame_data.pos = tc_current + 1;
     frame_data.data_ptr = data + frame_index * frame_size;
     frame_data.data_size = frame_size;
+
+    // write_lock.set_position(this, tc_current);
 }
 
 void ReplayBuffer::finish_frame_write( ) {
@@ -199,4 +206,154 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
 
 const char *ReplayBuffer::get_name( ) {
     return name;
+}
+
+void ReplayBuffer::lock_frame(timecode_t frame) {
+    bool flag;
+    unsigned int frame_offset = frame % n_frames;
+
+    if (frame_offset >= n_frames) {
+        return; 
+    }
+
+    { MutexLock l(m);
+        if (locks[frame_offset] == 0) {
+            flag = true;
+        } else {
+            flag = false;
+        }
+        locks[frame_offset]++;
+    }
+
+    if (flag) {
+        mlock(data + frame_offset * frame_size, frame_size);
+    }
+}
+
+void ReplayBuffer::unlock_frame(timecode_t frame) {
+    bool flag;
+    unsigned int frame_offset = frame % n_frames;
+
+    if (frame_offset >= n_frames) {
+        return; 
+    }
+
+    { MutexLock l(m);
+        locks[frame_offset]--;
+        if (locks[frame_offset] == 0) {
+            flag = true;
+        } else {
+            flag = false;
+        }
+    }
+
+    if (flag) {
+        munlock(data + frame_offset * frame_size, frame_size);
+    }
+}
+
+ReplayBufferLocker::ReplayBufferLocker( ) {
+    buf = NULL;
+    start = end = 0;
+
+    start_thread( );
+}
+
+ReplayBufferLocker::~ReplayBufferLocker( ) {
+    
+}
+
+void ReplayBufferLocker::run_thread( ) {
+    timecode_t current_start = 0, current_end = 0;
+    ReplayBuffer *current_buf = NULL;
+    
+    timecode_t next_start = 0, next_end = 0;
+    ReplayBuffer *next_buf = NULL;
+
+    for (;;) {
+        { MutexLock l(m);
+            if (start == current_start && end == current_end 
+                    && buf == current_buf) {
+                c.wait(m);
+                continue;
+            } else {
+                next_start = start;
+                next_end = end;
+                next_buf = buf;
+            }
+        }
+
+        /* something has changed if we fall through here */
+        if (next_buf != NULL) {
+            if (next_buf != current_buf) {
+                /* we changed buffers so we have to unlock everything */
+                /* (but only if it's not NULL) */
+                if (current_buf != NULL) {
+                    unlock_all_frames(current_buf, current_start, current_end);
+                }
+                current_buf = next_buf;
+                current_start = next_start;
+                current_end = next_end;
+                lock_all_frames(current_buf, current_start, current_end);
+            } else {
+                /* check for overlap and move the range if possible */
+                move_range(current_buf, current_start, current_end, 
+                        next_start, next_end);
+                current_start = next_start;
+                current_end = next_end;
+            }
+        }
+    }
+
+}
+
+void ReplayBufferLocker::set_position(ReplayBuffer *buf, timecode_t tc) {
+    MutexLock l(m);
+
+    this->buf = buf;
+    start = tc - 100;
+    end = tc + 100;
+
+    c.signal( );
+}
+
+void ReplayBufferLocker::lock_all_frames(ReplayBuffer *buf, timecode_t start, 
+        timecode_t end) {
+    for (timecode_t i = start; i < end; i++) {
+        buf->lock_frame(i);
+    }
+}
+
+void ReplayBufferLocker::unlock_all_frames(ReplayBuffer *buf, 
+        timecode_t start, timecode_t end) {
+    for (timecode_t i = start; i < end; i++) {
+        buf->unlock_frame(i);
+    }
+}
+
+void ReplayBufferLocker::move_range(ReplayBuffer *buf,
+        timecode_t s1, timecode_t e1, 
+        timecode_t s2, timecode_t e2) {
+    if (s1 > e2 || s2 > e1) {
+        /* no overlap */
+        unlock_all_frames(buf, s1, e1);
+        lock_all_frames(buf, s2, e2);
+    } else {
+        if (s1 < s2) {
+            /* unlock all frames from s1 up to s2 */
+            unlock_all_frames(buf, s1, s2);
+        } else {
+            /* lock all frames from s2 to s1 */
+            lock_all_frames(buf, s2, s1);
+        }
+
+        if (e1 < e2) {
+            /* lock all frames from e1 to e2 */
+            lock_all_frames(buf, e1, e2);
+        } else {
+            /* unlock all frames from e2 to e1 */
+            unlock_all_frames(buf, e2, e1);
+        }
+
+    }
 }

@@ -26,6 +26,7 @@ class Thread {
     public:
         Thread( );
         virtual ~Thread( );
+        void priority(int scheduler, int priority);
 
     protected:
         void start_thread(void);

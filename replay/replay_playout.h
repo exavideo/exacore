@@ -74,6 +74,7 @@ class ReplayPlayout : public Thread {
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
+        ReplayBufferLocker lock;
         Rational current_pos;
         Rational field_rate;
         timecode_t shot_end;

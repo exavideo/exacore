@@ -19,6 +19,7 @@
 
 #include "thread.h"
 #include <stdexcept>
+#include <stdio.h>
 
 Thread::Thread( ) {
     running = false;
@@ -32,6 +33,15 @@ void Thread::start_thread(void) {
     if (pthread_create(&pthread, NULL, thread_proc, (void *) this) != 0) {
         throw std::runtime_error("pthread_create failed");
     } 
+
+    fprintf(stderr, "new thread %d\n", (int) pthread);
+}
+
+void Thread::priority(int policy, int priority) {
+    struct sched_param param;
+    param.sched_priority = priority;
+
+    pthread_setschedparam(pthread, policy, &param);
 }
 
 void Thread::join_thread(void) {

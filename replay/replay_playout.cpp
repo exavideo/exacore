@@ -36,6 +36,7 @@ ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) :
     clock_y = 0;
 
     start_thread( );
+    //priority(SCHED_FIFO, 20);
 }
 
 ReplayPlayout::~ReplayPlayout( ) {
@@ -224,6 +225,9 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         pos = current_pos;
         tc = current_pos.integer_part( );
         current_source->get_readable_frame(tc, f1);
+
+        /* keep nearby frames in memory when possible */
+        lock.set_position(current_source, tc);
 
         if (current_pos.fractional_part( ).less_than_one_half( )) {
             f1.use_first_field = true;

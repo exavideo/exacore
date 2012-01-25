@@ -123,4 +123,6 @@ void ReplayPreview::wait_update(ReplayFrameData &rfd) {
 
     /* grab the frame from the buffer */
     current_shot.source->get_readable_frame(current_pos, rfd);
+
+    lock.set_position(current_shot.source, current_pos);
 }

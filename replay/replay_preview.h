@@ -21,6 +21,7 @@
 #define _REPLAY_PREVIEW_H
 
 #include "replay_data.h"
+#include "replay_buffer.h"
 #include "thread.h"
 #include "mutex.h"
 #include "condition.h"
@@ -58,6 +59,8 @@ class ReplayPreview : public Thread {
 
         Mutex m;
         Condition updated;
+
+        ReplayBufferLocker lock;
 
         bool update_monitor;
 };

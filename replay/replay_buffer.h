@@ -22,11 +22,41 @@
 
 #include "replay_data.h"
 #include "mutex.h"
+#include "thread.h"
+#include "condition.h"
 
 #include <stdexcept>
 
 class ReplayFrameNotFoundException : public virtual std::exception {
     const char *what() const throw() { return "Frame off ends of buffer"; }
+};
+
+class ReplayBuffer;
+
+class ReplayBufferLocker : public Thread {
+    public:
+        ReplayBufferLocker( );
+        ~ReplayBufferLocker( );
+
+        void set_position(ReplayBuffer *buf, timecode_t tc);
+
+    protected:
+        timecode_t start, end;
+        ReplayBuffer *buf;        
+
+        Mutex m;
+        Condition c;
+
+        void run_thread( );
+
+        void lock_all_frames(ReplayBuffer *buf, timecode_t start, 
+                timecode_t end);
+        
+        void unlock_all_frames(ReplayBuffer *buf, timecode_t start, 
+                timecode_t end);
+
+        void move_range(ReplayBuffer *buf, timecode_t s1, timecode_t e1,
+                timecode_t s2, timecode_t e2);
 };
 
 class ReplayBuffer {
@@ -49,6 +79,9 @@ class ReplayBuffer {
 
         const char *get_name( );
 
+        void lock_frame(timecode_t frame);
+        void unlock_frame(timecode_t frame);
+
     private:
         class MsyncBackground;
         MsyncBackground *mst;
@@ -65,6 +98,10 @@ class ReplayBuffer {
         uint8_t *data;
 
         timecode_t tc_current;
+
+        int *locks;
+
+        ReplayBufferLocker write_lock;
 
         Mutex m;
 };
