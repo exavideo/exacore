@@ -100,7 +100,6 @@ class ReplayLocalControl < ShuttleProInput
         when 258
             @app.preview.mark_in
             @app.program.shot = @app.preview.shot
-            send_preview_to_web_interface
         when 259
             @app.preview.mark_out
         when 260
