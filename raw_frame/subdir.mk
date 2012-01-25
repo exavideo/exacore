@@ -9,6 +9,7 @@ raw_frame_OBJECTS = \
     raw_frame/convert/CbYCrY8422_BGRAn8_default.o \
     raw_frame/convert/CbYCrY8422_BGRAn8_scale_1_2_default.o \
     raw_frame/convert/CbYCrY8422_BGRAn8_scale_1_4_default.o \
+    raw_frame/convert/CbYCrY8422_CbYCrY8422_scale_1_4.o \
     raw_frame/draw/CbYCrY8422_alpha_key.o \
     raw_frame/draw/BGRAn8_blit.o \
     raw_frame/draw/BGRAn8_alpha_key.o \
