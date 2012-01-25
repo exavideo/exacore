@@ -58,20 +58,32 @@ class ReplayLocalControl < ShuttleProInput
 
     def on_shuttle(value)
         case value
-        when 0
-            @app.program.stop
-        when 1
+        when -6
+            @app.program.set_speed(1,8)
+        when -5
+            @app.program.set_speed(1,6)
+        when -4
             @app.program.set_speed(1,4)
-        when 2
+        when -3
             @app.program.set_speed(1,3)
-        when 3
+        when -2
+            @app.program.set_speed(3,8)
+        when -1
             @app.program.set_speed(1,2)
-        when 4
+        when 0
+            @app.program.set_speed(3,4)
+        when 1
             @app.program.set_speed(1,1)
-        when 5
+        when 2
+            @app.program.set_speed(5,4)
+        when 3
             @app.program.set_speed(3,2)
-        when 6
+        when 4
             @app.program.set_speed(2,1)
+        when 5
+            @app.program.set_speed(5,2)
+        when 6
+            @app.program.set_speed(3,1)
         end
     end
 
