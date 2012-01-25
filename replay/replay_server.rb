@@ -9,32 +9,16 @@ require_relative 'object_ids'
 require_relative 'replay_app'
 require_relative '../input/shuttlepro'
 
-iadp1 = Replay::create_decklink_input_adapter(1, 0, 0, Replay::RawFrame::CbYCrY8422)
-#iadp2 = Replay::create_decklink_input_adapter(2, 0, 0, Replay::RawFrame::CbYCrY8422)
-#iadp3 = Replay::create_decklink_input_adapter(3, 0, 0, Replay::RawFrame::CbYCrY8422)
-#iadp4 = Replay::create_decklink_input_adapter(4, 0, 0, Replay::RawFrame::CbYCrY8422)
-#iadp5 = Replay::create_decklink_input_adapter(5, 0, 0, Replay::RawFrame::CbYCrY8422)
-#iadp6 = Replay::create_decklink_input_adapter(6, 0, 0, Replay::RawFrame::CbYCrY8422)
-
 app = Replay::ReplayApp.new
+$app = app # hack
+
+def configure
+    yield $app
+end
+
+load './replay_config.rb'
+
 app.game_data.clock = "13:37"
-
-#app.add_source(:mjpeg_cmd => 'nc 192.168.216.1 12345', :file => '/root/d5', :name => 'WIRELESS 1')
-app.add_source(:input => iadp1, :file => '/mnt/cam1/d1', :name => 'CAM 1')
-#app.add_source(:input => iadp2, :file => '/mnt/cam2/d2', :name => 'CAM 2')
-#app.add_source(:input => iadp3, :file => '/mnt/cam3/d3', :name => 'CAM 3')
-#app.add_source(:input => iadp4, :file => '/mnt/cam4/d4', :name => 'CAM 4')
-#app.add_source(:input => iadp5, :file => '/root/d5', :name => 'HYPERMOTION')
-#app.add_source(:input => iadp6, :file => '/root/d6', :name => 'CAM 6')
-
-# set up replay graphic
-app.program.add_svg_dsk(IO.read('/root/instantreplay.svg'), 0, 0)
-app.program.add_svg_dsk(IO.read('/root/clock.svg'), 1600, 50)
-app.program.position_clock(1688, 78)
-
-# show the clock
-app.program.show_clock
-
 app.start
 
 module IRB # :nodoc:
