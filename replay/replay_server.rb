@@ -116,9 +116,17 @@ class ReplayLocalControl < ShuttleProInput
                 preview_source 1
             end
         when 262
-            preview_source 2
+            if @shifted == 1
+                preview_source 6
+            else
+                preview_source 2
+            end
         when 263
-            preview_source 3
+            if @shifted == 1
+                preview_source 7
+            else
+                preview_source 3
+            end
         when 264
             @shifted = 2
         when 269
