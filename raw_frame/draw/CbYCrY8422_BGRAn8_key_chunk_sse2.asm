@@ -24,144 +24,123 @@ global CbYCrY8422_BGRAn8_key_chunk_sse2
 CbYCrY8422_BGRAn8_key_chunk_sse2:
     ; rdi = CbYCbY8422 background data
     ; rsi = BGRAn8 key/fill data
-    ; rdx = number of source pixels to key
+    ; rdx = number of source bytes to key
     ; rcx = global alpha
 
+    ; 72 instructions per 4 pixels, at last count (2011/01/26)
+    ; i.e. much less than what GCC came up with :)
+
     ; load xmm8 with global alpha
+    pxor        xmm7, xmm7 
     movd        xmm8, rcx
-    cvtdq2ps    xmm8, xmm8
-    shufps      xmm8, xmm8, 0x00
-    mulps       xmm8, [OneOn255 wrt rip]    ; xmm8 = global alpha multiplier
+    pshufd      xmm8, xmm8, 0x00
+    pslld       xmm8, 8 ; make alpha out of 65535 instead of 255
 
 .loop:
-    ; xmm3 = a
-    movdqa      xmm3, [rsi]
-    psrld       xmm3, 24
-    
-    ; check if anything to do, skip expensive stuff if not
-    movdqa      xmm9, xmm3
-    packusdw    xmm9, xmm9
-    movq        rcx,  xmm9
-    test        rcx,  rcx
-    jz          .next
-
-    cvtdq2ps    xmm3, xmm3
-
-    mulps       xmm3, xmm8  ; multiply in global alpha
-
-    ; xmm0 = r
     movdqa      xmm0, [rsi]
-    psrld       xmm0, 16
-    pand        xmm0, [Mask4 wrt rip]
-    cvtdq2ps    xmm0, xmm0
+    movdqa      xmm1, xmm0
+    movdqa      xmm2, xmm0
+    movdqa      xmm3, xmm0
 
-    ; xmm1 = g
-    movdqa      xmm1, [rsi]
-    psrld       xmm1, 8
-    pand        xmm1, [Mask4 wrt rip]
-    cvtdq2ps    xmm1, xmm1
+    ; get alpha in XMM0
+    psrld       xmm0, 24
+    pand        xmm0, [lsb32_mask wrt rip]
 
-    ; xmm2 = b
-    movdqa      xmm2, [rsi]
-    pand        xmm2, [Mask4 wrt rip]
-    cvtdq2ps    xmm2, xmm2
+    ; red in XMM1
+    psrld       xmm1, 16
+    pand        xmm1, [lsb32_mask wrt rip]
 
-    ; compute Y in xmm1
-    mulps       xmm1, [YG_coeff wrt rip]
-    movdqa      xmm4, xmm2
-    mulps       xmm4, [YB_coeff wrt rip]
-    addps       xmm1, xmm4
-    movdqa      xmm4, xmm0
-    mulps       xmm4, [YR_coeff wrt rip]
-    addps       xmm1, xmm4
-    addps       xmm1, [Y_offset wrt rip]
+    ; green in XMM2
+    psrld       xmm2, 8
+    pand        xmm2, [lsb32_mask wrt rip]
 
-    ; compute Cb = (B' - Y') * scale + offset
-    subps       xmm2, xmm1
-    mulps       xmm2, [CB_scale wrt rip]
-    addps       xmm2, [CBCR_offset wrt rip]
+    ; blue in XMM3
+    pand        xmm3, [lsb32_mask wrt rip]
+
+    ; scale RGB to 0..219
+    pmulhuw     xmm1, [rgb_scale wrt rip] ; xmm1 = xmm1 * rgb_scale / 65536
+    pmulhuw     xmm2, [rgb_scale wrt rip]
+    pmulhuw     xmm3, [rgb_scale wrt rip]
+
+    ; compute luma
+    ; note *potential* optimization opportunity here (we multiply green by two consts)
+    pmulhuw     xmm2, [gy_scale wrt rip]        ; xmm2 = xmm2 * gy_scale / 65536
+    movdqa      xmm5, xmm3
+    pmulhuw     xmm5, [by_scale wrt rip]        ; xmm3 = xmm3 * by_scale / 65536
+    paddusw     xmm2, xmm5
+    movdqa      xmm5, xmm1
+    pmulhuw     xmm5, [ry_scale wrt rip]        ; xmm4 = xmm4 * ry_scale / 65536
+    paddusw     xmm2, xmm5
+
+    ; compute Cb
+    psubusw     xmm3, xmm2
+    pmulhuw     xmm3, [kb wrt rip]
+    paddusw     xmm3, [cb_cr_offset wrt rip]
+
+    ; compute Cr
+    psubusw     xmm1, xmm2
+    pmulhuw     xmm1, [kr wrt rip]
+    paddusw     xmm1, [cb_cr_offset wrt rip]
+
+    ; offset luma
+    paddusw     xmm2, [luma_offset wrt rip]
+
+    ; now we have Y/Cb/Cr/alpha vectors (xmm2, xmm3, xmm1, xmm0 respectively)
     
-    ; compute Cr = (R' - Y') * scale + offset
-    subps       xmm0, xmm1
-    mulps       xmm0, [CR_scale wrt rip]
-    addps       xmm0, [CBCR_offset wrt rip]
+    ; load four source pixels
+    movq        xmm4, [rdi]             ;        msb            lsb
+    punpcklbw   xmm4, xmm7              ; xmm4 = [ y v y u y v y u]
+    
+    pshuflw     xmm5, xmm4, 0x00
+    pshufhw     xmm5, xmm5, 0x00        ; xmm5 = [ u u u u u u u u]
+    pand        xmm5, [lsb32_mask wrt rip]      ; xmm5 = [   u   u   u   u]
 
-    ; xmm0 = key Cr
-    ; xmm1 = key Y
-    ; xmm2 = key Cb
-    ; xmm3 = key alpha
+    pshuflw     xmm6, xmm4, 0xaa        ; xmm6 = [ v v v v v v v v]
+    pshufhw     xmm6, xmm6, 0xaa
+    pand        xmm6, [lsb32_mask wrt rip]      ; xmm6 = [   v   v   v   v]
 
-    ; load 4 pixels of background CbYCrY data
-    pxor        xmm7, xmm7
+    psrld       xmm4, 16                ; xmm4 = [   y   y   y   y]
 
-    ; xmm4 = vector of 4 Cr
-    movq        xmm4, [rdi]
-    punpcklbw   xmm4, xmm7
-    pand        xmm4, [Mask4 wrt rip]
-    cvtdq2ps    xmm4, xmm4
-    shufps      xmm6, xmm6, 0xf5
-
-    ; xmm5 = vector of 4 Y
-    movq        xmm5, [rdi]
-    punpcklbw   xmm5, xmm7
-    psrld       xmm5, 16
-    cvtdq2ps    xmm5, xmm5
-
-    ; xmm6 = vector of 4 Cb
-    movq        xmm6, [rdi]
-    punpcklbw   xmm6, xmm7
-    pand        xmm6, [Mask4 wrt rip]
-    cvtdq2ps    xmm6, xmm6
-    shufps      xmm6, xmm6, 0xa0
-
-    ; xmm4 = background Cr
-    ; xmm5 = background Y
-    ; xmm6 = background Cb
-
+    ; now have background in Y/Cb/Cr vectors (xmm4/xmm5/xmm6 respectively)
+    
     ; alpha blending
-    ; get background alpha in xmm7 as max-key alpha in xmm3
-    movdqa      xmm7, [MaxAlpha wrt rip]
-    subps       xmm7, xmm3
+    ; xmm8 = global alpha, multiply into source alpha
+    pslld       xmm0, 8         ; make source alpha a fraction on 65536 
+    pmulhuw     xmm0, xmm8      ; xmm0 = xmm0 * xmm8 / 65536 = alpha ratio
 
-    ; scale source Cr/Y/Cb by source alpha
-    mulps       xmm0, xmm3
-    mulps       xmm1, xmm3
-    mulps       xmm2, xmm3
 
-    ; scale destination Cr/Y/Cb by destination alpha
-    mulps       xmm4, xmm7
-    mulps       xmm5, xmm7
-    mulps       xmm6, xmm7
+    ; key alpha scaling
+    pmulhuw     xmm1, xmm0      
+    pmulhuw     xmm2, xmm0
+    pmulhuw     xmm3, xmm0
+
+    ; compute complementary alpha
+    movdqa      xmm9, [alpha_65536 wrt rip]
+    psubd       xmm9, xmm0
+
+    ; background alpha scaling
+    pmulhuw     xmm4, xmm9
+    pmulhuw     xmm5, xmm9
+    pmulhuw     xmm6, xmm9
+
+    paddusw     xmm2, xmm4
+    paddusw     xmm3, xmm5
+    paddusw     xmm1, xmm6
+
+    ; repack pixels
+    packssdw    xmm2, xmm7              ; xmm2 [   y   y   y   y] -> [         y y y y]
+    pslld       xmm2, 8                 ; xmm2 -> [        y y y y ]
     
-    ; combine images
-    addps       xmm4, xmm0
-    addps       xmm5, xmm1
-    addps       xmm6, xmm2
+    packssdw    xmm3, xmm7              ; xmm3 [   u   u   u   u] -> [         u u u u]
+    pand        xmm3, [lsb32_mask wrt rip]      ; xmm3 -> [           u   u]
+    por         xmm2, xmm3              ; xmm2 -> [        y yu y yu]
 
-    ; divide by 255
-    mulps       xmm4, [OneOn255 wrt rip]    ; xmm5 = Y output
-    mulps       xmm5, [OneOn255 wrt rip]    ; xmm6 = Cb output
-    mulps       xmm6, [OneOn255 wrt rip]    ; xmm7 = Cr output
+    packssdw    xmm1, xmm7              ; xmm4 [   v   v   v   v] -> [         v v v v]
+    pslld       xmm1, 16                ; xmm4 -> [         v   v  ]
+    por         xmm2, xmm1              ; xmm2 -> [        yvyuyvyu]
 
-    ; subsample and convert back to integer Y/Cb/Cr values
-    shufps      xmm4, xmm4, 0xa0
-    cvtps2dq    xmm4, xmm4          
-    cvtps2dq    xmm5, xmm5         
-    cvtps2dq    xmm6, xmm6        
-
-    ; xmm4 = final Cr
-    ; xmm5 = final Y
-    ; xmm6 = final Cb
+    movq        [rdi], xmm2
     
-    ; store as Cb-Y-Cr-Y
-    pslld       xmm5, 16
-    pand        xmm4, [Cr_mask wrt rip]
-    pand        xmm6, [Cb_mask wrt rip]
-    por         xmm5, xmm4
-    por         xmm5, xmm6
-    packuswb    xmm5, xmm5
-    movq        [rdi], xmm5
-
 .next:
     add rsi, 16
     add rdi, 8
@@ -172,21 +151,22 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
 
 ; constants - see Poynton, "Digital Video and HDTV", chapter 26
 align 16
-YR_coeff            times 4 dd 0.1826
-YG_coeff            times 4 dd 0.6142
-YB_coeff            times 4 dd 0.0620
-Y_offset            times 4 dd 16.0
-CBCR_offset         times 4 dd 128.0
-CB_scale            times 4 dd 0.47339
-CR_scale            times 4 dd 0.55781
-MaxAlpha            times 4 dd 255.0
-; won't find this one in Poynton... it's just 1/255.0.
-; NASM can't do floating point computations to get literals,
-; so we have this ugly constant instead.
-OneOn255            times 4 dd 0.0039215686
+ry_scale                times 4 dd 13933
+gy_scale                times 4 dd 46871
+by_scale                times 4 dd 4732
+
+kb                      times 4 dd 36124
+kr                      times 4 dd 42566
+
+alpha_65536             times 4 dd 65535
+
+luma_offset             times 4 dd 16
+cb_cr_offset            times 4 dd 128
+
+; Scale factors
+rgb_scale               times 4 dd 56284
 
 ; Bit masks
-Mask4               times 4 db 0xff, 0x00, 0x00, 0x00
-Cb_mask             times 2 db 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-Cr_mask             times 2 db 0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00
+lsb32_mask              times 4 db 0xff, 0x00, 0x00, 0x00
+
 ; vim:syntax=nasm64

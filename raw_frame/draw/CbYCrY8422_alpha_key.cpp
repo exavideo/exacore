@@ -19,12 +19,19 @@
 
 #include "raw_frame.h"
 #include <assert.h>
+#include "cpu_dispatch.h"
 
 static void CbYCrY8422_RGBAn8_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha); 
 
 static void CbYCrY8422_BGRAn8_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha);
+
+static void CbYCrY8422_BGRAn8_key_vector(RawFrame *bkgd, RawFrame *key,
+        coord_t x, coord_t y, uint8_t galpha);
+
+extern "C" void CbYCrY8422_BGRAn8_key_chunk_sse2(void *bkgd, void *key,
+        unsigned int source_length, unsigned int galpha);
 
 void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
@@ -37,13 +44,35 @@ void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
             break;
 
         case RawFrame::BGRAn8:
-            CbYCrY8422_BGRAn8_key_default(bkgd, key, x, y, galpha);
+            if (cpu_sse2_available( )) {
+                CbYCrY8422_BGRAn8_key_vector(bkgd, key, x, y, galpha);
+            } else {
+                CbYCrY8422_BGRAn8_key_default(bkgd, key, x, y, galpha);
+            }
+
             break;
 
         default:
             throw std::runtime_error("Unsupported key requested");
     }
 
+}
+
+void CbYCrY8422_BGRAn8_key_vector(RawFrame *bkgd, RawFrame *key, 
+        coord_t x, coord_t y, uint8_t galpha) {
+    coord_t h;
+
+    if (galpha == 0) {
+        return;
+    }
+
+    for (h = 0; h < key->h( ); h++) {
+        CbYCrY8422_BGRAn8_key_chunk_sse2(
+            bkgd->scanline(y + h) + 2*x,
+            key->scanline(h), key->pitch (),
+            galpha
+        );
+    }
 }
 
 void CbYCrY8422_RGBAn8_key_default(RawFrame *bkgd, RawFrame *key, 

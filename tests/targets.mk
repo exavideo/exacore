@@ -53,6 +53,16 @@ tests/CbYCrY8422_scan_double: $(test_CbYCrY8422_scan_double_OBJECTS)
 
 all_TARGETS += tests/CbYCrY8422_scan_double    
 
+test_CbYCrY8422_alpha_BGRAn8_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/CbYCrY8422_alpha_BGRAn8.o
+
+tests/CbYCrY8422_alpha_BGRAn8: $(test_CbYCrY8422_alpha_BGRAn8_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+all_TARGETS += tests/CbYCrY8422_alpha_BGRAn8    
+
 test_stretch_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \
