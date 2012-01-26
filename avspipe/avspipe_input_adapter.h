@@ -29,8 +29,8 @@ class AvspipeInputAdapter {
     public:
         AvspipeInputAdapter(const char *cmd, bool use_builtin_audio = false);
         ~AvspipeInputAdapter( );
-        Pipe<RawFrame *> &output_pipe( );
-        Pipe<AudioPacket *> *audio_output_pipe( );
+        Pipe<RawFrame *> &output_pipe( ) { return vpipe; }
+        Pipe<AudioPacket *> *audio_output_pipe( ) { return apipe; }
     protected:
         char *parse_command(const char *cmd, int vpfd, int apfd);
         pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd);

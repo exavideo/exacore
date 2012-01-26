@@ -23,6 +23,8 @@
 #include "thread.h"
 #include "pipe.h"
 
+#include <typeinfo>
+
 template <class SendableThing, class _Allocator>
 class AvspipeReaderThread : public Thread {
     public:
@@ -46,11 +48,18 @@ class AvspipeReaderThread : public Thread {
                 thing = _allocator.allocate( );
 
                 if (thing->read_from_fd(_in_fd) == 0) {
+                    _fpipe->done_writing( );
                     break;
                 }
 
-                _fpipe->put(thing); 
+                try {
+                    _fpipe->put(thing); 
+                } catch (BrokenPipe &ex) {
+                    break;
+                }
             }
+
+            close(_in_fd);
         }
 
         Pipe<SendableThing *> *_fpipe;

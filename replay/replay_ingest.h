@@ -26,6 +26,7 @@
 #include "replay_data.h"
 #include "replay_buffer.h"
 #include "replay_gamedata.h"
+#include "mutex.h"
 
 class ReplayIngest : public Thread {
     public:
@@ -35,6 +36,10 @@ class ReplayIngest : public Thread {
 
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
+
+        void suspend_encode( );
+        void resume_encode( );
+
     protected:
         void run_thread( );
         
@@ -44,6 +49,9 @@ class ReplayIngest : public Thread {
         ReplayGameData *gd;
 
         ReplayIngest() { };
+
+        Mutex m;
+        bool encode_suspended;
 };
 
 #endif

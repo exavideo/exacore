@@ -311,8 +311,8 @@ void ReplayBufferLocker::set_position(ReplayBuffer *buf, timecode_t tc) {
     MutexLock l(m);
 
     this->buf = buf;
-    start = tc - 100;
-    end = tc + 100;
+    start = tc - 10;
+    end = tc + 10;
 
     c.signal( );
 }

@@ -29,5 +29,8 @@ class ReplayIngest : public Thread {
             ReplayGameData *INPUT = NULL);
         ~ReplayIngest( );
         AsyncPort<ReplayRawFrame> *get_monitor( );
+
+        void suspend_encode( );
+        void resume_encode( );
 };
 

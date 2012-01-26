@@ -28,7 +28,7 @@
 
 
 AvspipeInputAdapter::AvspipeInputAdapter(const char *cmd, 
-        bool use_builtin_audio) : vpipe(16) {
+        bool use_builtin_audio) : vpipe(64) {
 
     pid_t child;
     signal(SIGCHLD, SIG_IGN);
@@ -50,19 +50,16 @@ AvspipeInputAdapter::AvspipeInputAdapter(const char *cmd,
         aread = NULL;
         apfd = -1;
     } else {
-        apipe = new Pipe<AudioPacket *>(16);
+        apipe = new Pipe<AudioPacket *>(64);
         aread = new AvspipeReaderThread<AudioPacket, 
                 AvspipeNTSCSyncAudioAllocator>(apipe, apfd);
     }
 }
 
 AvspipeInputAdapter::~AvspipeInputAdapter( ) {
-    if (apfd != -1) {
-        close(apfd);
-    }
-
-    if (vpfd != -1) {
-        close(vpfd);
+    vpipe.done_reading( );
+    if (apipe) {
+        apipe->done_reading( );
     }
 
     if (aread) {
@@ -190,6 +187,7 @@ pid_t AvspipeInputAdapter::start_subprocess(const char *cmd, int &vpfd, int &apf
         /* child */
         close(vpipe[0]);
         close(apipe[0]);
+        close(STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL); 
 
         perror("execl");

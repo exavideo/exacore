@@ -26,6 +26,7 @@ ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_,
     iadp = iadp_;
     buf = buf_;
     gd = gds;
+    encode_suspended = false;
     start_thread( );
 }
 
@@ -41,44 +42,62 @@ void ReplayIngest::run_thread( ) {
     Mjpeg422Encoder enc(1920, 1080); /* FIXME: hard coded frame size */
 
     for (;;) {
+
         /* obtain writable frame from buffer */
         buf->get_writable_frame(dest);
 
         /* obtain frame from input adapter */
         input = iadp->output_pipe( ).get( );
 
-        /* set field dominance if necessary */
-        if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
-            buf->set_field_dominance(input->field_dominance( ));
+        bool suspended;
+
+        { MutexLock l(m);
+            suspended = encode_suspended;
         }
 
-        if (gd != NULL) {
-            gd->as_jpeg_comment(com);
-            enc.set_comment(com);
+        if (!suspended) {
+            /* set field dominance if necessary */
+            if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
+                buf->set_field_dominance(input->field_dominance( ));
+            }
+
+            if (gd != NULL) {
+                gd->as_jpeg_comment(com);
+                enc.set_comment(com);
+            }
+
+            /* encode to M-JPEG */
+            enc.encode_to(input, dest.main_jpeg( ), dest.main_jpeg_size( ));
+
+            /* scale input and make JPEG thumbnail */
+            thumb = input->convert->CbYCrY8422_scaled(480, 270);
+            //enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
+            delete thumb;
+
+            buf->finish_frame_write( );
+
+            /* scale down frame to send to monitor */
+            monitor_frame = new ReplayRawFrame(
+                input->convert->BGRAn8_scale_1_4( )
+            );
+            
+            /* fill in monitor status info */
+            monitor_frame->source_name = buf->get_name( );
+            monitor_frame->tc = dest.pos;
+
+            monitor.put(monitor_frame);
         }
-
-        /* encode to M-JPEG */
-        enc.encode_to(input, dest.main_jpeg( ), dest.main_jpeg_size( ));
-
-        /* scale input and make JPEG thumbnail */
-        thumb = input->convert->CbYCrY8422_scaled(480, 270);
-        enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
-        delete thumb;
-
-        buf->finish_frame_write( );
-
-        /* scale down frame to send to monitor */
-        monitor_frame = new ReplayRawFrame(
-            input->convert->BGRAn8_scale_1_4( )
-        );
-        
-        /* fill in monitor status info */
-        monitor_frame->source_name = buf->get_name( );
-        monitor_frame->tc = dest.pos;
-
-        monitor.put(monitor_frame);
         
         delete input;
     }
 }
 
+void ReplayIngest::suspend_encode( ) {
+    MutexLock l(m);
+    encode_suspended = true;
+}
+
+void ReplayIngest::resume_encode( ) {
+    MutexLock l(m);
+    encode_suspended = false;
+}

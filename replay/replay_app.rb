@@ -38,6 +38,14 @@ module Replay
             end
         end
 
+        def suspend_encode
+            @ingest.suspend_encode
+        end
+
+        def resume_encode
+            @ingest.resume_encode
+        end
+
         def make_shot_now
             @buffer.make_shot(0, ReplayBuffer::END)
         end
@@ -71,7 +79,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            Replay::create_decklink_output_adapter(7, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter_with_audio(7, 0, RawFrame::CbYCrY8422)
         end
     end
 
@@ -163,12 +171,21 @@ module Replay
             @sources[i]
         end
 
+
         def each_source
             if block_given?
                 @sources.each { yield }
             else 
                 @sources.each
             end
+        end
+
+        def suspend_encode
+            @sources.each { |source| source.suspend_encode }    
+        end
+
+        def resume_encode
+            @sources.each { |source| source.resume_encode }
         end
 
         def start_irb

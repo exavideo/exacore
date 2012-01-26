@@ -22,6 +22,7 @@
 #include "rsvg_frame.h"
 #include "mjpeg_codec.h"
 #include "cairo_frame.h"
+#include "avspipe_allocators.h"
 #include <string.h>
 
 /* FIXME hardcoded 1920x1080 decoding */
@@ -126,9 +127,13 @@ void ReplayPlayout::run_thread( ) {
     RawFrame *f_cache = NULL;
     RawFrame *out = NULL;
 
+    AudioPacket *audio;
+
     AvspipeInputAdapter *current_avspipe = NULL;
+
+    AvspipeNTSCSyncAudioAllocator audio_allocator;
+
     timecode_t avs_tc = 0;
-                          
 
     for (;;) {
         { MutexLock l(m);
@@ -139,8 +144,10 @@ void ReplayPlayout::run_thread( ) {
 
                 current_avspipe = next_avspipe;
                 avs_tc = 0;
+
             }
         }
+
 
         if (current_avspipe == NULL) {
             get_and_advance_current_fields(rfd1, rfd2, pos);
@@ -177,9 +184,13 @@ void ReplayPlayout::run_thread( ) {
 
             /* send the full CbYCrY frame to output */
             oadp->input_pipe( ).put(out);
+            audio = audio_allocator.allocate( );
+            memset(audio->data( ), 0, audio->size( ));
+            oadp->audio_input_pipe( )->put(audio);
         } else {
             try {
                 out = current_avspipe->output_pipe( ).get( );
+                audio = current_avspipe->audio_output_pipe( )->get( );
                 monitor_frame = new ReplayRawFrame(
                     out->convert->BGRAn8_scale_1_2( )
                 );
@@ -187,7 +198,10 @@ void ReplayPlayout::run_thread( ) {
                 monitor_frame->tc = avs_tc;
                 monitor_frame->source_name = "Program";
                 monitor_frame->source_name2 = "AVSPIPE Rollout";
+                monitor.put(monitor_frame);
+
                 oadp->input_pipe( ).put(out);
+                oadp->audio_input_pipe( )->put(audio);
 
                 avs_tc++;
             } catch (BrokenPipe &ex) {
@@ -209,7 +223,7 @@ void ReplayPlayout::avspipe_playout(const char *cmd) {
         return;
     }
 
-    next_avspipe = new AvspipeInputAdapter(cmd, true);
+    next_avspipe = new AvspipeInputAdapter(cmd, false);
 
 }
 

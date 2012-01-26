@@ -27,7 +27,7 @@
 #include <string.h>
 
 #define IN_PIPE_SIZE 32
-#define OUT_PIPE_SIZE 10 
+#define OUT_PIPE_SIZE 15 
 
 struct decklink_norm {
     const char *name;
@@ -177,7 +177,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             start_video( );
 
-            //thread_priority_hack( );
+            thread_priority_hack( );
 
             fprintf(stderr, "DeckLink: initialized using norm %s\n", 
                     norms[norm].name);
@@ -365,7 +365,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             /* FIXME magic 29.97 related number */
             /* Set up empty audio packet for prerolling */
-            current_audio_pkt = new AudioPacket(48000, n_channels, 2, 6404);
+            current_audio_pkt = new AudioPacket(48000, n_channels, 2, 25626);
             samples_written_from_current_audio_pkt = 0;
 
             assert(deckLinkOutput != NULL);
@@ -513,11 +513,20 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         int try_finish_current_audio_packet( ) {
             uint32_t n_consumed;
             uint32_t n_left;
+            
+            uint32_t buffer;
+            deckLinkOutput->GetBufferedAudioSampleFrameCount(&buffer);
+            fprintf(stderr, "audio buffer = %u ", buffer);
 
             assert(current_audio_pkt != NULL);
 
             n_left = current_audio_pkt->n_frames( ) 
                     - samples_written_from_current_audio_pkt;
+
+            if (n_left == 0) {
+                fprintf(stderr, "Audio warning: This should not happen!\n");
+                return 1;
+            }
 
             if (deckLinkOutput->ScheduleAudioSamples(
                     current_audio_pkt->sample(
@@ -536,6 +545,9 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             } else {
                 throw std::runtime_error("This should not happen");
             }
+
+            deckLinkOutput->GetBufferedAudioSampleFrameCount(&buffer);
+            fprintf(stderr, "-> %u\n", buffer);
 
             return n_consumed;
         }
