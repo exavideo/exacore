@@ -63,6 +63,16 @@ tests/CbYCrY8422_alpha_BGRAn8: $(test_CbYCrY8422_alpha_BGRAn8_OBJECTS)
 
 all_TARGETS += tests/CbYCrY8422_alpha_BGRAn8    
 
+test_CbYCrY8422_BGRAn8_scale_1_4_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/CbYCrY8422_BGRAn8_scale_1_4.o
+
+tests/CbYCrY8422_BGRAn8_scale_1_4: $(test_CbYCrY8422_BGRAn8_scale_1_4_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^
+
+all_TARGETS += tests/CbYCrY8422_alpha_BGRAn8    
+
 test_stretch_OBJECTS = \
 	$(common_OBJECTS) \
 	$(raw_frame_OBJECTS) \
