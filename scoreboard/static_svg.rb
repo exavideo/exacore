@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby 
 
-template = File.open('test_files/bug.svg', 'r') do |f|
+template = File.open(ARGV[0], 'r') do |f|
     f.read( )
 end
 
