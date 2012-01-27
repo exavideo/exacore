@@ -260,21 +260,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 } 
             } else {
                 /* Cram as much audio into the buffer as we can. */
-                while (audio_in_pipe->data_ready( )) {
-                    AudioPacket *apkt = audio_in_pipe->get( );
-                    int n_consumed = 0;
-
-                    while (n_consumed < apkt->n_frames( )) {
-                        if (deckLinkOutput->ScheduleAudioSamples(apkt->sample(n_consumed), 
-                                apkt->n_frames( ) - n_consumed, 0, 0, &n_consumed) != S_OK) {
-                            throw std::runtime_error(
-                                "Failed to schedule audio samples"
-                            );
-                        }
-                    }
-                }
-
-                #if 0
                 for (;;) {
                     if (current_audio_pkt != NULL) {
                         if (try_finish_current_audio_packet( ) == 0) {
@@ -296,7 +281,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                         break;
                     }
                 }
-                #endif
             }
 
             return S_OK;
