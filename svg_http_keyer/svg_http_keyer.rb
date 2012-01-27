@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby 
 
 require 'rubygems'
-require 'sinatra/base'
+require 'patchbay'
 require 'thin'
 
 Thin::Logging.silent = true
@@ -27,12 +27,12 @@ Thread.new do
                 break
             end
 
-            size = [ $svgdata.length ].pack('L')
-
-            alpha = 0
 
             # dissolve state logic
             Thread.exclusive do
+                size = [ $svgdata.length ].pack('L')
+                alpha = 0
+
                 if $trans_state == UP
                     alpha = 255
                 elsif $trans_state == DOWN
@@ -51,14 +51,15 @@ Thread.new do
                         $trans_state = DOWN
                     end
                 end
+
+                alphastr = [ alpha, $dirty_level ].pack('CC')
+
+                STDOUT.write(size)
+                STDOUT.write(alphastr)
+                STDOUT.write($svgdata)
+                STDOUT.flush
             end
 
-            alphastr = [ alpha, $dirty_level ].pack('CC')
-
-            STDOUT.write(size)
-            STDOUT.write(alphastr)
-            STDOUT.write($svgdata)
-            STDOUT.flush
         end
     rescue Exception, e
         STDERR.puts "exception in IO thread"
@@ -66,28 +67,31 @@ Thread.new do
     end
 end
 
-class KeyerServer < Sinatra::Base
-    get '/' do
-        # show some view
-        erb :form
-    end
-
+class KeyerServer < Patchbay
     post '/key' do
         # read the postdata into template
         Thread.exclusive do
-            $svgdata = request.env["rack.input"].read
+            data = incoming_data
+            STDERR.puts "new key was written #{data.length}"
+            File.open('/tmp/lastkey.svg', 'wb') do |f|
+                f.write data
+            end
+            $svgdata = data
         end
-        STDERR.puts "key updated to #{$template}"
-        204 # no content
+        render :json => ''
     end
 
     put '/key' do
         # read the postdata into template
         Thread.exclusive do
-            $svgdata = request.env["rack.input"].read
+            data = incoming_data
+            STDERR.puts "new key was written #{data.length}"
+            File.open('/tmp/lastkey.svg', 'wb') do |f|
+                f.write data
+            end
+            $svgdata = data
         end
-        STDERR.puts "key updated to #{$template}"
-        204 # no content
+        render :json => ''
     end
 
     post '/dissolve_in/:frames' do
@@ -96,9 +100,9 @@ class KeyerServer < Sinatra::Base
                 $trans_nframes = params[:frames].to_i
                 $trans_i = 0
                 $trans_state = IN
-                204 # no content
+                render :json => ''
             else
-                503 # service unavailable
+                render :json => '', :status => 503
             end
         end
     end
@@ -106,8 +110,8 @@ class KeyerServer < Sinatra::Base
     post '/dirty_level/:n' do
         Thread.exclusive do
             $dirty_level = params[:n].to_ik
-            204 # no content
         end
+        render :json => ''
     end
 
     post '/dissolve_out/:frames' do
@@ -116,12 +120,23 @@ class KeyerServer < Sinatra::Base
                 $trans_nframes = params[:frames].to_i
                 $trans_i = 0
                 $trans_state = OUT
-                204 # no content
+                render :json => ''
             else
-                503 # service unavailable
+                render :json => '', :status => 503
             end
         end
     end
 
-    run!
+    def incoming_data
+        unless params[:incoming_data]
+            inp = environment['rack.input']
+            inp.rewind
+            params[:incoming_data] = inp.read
+        end
+
+        params[:incoming_data]
+    end
 end
+
+app = KeyerServer.new
+app.run(:Host => '::', :Port => 4567)
