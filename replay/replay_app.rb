@@ -100,10 +100,10 @@ module Replay
 
         def make_json(source_id)
             {
-                :source => source_id,
-                :source_name => source.name,
-                :start => start,
-                :length => length
+                "source" => source_id,
+                "source_name" => source.name,
+                "start" => start,
+                "length" => length
             }
         end     
 
@@ -115,11 +115,10 @@ module Replay
                 data = JSON.parse(json)
             end
 
-            shot = self.new
 
             p data
-            shot.source = sources[data["source"]]
-            shot.start = data["start"] if data["start"]
+            start = data["start"]
+            shot = sources[data["source"]].make_shot_at(start)
             shot.length = data["length"] if data["length"]
 
             shot

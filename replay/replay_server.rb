@@ -49,9 +49,9 @@ class ReplayEvent
 
     def make_json
         {
-            :id => @id,
-            :type => @type,
-            :shots => @shots.each_with_index.map { |shot, source_id| shot.make_json(source_id) }
+            "id" => @id,
+            "type" => @type,
+            "shots" => @shots.each_with_index.map { |shot, source_id| shot.make_json(source_id) }
         }
     end
 end
@@ -204,7 +204,7 @@ end
 class ReplayServer < Patchbay
     # Get all shots currently saved.
     get '/events.json' do
-        render :json => events.each_with_index.map { |x, i| x.make_json( ) }
+        render :json => (events.each_with_index.map { |x, i| x.make_json( ) }).to_json
     end
 
     # Throw this shot up on the local operator's preview.
@@ -242,15 +242,27 @@ class ReplayServer < Patchbay
     get '/sources/:id/:timecode/preview.jpg' do
         tc = params[:timecode].to_i
         src = params[:id].to_i
-        shot = replay_app.source(src).make_shot_at(tc)
-        render :jpg => shot.preview
+        now = replay_app.source(src).make_shot_now
+        
+        if tc < 0 or tc > now.start
+            render :json => '', :status => 404
+        else
+            shot = replay_app.source(src).make_shot_at(tc)
+            render :jpg => shot.preview
+        end
     end
 
     get '/sources/:id/:timecode/thumbnail.jpg' do
         tc = params[:timecode].to_i
         src = params[:id].to_i
-        shot = replay_app.source(src).make_shot_at(tc)
-        render :jpg => shot.thumbnail
+        now = replay_app.source(src).make_shot_now
+        
+        if tc < 0 or tc > now.start
+            render :json => '', :status => 404
+        else
+            shot = replay_app.source(src).make_shot_at(tc)
+            render :jpg => shot.thumbnail
+        end
     end
 
     get '/sources/:id/:start/:length/video.mjpg' do
@@ -260,6 +272,29 @@ class ReplayServer < Patchbay
         length = params[:length].to_i
 
         render :mjpg => MjpegIterator.new(source, start, length)
+    end
+
+    get '/files.json' do
+        ROLLOUT_DIR = '/root/rollout'
+        render :json => Dir.glob(ROLLOUT_DIR + '/*.mov').to_json
+    end
+
+    put '/ffmpeg_rollout.json' do
+        # DANGER DANGER DANGER
+        # FIXME FIXME FIXME
+        # THIS IS A GLARINC SECURITY HOLE
+        p inbound_json
+        filename = inbound_json["filename"]
+        cmd = "ffmpeg -i #{filename} -f rawvideo -s 1920x1080 -pix_fmt uyvy422 pipe:%a -f s16le -ac 2 -ar 48000 pipe:%a"
+        p cmd
+        replay_app.suspend_encode
+        replay_app.program.avspipe_playout(cmd)
+        render :json => ''
+    end
+
+    put '/resume_encode.json' do
+        replay_app.resume_encode
+        render :json => ''
     end
 
     self.files_dir = "public_html/"
@@ -284,6 +319,16 @@ private
         end
 
         params[:inbound_shot]
+    end
+
+    def inbound_json
+        unless params[:inbound_json]
+            inp = environment['rack.input']
+            inp.rewind
+            params[:inbound_json] = JSON.parse(inp.read)
+        end
+
+        params[:inbound_json]
     end
 
     def inbound_shots

@@ -16,23 +16,17 @@ function loadHtml(aUrl, callback) {
     });
 }
 
-function postJson(data, aUrl, callback) {
+function postJson(aUrl, data) {
     jQuery.ajax(aUrl, {
         type: 'POST',
-        success: function(data, jqXHR, textStatus) {
-            callback(data);
-        },
         data: JSON.stringify(data),
         dataType: "json"
     });
 }
 
-function putJson(data, aUrl, callback) {
+function putJson(aUrl, data) {
     jQuery.ajax(aUrl, {
         type: 'PUT',
-        success: function(data, jqXHR, textStatus) {
-            callback(data);
-        },
         data: JSON.stringify(data),
         dataType: "json"
     });
@@ -49,222 +43,217 @@ function deleteJson(data, aUrl, callback) {
     });
 }
 
-function previewShot(shot) {
-    putJson(shot, '/preview_shot.json', function() {});
-}
-
-function rollShot(shot) {
-    putJson(shot, '/roll_shot.json', function() {});
-}
-
-function queueShot(shot) {
-    var div = makeDivForShot(jQuery.extend(true, {}, shot));
-
-    div.find('#queue').text('Copy'); 
-    div.find('#delete').show();
-    div.find('#delete').removeAttr('disabled');
-    $('#queuedShots').append(div);
-
-    div.show( );
-}
-
-function rollQueue() {
-    var shots = $('#queuedShots div').map(function(i, shotDiv) {
-        return $(shotDiv).data('shot');
-    }).get( );
-
-    putJson(shots, '/roll_queue.json', function() {});
-}
-
-function emptyQueue() {
-    $('#queuedShots div').remove( );
-}
-
-function twoDigits(value) { 
-    value = Math.floor(value)
-    if (value < 10) {
-        return '0' + value;
-    } else {
-        return value;
+function get_timeline_frames(pos) {
+    var ret = []
+    for (var i = -7; i < 3; i++) {
+        ret.push(pos + i * 30);
     }
+    return ret;
 }
 
-function formatTimecode(tc_value) {
-    var frames = tc_value % 30; /* FIXME NTSC hardcoded frames per sec */
-    var seconds = (tc_value / 30) % 60; 
-    var minutes = (tc_value / (30 * 60)) % 60;
-    var hours = (tc_value / (30 * 60 * 60));
-
-    return twoDigits(hours) + ':' + twoDigits(minutes) + ':' + twoDigits(seconds) + ':' + twoDigits(frames);
-}
-
-function selectShot(div) {
-    $('.shotViewSelected').removeClass('shotViewSelected').addClass('shotViewUnselected');
-    div.addClass('shotViewSelected').removeClass('shotViewUnselected');
-}
-
-function makeDivForShot(shot) {
-    var new_div = $("#shotPrototype").clone( );
-
-    new_div.data('shot', shot);
-    new_div.data('offset', 0);
-
-    new_div.find('#shotPreview img').attr('src', '/shots/'+shot.id+'/preview.jpg');
-    new_div.find('#preview').click(function() { previewShot( $(this).parent().data('shot')) });
-    new_div.find('#roll').click(function() { rollShot( $(this).parent().data('shot')) });
-    new_div.find('#queue').click(function() { queueShot( $(this).parent().data('shot')) });
-    new_div.find('#delete').click(function() { $(this).parent().remove() });
-
-    new_div.find('#back').click(seekBackButton);
-    new_div.find('#forward').click(seekForwardButton);
-    new_div.find('#in').click(markIn);
-    new_div.find('#out').click(markOut);
-
-    new_div.click(function() { selectShot($(this)) } );
-
-    updateShotData(new_div);
-
-    return new_div;
-}
-
-function updateShotData(shotDiv) {
-    var shot = shotDiv.data('shot');
-    var offset = shotDiv.data('offset');
-
-    shotDiv.find('#data').html(
-        '<table><tr><td>Source</td><td>' + shot.source_name 
-        + '</td></tr><tr><td>Preview</td><td>' + formatTimecode(shot.start + offset)
-        + '</td></tr><tr><td>Start Time</td><td>' + formatTimecode(shot.start) 
-        + '</td></tr><tr><td>Duration</td><td>' + formatTimecode(shot.length) 
-        + '</td></tr></table>'
-    );
-}
-
-function markIn() {
-    var shotDiv = $(this).parent();
-
-    var shot = shotDiv.data('shot');
-    var oldOut = shot.start + shot.length;
-    
-    shot.start = shot.start + shotDiv.data('offset');
-    if (shot.start < 0) {
-        shot.start = 0;
-    }
-
-    if (oldOut < shot.start) {
-        shot.length = 0;
-    } else {
-        shot.length = oldOut - shot.start;
-    }
-
-    shotDiv.data('shot', shot);
-    shotDiv.data('offset', 0);
-
-    updateShotData(shotDiv);
-}
-
-function markOut() {
-    var shotDiv = $(this).parent();
-
-    // if we're before the "in" mark... mark in here as well.
-    // That makes length always positive.
-    if (shotDiv.data('offset') < 0) {
-        markIn(shotDiv);
-    }
-
-    var shot = shotDiv.data('shot');
-    shot.length = shotDiv.data('offset');
-    shotDiv.data('shot', shot);
-
-    updateShotData(shotDiv); 
-}
-
-function seekBackButton() {
-    var shotDiv = $(this).parent();
-    doSeekBack(shotDiv);
-}
-
-function doSeekBack(shotDiv) {
-    var shot = shotDiv.data('shot');
-
-    var new_offset = shotDiv.data('offset') - 15;
-    var new_start = shot.start + new_offset;
-
-    // clamp start of shot to zero
-    if (new_start < 0) {
-        new_offset = new_offset - new_start;
-    }
-    
-    shotDiv.data('offset', new_offset);
-    updateShotPreview(shotDiv);
-    updateShotData(shotDiv);
-}
-
-function seekForwardButton() {
-    var shotDiv = $(this).parent();
-    doSeekForward(shotDiv);
-}
-
-function doSeekForward(shotDiv) {
-    shotDiv.data('offset', shotDiv.data('offset') + 15);
-    updateShotPreview(shotDiv);
-    updateShotData(shotDiv);
-}
-
-function updateShotPreview(shotDiv) {
-    var shot = shotDiv.data('shot');
-    var offset = shotDiv.data('offset');
-
-    shotDiv.find('#shotPreview img').attr('src', '/sources/'+shot.source+'/' 
-        + (shot.start + offset) + '/preview.jpg');
-}
-
-// Populate the shot list with an initial data set.
-function populateShots(data) {
-    $.each(data, function(i, shot) {
-        var div = makeDivForShot(shot);
-        div.find('#delete').hide();
-        div.find('#delete').attr('disabled','disabled');
-        $('#recordedShots').append(div);
-        div.show();
+function update_timelines(evt) {
+    $.each(evt.shots, function(i, shot) {
+        update_timeline(shot);
     });
 }
 
-function handleKeyboard(evt) {
-    var selectedShot = $('.shotViewSelected');
+function update_timeline(shot) {
+    var timeline_div = $('div#source' + shot.source);
+    var frames = get_timeline_frames(shot.start);
 
-    if (evt.which == 38) {    // 38 = up
-        if (selectedShot.prev( ).size( ) > 0) {
-            selectShot(selectedShot.prev( ));
-            selectedShot.prev( ).scrollintoview( );
-        }
-    } else if (evt.which == 40) { // 40 = down
-        if (selectedShot.next( ).size( ) > 0) {
-            selectShot(selectedShot.next( )); 
-            selectedShot.next( ).scrollintoview( );
-        }
-    } else if (evt.which == 37) { // 37 = left
-        doSeekBack(selectedShot);
-    } else if (evt.which == 39) { // 39 = right
-        doSeekForward(selectedShot);
-    } else if (evt.which == 81) { // 81 = q
-    } else if (evt.which == 80) { // 80 = p
-    } else if (evt.which == 82) { // 82 = r
+    timeline_div.data('shot', shot);
 
+    $.each(frames, function(i, f) {
+        var im = $(timeline_div.find('img')[i]);
+        im.attr('src', '/sources/' + shot.source + '/' + f + '/thumbnail.jpg');
+        im.data('frame', f);
+    });
+}
+
+function make_timeline(shot) {
+    var timeline_div = $('<div class="timeline"></div>');
+    timeline_div.attr('id', 'source' + shot.source);
+    timeline_div.data('shot', shot);
+    
+    var frames = get_timeline_frames(shot.start);
+
+    $.each(frames, function(i, f) {
+        var im = $('<img />');
+        im.attr('src', '/sources/' + shot.source + '/' + f + '/thumbnail.jpg');
+        im.data('frame', f);
+        timeline_div.append(im);
+    });
+
+    timeline_div.mousedown(function(mouseevt) {
+        if (mouseevt.shiftKey) {
+            var x = mouseevt.pageX - this.offsetLeft;
+            // each frame is 120px wide...
+            var leftim = timeline_div.find('img')[0];
+            // FIXME: shouldn't hardcode the 9
+            var rightim = timeline_div.find('img')[9];
+
+            var lpos = leftim.offsetLeft + leftim.width / 2;
+            var rpos = rightim.offsetLeft + rightim.width / 2;
+
+            var lframe = $(leftim).data('frame');
+            var rframe = $(rightim).data('frame');
+
+            var markframe = Math.floor((x - lpos) / (rpos - lpos) * (rframe - lframe));
+            
+            console.log("marked frame " + markframe);
+
+            if (mouseevt.which == 1) {
+                timeline_div.data('mark_in', markframe);
+            } else if (mouseevt.which == 3) {
+                timeline_div.data('mark_out', markframe);
+            }
+        } else if (mouseevt.ctrlKey) {
+            /* make shot and add to queue */
+            var source = timeline_div.data('shot').source;
+            var mark_in = timeline_div.data('mark_in');
+            var mark_out = timeline_div.data('mark_out');
+            if (mark_out < mark_in) {
+                var tmp = mark_out;
+                mark_out = mark_in;
+                mark_in = tmp;
+            }
+            queue_shot(source, mark_in, mark_out);
+        }
+    });
+
+    /* disable context menu */
+    timeline_div.find('img').bind('contextmenu', function(e) {
+        e.preventDefault( );
+        return false;
+    });
+
+
+    $('#timelines').append(timeline_div)
+}
+
+function next_event( ) {
+    var event_id = $('#timelines').data('event') + 1;
+    var events = $('#timelines').data('events');
+
+    if (event_id < events.length) {
+        update_timelines(events[event_id]);
+        $('#timelines').data('event', event_id);
     }
+}
+
+function prev_event( ) {
+    var event_id = $('#timelines').data('event') - 1;
+    var events = $('#timelines').data('events');
+
+    if (event_id >= 0) {
+        update_timelines(events[event_id]);
+        $('#timelines').data('event', event_id);
+    }
+}
+
+function filter_events(events) {
+    return events;
+}
+
+function zero_pad(tcval) {
+    if (tcval < 10) {
+        return '0' + tcval;
+    } else {
+        return tcval;
+    }
+}
+
+function format_tc(tc) {
+    var frames = tc % 30;
+    var seconds = Math.floor(tc / 30);
+
+    minutes = Math.floor(seconds / 60);
+    seconds = seconds % 60;
+
+    hours = Math.floor(minutes / 60);
+    minutes = minutes % 60;
+
+    return zero_pad(hours) + ':' + zero_pad(minutes) + ':' +
+            zero_pad(seconds) + ':' + zero_pad(frames);
+}
+
+function queue_shot(source, start, end) {
+    var shot = {
+        source : source,
+        start : start,
+        length : end - start + 1,
+    }
+
+    var shot_div = $('<div></div>');
+    shot_div.text('source ' + source + ' ' + format_tc(start)
+            + '-' + format_tc(end));
+
+    shot_div.data('shot', shot);
+    $('#reel').append(shot_div);
+}
+
+function clear_reel( ) {
+    $('#reel').empty( );
+}
+
+function rollout_reel( ) {
+    var shots = $('#reel div').map(function(i, e) {
+        return $(e).data('shot');
+    }).get( );
+
+    putJson('/roll_queue.json', shots);
+}
+
+function updateEvents(events) {
+    if ($('#timelines .timeline').length == 0 && events.length > 0) {
+        // create timelines
+        $.each(events[0].shots, function(i, shot) {
+            make_timeline(shot);
+        })
+
+        $('#timelines').data('event', 0);
+    }
+
+    $('#timelines').data('all_events', events);
+    $('#timelines').data('events', filter_events(events));
+}
+
+function updateEventsTimeout( ) {
+    console.log("requested event data");
+    loadJson('/events.json', updateEvents);
+    setTimeout(updateEventsTimeout, 1000);
+}
+
+function loadFiles( ) {
+    loadJson('/files.json', function(files) {
+        $.each(files, function(i, x) {
+            $('#filepicker').append('<option value="'+x+'">'+x+'</option>');
+        });
+    });
+}
+
+function rolloutFile( ) {
+    var file = $('#filepicker').val( );
+
+    if (file.length > 0) {
+        putJson('/ffmpeg_rollout.json', { filename : file });
+    }
+}
+
+function resumeEncode( ) {
+    putJson('/resume_encode.json', { });
 }
 
 $(function() {
-    loadJson('/shots.json', populateShots);
-    $('#rollQueue').click(function() { rollQueue( ); });
-    $('#emptyQueue').click(function() { emptyQueue( ); });
-    $('#queuedShots').sortable();
-    $('#helpLink').click(function() {
-        $('#help').dialog('open');
-    });
+    updateEventsTimeout( );
+    loadFiles( );
 
+    $('#clear_queue').click(function() { clear_reel( ); });
+    $('#roll_queue').click(function() { rollout_reel( ); });
+    $('#prev_event').click(prev_event);
+    $('#next_event').click(next_event);
 
-    $('#help').dialog({ autoOpen: false });
-    $(document).keydown(handleKeyboard);
+    $('#rollout_file').click(rolloutFile);
+    $('#resume_encode').click(resumeEncode);
 });
 
