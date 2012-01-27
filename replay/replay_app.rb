@@ -98,16 +98,16 @@ module Replay
             @@previewer.extract_thumbnail_jpeg(self, 0)
         end
 
-        def make_json
+        def make_json(source_id)
             {
-                :source => source.persist_id,
+                :source => source_id,
                 :source_name => source.name,
                 :start => start,
                 :length => length
             }
         end     
 
-        def self.from_json(json)
+        def self.from_json(json, sources)
             # check if our JSON is hash-like already, if so don't parse again
             if json.respond_to? :each_pair
                 data = json
@@ -118,7 +118,7 @@ module Replay
             shot = self.new
 
             p data
-            shot.source = Object.from_persist_id(data["source"])
+            shot.source = sources[data["source"]]
             shot.start = data["start"] if data["start"]
             shot.length = data["length"] if data["length"]
 
@@ -180,6 +180,9 @@ module Replay
             @sources[i]
         end
 
+        def sources
+            @sources
+        end
 
         def each_source
             if block_given?

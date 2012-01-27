@@ -4,8 +4,6 @@ require 'irb'
 require 'json'
 require 'thin'
 
-require_relative 'object_ids'
-
 require_relative 'replay_app'
 require_relative '../input/shuttlepro'
 
@@ -44,16 +42,31 @@ module IRB # :nodoc:
     end
 end
 
+class ReplayEvent
+    attr_accessor :id
+    attr_accessor :type
+    attr_accessor :shots
+
+    def make_json
+        {
+            :id => @id,
+            :type => @type,
+            :shots => @shots.each_with_index.map { |shot, source_id| shot.make_json(source_id) }
+        }
+    end
+end
+
 class ReplayLocalControl < ShuttleProInput
     def initialize(app)
         @app = app
         @shifted = 0
         @current_event = @app.each_source.map { |src| nil }
         @current_preview_source = 0
+        @event_id = 0
         super()
     end
 
-    attr_accessor :shot_target
+    attr_accessor :web_interface
     attr_accessor :current_event
 
     def on_shuttle(value)
@@ -130,9 +143,6 @@ class ReplayLocalControl < ShuttleProInput
             @shifted = 2
         when 269
             capture_event
-        when 270
-            send_preview_to_web_interface
-            #send_event_to_web_interface
         end
 
         if @shifted == 2
@@ -142,24 +152,25 @@ class ReplayLocalControl < ShuttleProInput
         end
     end
 
+    def tag_current_event(tag)
+        @current_event.type = tag
+        @web_interface.send_event(@current_event)
+    end
+
     def preview_source(source)
         @current_preview_source = source
-        @app.preview.shot = current_event[source] if current_event[source]
+        @app.preview.shot = current_event.shots[source] if current_event[source]
     end
 
     def capture_event
-        @current_event = @app.each_source.map { |src| src.make_shot_now }
-        @app.preview.shot = current_event[@current_preview_source]
-    end
+        @current_event = ReplayEvent.new
+        @current_event.id = @event_id
+        @current_event.type = 'Uncategorized'
+        @event_id += 1
+        @current_event.shots = @app.each_source.map { |src| src.make_shot_now }
+        @app.preview.shot = @current_event.shots[@current_preview_source]
 
-    def send_event_to_web_interface
-        current_event.each do |shot|
-            shot_target.send_shot(shot)
-        end
-    end
-
-    def send_preview_to_web_interface
-        shot_target.send_shot(@app.preview.shot)
+        @web_interface.send_event(@current_event)
     end
 
     def start_irb
@@ -192,20 +203,8 @@ end
 
 class ReplayServer < Patchbay
     # Get all shots currently saved.
-    get '/shots.json' do
-        render :json => shots.each_with_index.map { |x, i| 
-            json_obj = x.make_json;  
-            json_obj[:id] = i;
-            json_obj
-        } .to_json
-    end
-
-    # Add a new shot.
-    post '/shots' do
-        shots << inbound_shot
-        json = inbound_shot.make_json
-        json[:id] = shots.length - 1
-        render :json => json
+    get '/events.json' do
+        render :json => events.each_with_index.map { |x, i| x.make_json( ) }
     end
 
     # Throw this shot up on the local operator's preview.
@@ -232,32 +231,18 @@ class ReplayServer < Patchbay
         render :json => ''
     end
 
-    # Preview the start of a shot.
-    get '/shots/:id/preview.jpg' do
-        render :jpg => shots[params[:id].to_i].preview
-    end
-
-    # Get source information.
-    get '/sources.json' do
-        x = 0
-        render :json => replay_app.each_source.map do |source|
-            { :id => source.persist_id, :name => source.name }
-            x += 1
-        end
-    end
-
     # Preview what's on the source right now.
     get '/sources/:id/preview.jpg' do
-        source = Object.from_persist_id(params[:id].to_i)
-        shot = source.make_shot_now
+        src = params[:id].to_i
+        shot = replay_app.source(src).make_shot_now
         render :jpg => shot.preview
     end
 
     # Preview a given timecode for a given source.
     get '/sources/:id/:timecode/preview.jpg' do
-        shot = Replay::ReplayShot.new
-        shot.source = Object.from_persist_id(params[:id].to_i)
-        shot.start = params[:timecode].to_i
+        tc = params[:timecode].to_i
+        src = params[:id].to_i
+        shot = replay_app.source(src).make_shot_at(tc)
         render :jpg => shot.preview
     end
 
@@ -269,7 +254,8 @@ class ReplayServer < Patchbay
     end
 
     get '/sources/:id/:start/:length/video.mjpg' do
-        source = Object.from_persist_id(params[:id].to_i)
+        srcid = params[:id].to_i
+        source = replay_app.source(srcid)
         start = params[:start].to_i
         length = params[:length].to_i
 
@@ -278,15 +264,13 @@ class ReplayServer < Patchbay
 
     self.files_dir = "public_html/"
 
-    # List of shots currently saved.
-    def shots
-        @shots ||= []
-        @shots
+    def events
+        @events.values.sort_by! { |event| event.id }
     end
 
-    # Save a new shot.
-    def send_shot(shot)
-        shots << shot
+    def send_event(event)
+        @events ||= { }
+        @events[event.id] = event
     end
 
     attr_accessor :replay_app
@@ -296,7 +280,7 @@ private
         unless params[:inbound_shot]
             inp = environment['rack.input']
             inp.rewind
-            params[:inbound_shot] = Replay::ReplayShot.from_json(inp.read)
+            params[:inbound_shot] = Replay::ReplayShot.from_json(inp.read, replay_app.sources)
         end
 
         params[:inbound_shot]
@@ -307,7 +291,7 @@ private
             inp = environment['rack.input']
             inp.rewind
             shots_json = JSON.parse(inp.read)
-            params[:inbound_shots] = shots_json.map { |json| Replay::ReplayShot.from_json(json) }
+            params[:inbound_shots] = shots_json.map { |json| Replay::ReplayShot.from_json(json, replay_app.sources) }
         end
 
         params[:inbound_shots]
@@ -316,7 +300,7 @@ end
 
 server = ReplayServer.new
 control = ReplayLocalControl.new(app)
-control.shot_target = server
+control.web_interface = server
 server.replay_app = app
 Thread.new { server.run(:Host => '::0', :Port => 3000) }
 Thin::Logging.debug = true
