@@ -50,6 +50,10 @@ module Replay
             @buffer.make_shot(0, ReplayBuffer::END)
         end
 
+        def make_shot_at(timecode)
+            @buffer.make_shot(timecode, ReplayBuffer::START)
+        end
+
         def monitor
             @ingest.monitor
         end
@@ -79,7 +83,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            Replay::create_decklink_output_adapter_with_audio(7, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter(7, 0, RawFrame::CbYCrY8422)
         end
     end
 
@@ -87,6 +91,11 @@ module Replay
         def preview
             @@previewer ||= ReplayFrameExtractor.new
             @@previewer.extract_raw_jpeg(self, 0)
+        end
+
+        def thumbnail
+            @@previewer ||= ReplayFrameExtractor.new
+            @@previewer.extract_thumbnail_jpeg(self, 0)
         end
 
         def make_json

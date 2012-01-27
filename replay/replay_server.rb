@@ -261,6 +261,13 @@ class ReplayServer < Patchbay
         render :jpg => shot.preview
     end
 
+    get '/sources/:id/:timecode/thumbnail.jpg' do
+        tc = params[:timecode].to_i
+        src = params[:id].to_i
+        shot = replay_app.source(src).make_shot_at(tc)
+        render :jpg => shot.thumbnail
+    end
+
     get '/sources/:id/:start/:length/video.mjpg' do
         source = Object.from_persist_id(params[:id].to_i)
         start = params[:start].to_i

@@ -24,10 +24,11 @@
 #include <assert.h>
 
 Mjpeg422Encoder::Mjpeg422Encoder(coord_t w_, coord_t h_, 
-        size_t max_frame_size) {
+        int qual, size_t max_frame_size) {
     w = w_;
     h = h_;
     jpeg_alloc_size = max_frame_size;
+    quality = qual;
 
     jpeg_data = (uint8_t *)
         xmalloc(jpeg_alloc_size, "Mjpeg422Encoder", "jpeg_data");
@@ -83,7 +84,7 @@ void Mjpeg422Encoder::libjpeg_init( ) {
 
     cinfo.input_components = 3;
     jpeg_set_defaults(&cinfo);
-    jpeg_set_quality(&cinfo, 70, false);
+    jpeg_set_quality(&cinfo, quality, false);
     jpeg_set_colorspace(&cinfo, JCS_YCbCr);
 
     cinfo.raw_data_in = TRUE;
