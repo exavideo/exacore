@@ -18,7 +18,7 @@
 bits 64
 
 section text align=16
-global CbYCrY8422_BGRAn8_scale_line_1_2_vector
+global CbYCrY8422_BGRAn8_scale_line_1_2_vector:function
 
 CbYCrY8422_BGRAn8_scale_line_1_2_vector:
     ; argument summary...

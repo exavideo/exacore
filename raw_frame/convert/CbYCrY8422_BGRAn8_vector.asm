@@ -18,7 +18,7 @@
 bits 64
 
 section text align=16
-global CbYCrY8422_BGRAn8_vector
+global CbYCrY8422_BGRAn8_vector:function
 
 CbYCrY8422_BGRAn8_vector:
     ; argument summary...

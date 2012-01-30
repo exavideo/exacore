@@ -20,7 +20,7 @@
 bits 64
 
 section text align=16
-global CbYCrY8422_YCbCr8P422_vector
+global CbYCrY8422_YCbCr8P422_vector:function
 CbYCrY8422_YCbCr8P422_vector:
     ; argument summary...
     ; rdi = CbYCrY data size
