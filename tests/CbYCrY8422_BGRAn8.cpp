@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
         exit(1);
     } else {
         while (n_frames != 0) {
-            RawFrame *out = frame.convert->BGRAn8_scale_1_4( );
+            RawFrame *out = frame.convert->BGRAn8( );
             
             #if 0
             if (out->write_to_fd(STDOUT_FILENO) < 0) {

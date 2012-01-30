@@ -42,7 +42,7 @@ static void print_cpu_info( ) {
     fprintf(stderr, "CPU dispatch initialized\n");
     fprintf(stderr, "cx=0x%x dx=0x%x ", cpuid_ecx, cpuid_edx);
     if (cpu_sse2_available( )) {
-        fprintf(stderr, "SSE3 ");
+        fprintf(stderr, "SSE2 ");
     }
     if (cpu_sse3_available( )) {
         fprintf(stderr, "SSE3 ");
@@ -66,6 +66,8 @@ static void cpuid_init( ) {
 }
 
 bool cpu_sse2_available( ) {
+    cpuid_init( );
+
     if (force_no_simd) {
         return false;
     } else if (cpuid_edx & 0x04000000) {
