@@ -104,6 +104,9 @@ class ReplayBuffer {
         ReplayBufferLocker write_lock;
 
         Mutex m;
+
+        void try_readahead(timecode_t tc);
+        void try_readahead(timecode_t tc, unsigned int n);
 };
 
 #endif
