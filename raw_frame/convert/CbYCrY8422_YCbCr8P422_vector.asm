@@ -40,13 +40,14 @@ CbYCrY8422_YCbCr8P422_vector:
     pand        xmm5, [u_mask wrt rip]          ; xmm5 = [u   u   u   u   ]
 
     movdqa      xmm2, xmm0
-    movdqa      xmm6, xmm5
-    pand        xmm2, [v_mask wrt rip]          ; xmm1 = [  v   v   v   v ]
+    movdqa      xmm6, xmm4
+    pand        xmm2, [v_mask wrt rip]          ; xmm2 = [  v   v   v   v ]
     pand        xmm6, [v_mask wrt rip]          ; xmm6 = [  v   v   v   v ]
+    psrld       xmm2, 16                        ; xmm2 = [v   v   v   v   ]
     psrld       xmm6, 16                        ; xmm6 = [v   v   v   v   ]
 
-    psrld       xmm0, 8                         ; xmm0 = [y y y y y y y y ]
-    psrld       xmm4, 8                         ; xmm4 = [y y y y y y y y ]
+    psrlw       xmm0, 8                         ; xmm0 = [y y y y y y y y ]
+    psrlw       xmm4, 8                         ; xmm4 = [y y y y y y y y ]
 
     packuswb    xmm0, xmm4                      ; xmm0 = [yyyyyyyyyyyyyyyy]
     packusdw    xmm1, xmm5                      ; xmm1 = [u u u u u u u u ]
@@ -61,12 +62,14 @@ CbYCrY8422_YCbCr8P422_vector:
     add rdx, 16
     add rcx, 8
     add r8, 8
+
+    add rsi, 32
     sub rdi, 32
     jg CbYCrY8422_YCbCr8P422_vector
 
     ret
 
 align 16
-u_mask  times 4 dw 0x000000ff
-v_mask  times 4 dw 0x00ff0000
+u_mask  times 4 dd 0x000000ff
+v_mask  times 4 dd 0x00ff0000
 ; vim:syntax=nasm64
