@@ -150,8 +150,14 @@ void ReplayPlayout::run_thread( ) {
 
 
         if (current_avspipe == NULL) {
-            get_and_advance_current_fields(rfd1, rfd2, pos);
-            
+            try {
+                get_and_advance_current_fields(rfd1, rfd2, pos);
+            } catch (ReplayFrameNotFoundException &ex) {
+                /* we've run off the end of the buffer */
+                rfd1.clear( );
+                rfd2.clear( );
+            }
+
             out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 
             if (!rfd1.valid( )) {
