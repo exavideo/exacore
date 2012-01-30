@@ -80,6 +80,15 @@ CbYCrY8422_BGRAn8_scale_line_1_4_vector:
     pmulhuw     xmm1, [RGB_scale wrt rip]
     pmulhuw     xmm2, [RGB_scale wrt rip]
 
+    ; RGB saturation logic
+    packuswb    xmm0, xmm7
+    packuswb    xmm1, xmm7
+    packuswb    xmm2, xmm7
+
+    punpcklbw   xmm0, xmm7
+    punpcklbw   xmm1, xmm7
+    punpcklbw   xmm2, xmm7
+
     ; pack down xmm0/xmm1/xmm2 to something resembling RGBA
     movdqa      xmm3, xmm0
     punpcklwd   xmm0, xmm7              ; xmm0 = [g   g   g   g   ]
@@ -90,16 +99,14 @@ CbYCrY8422_BGRAn8_scale_line_1_4_vector:
     movdqa      xmm4, xmm1              
     punpcklwd   xmm1, xmm7              ; xmm1 = [b   b   b   b   ]
     punpckhwd   xmm4, xmm7              ; xmm4 = [b   b   b   b   ]
-    pslld       xmm1, 16
-    pslld       xmm4, 16
     por         xmm0, xmm1
     por         xmm3, xmm4
 
     movdqa      xmm5, xmm2              
     punpcklwd   xmm2, xmm7              ; xmm2 = [r   r   r   r   ]
     punpckhwd   xmm5, xmm7              ; xmm5 = [r   r   r   r   ]
-    pslld       xmm2, 24
-    pslld       xmm5, 24
+    pslld       xmm2, 16
+    pslld       xmm5, 16
     por         xmm0, xmm2
     por         xmm3, xmm5
     
