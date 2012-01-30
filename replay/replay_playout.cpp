@@ -24,6 +24,7 @@
 #include "cairo_frame.h"
 #include "avspipe_allocators.h"
 #include <string.h>
+#include <fcntl.h>
 
 /* FIXME hardcoded 1920x1080 decoding */
 ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : 
