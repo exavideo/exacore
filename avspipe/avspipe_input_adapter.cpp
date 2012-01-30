@@ -187,6 +187,12 @@ pid_t AvspipeInputAdapter::start_subprocess(const char *cmd, int &vpfd, int &apf
         /* child */
         close(vpipe[0]);
         close(apipe[0]);
+
+        /* artificial audio delay */
+        void *bogus_audio = malloc(192000);
+        memset(bogus_audio, 0, 192000);
+        write_all(apipe[1], bogus_audio, 192000);
+
         close(STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL); 
 
