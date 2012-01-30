@@ -90,6 +90,7 @@ METHODDEF(void) mem_init_destination(j_compress_ptr cinfo) {
 }
 
 METHODDEF(boolean) mem_empty_output_buffer(j_compress_ptr cinfo) {
+    fprintf(stderr, "JPEG output buffer too small!\n");
     ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
     return FALSE;
 }

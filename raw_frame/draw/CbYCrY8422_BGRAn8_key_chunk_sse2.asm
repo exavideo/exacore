@@ -73,14 +73,18 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     paddusw     xmm2, xmm5
 
     ; compute Cb
-    psubusw     xmm3, xmm2
+    movdqa      xmm4, xmm2
     pmulhuw     xmm3, [kb wrt rip]
+    pmulhuw     xmm4, [kb wrt rip]
     paddusw     xmm3, [cb_cr_offset wrt rip]
+    psubusw     xmm3, xmm4
 
     ; compute Cr
-    psubusw     xmm1, xmm2
+    movdqa      xmm4, xmm2
     pmulhuw     xmm1, [kr wrt rip]
+    pmulhuw     xmm4, [kr wrt rip]
     paddusw     xmm1, [cb_cr_offset wrt rip]
+    psubusw     xmm1, xmm4
 
     ; offset luma
     paddusw     xmm2, [luma_offset wrt rip]
@@ -151,6 +155,9 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
 
 ; constants - see Poynton, "Digital Video and HDTV", chapter 26
 align 16
+;ry_scale                times 4 dd 19595
+;gy_scale                times 4 dd 38469
+;by_scale                times 4 dd 7471
 ry_scale                times 4 dd 13933
 gy_scale                times 4 dd 46871
 by_scale                times 4 dd 4732

@@ -40,6 +40,7 @@ void ReplayIngest::run_thread( ) {
     ReplayFrameData dest;
     std::string com;
     Mjpeg422Encoder enc(1920, 1080); /* FIXME: hard coded frame size */
+    Mjpeg422Encoder thumb_enc(480, 272, 30);
 
     for (;;) {
 
@@ -71,7 +72,7 @@ void ReplayIngest::run_thread( ) {
 
             /* scale input and make JPEG thumbnail */
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
-            //enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
+            thumb_enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
             delete thumb;
 
             buf->finish_frame_write( );

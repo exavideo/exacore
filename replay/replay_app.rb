@@ -50,6 +50,10 @@ module Replay
             @buffer.make_shot(0, ReplayBuffer::END)
         end
 
+        def make_shot_at(timecode)
+            @buffer.make_shot(timecode, ReplayBuffer::START)
+        end
+
         def monitor
             @ingest.monitor
         end
@@ -79,7 +83,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            Replay::create_decklink_output_adapter_with_audio(7, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter(7, 0, RawFrame::CbYCrY8422)
         end
     end
 
@@ -89,16 +93,21 @@ module Replay
             @@previewer.extract_raw_jpeg(self, 0)
         end
 
-        def make_json
+        def thumbnail
+            @@previewer ||= ReplayFrameExtractor.new
+            @@previewer.extract_thumbnail_jpeg(self, 0)
+        end
+
+        def make_json(source_id)
             {
-                :source => source.persist_id,
-                :source_name => source.name,
-                :start => start,
-                :length => length
+                "source" => source_id,
+                "source_name" => source.name,
+                "start" => start,
+                "length" => length
             }
         end     
 
-        def self.from_json(json)
+        def self.from_json(json, sources)
             # check if our JSON is hash-like already, if so don't parse again
             if json.respond_to? :each_pair
                 data = json
@@ -106,11 +115,10 @@ module Replay
                 data = JSON.parse(json)
             end
 
-            shot = self.new
 
             p data
-            shot.source = Object.from_persist_id(data["source"])
-            shot.start = data["start"] if data["start"]
+            start = data["start"]
+            shot = sources[data["source"]].make_shot_at(start)
             shot.length = data["length"] if data["length"]
 
             shot
@@ -171,6 +179,9 @@ module Replay
             @sources[i]
         end
 
+        def sources
+            @sources
+        end
 
         def each_source
             if block_given?

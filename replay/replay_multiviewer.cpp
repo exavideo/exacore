@@ -20,6 +20,7 @@
 #include "replay_multiviewer.h"
 #include "freetype_font.h"
 #include <stdio.h>
+#include <unistd.h>
 
 ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     dpy = dpy_;
@@ -55,6 +56,7 @@ void ReplayMultiviewer::run_thread( ) {
         }
         dpy->flip( );
     }
+    usleep(20000);
 }
 
 void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
