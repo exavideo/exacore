@@ -22,9 +22,8 @@ raw_frame_OBJECTS += \
     raw_frame/convert/CbYCrY8422_BGRAn8_scale_1_4_vector.o \
     raw_frame/convert/CbYCrY8422_BGRAn8_scale_line_1_2_vector.o \
     raw_frame/convert/CbYCrY8422_BGRAn8_scale_1_2_vector.o \
+    raw_frame/convert/CbYCrY8422_YCbCr8P422_vector.o \
     raw_frame/draw/CbYCrY8422_BGRAn8_key_chunk_sse2.o \
     raw_frame/draw/CbYCrY8422_alpha_key_sse2.o \
-    raw_frame/convert/CbYCrY8422_YCbCr8P422_sse3.o \
-    raw_frame/convert/CbYCrY8422_YCbCr8P422_ssse3.o \
 
 endif
