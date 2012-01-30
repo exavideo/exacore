@@ -154,6 +154,10 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
     frame_data.data_ptr = data + frame_index * frame_size;
     frame_data.data_size = frame_size;
 
+    /* read-ahead the next frame so we have somewhere to put it*/
+    unsigned int next_frame_index = (tc_current + 1) % n_frames;
+    madvise(data + next_frame_index * frame_size, frame_size, MADV_WILLNEED);
+
     // write_lock.set_position(this, tc_current);
 }
 
@@ -202,6 +206,11 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     frame_data.pos = tc;
     frame_data.data_ptr = data + frame_index * frame_size;
     frame_data.data_size = frame_size;
+
+    madvise(frame_data.data_ptr, frame_size, MADV_WILLNEED);
+
+    unsigned int next_frame_index = (tc + 1) % n_frames;
+    madvise(data + next_frame_index * frame_size, frame_size, MADV_WILLNEED);
 }
 
 const char *ReplayBuffer::get_name( ) {
