@@ -126,6 +126,9 @@ void ReplayPlayout::run_thread( ) {
     ReplayFrameData rfd_cache;
     RawFrame *f_cache = NULL;
     RawFrame *out = NULL;
+    RawFrame *bars = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+
+    int barsfd;
 
     AudioPacket *audio;
 
@@ -134,6 +137,13 @@ void ReplayPlayout::run_thread( ) {
     AvspipeNTSCSyncAudioAllocator audio_allocator;
 
     timecode_t avs_tc = 0;
+
+    barsfd = open("../files/1080p_bars.uyvy", O_RDONLY);
+
+    if (barsfd != -1) {
+        bars->read_from_fd(barsfd);
+        close(barsfd);
+    }
 
     for (;;) {
         { MutexLock l(m);
@@ -161,8 +171,10 @@ void ReplayPlayout::run_thread( ) {
             out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 
             if (!rfd1.valid( )) {
-                /* out = something... */
+                /* throw up our color bars */
+                memcpy(out->data( ), bars->data( ), out->size( ));
             } else {
+                /* decode the replay */
                 decode_field(out, rfd1, rfd_cache, f_cache, true);
                 decode_field(out, rfd2, rfd_cache, f_cache, false);
             }
