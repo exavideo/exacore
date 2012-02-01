@@ -83,13 +83,17 @@ void ReplayMultiviewer::run_thread( ) {
 
             if (f != NULL) {
                 f->bgra_data = f->frame_data->convert->BGRAn8( );
-                render_text(f);
 
-                if (overlay == VECTORSCOPE) {
-                    render_vector(f);
-                } else if (overlay == WAVEFORM) {
-                    render_waveform(f);
+                if (f->frame_data->pixel_format( ) == RawFrame::CbYCrY8422) {
+                    if (overlay == VECTORSCOPE) {
+                        render_vector(f);
+                    } else if (overlay == WAVEFORM) {
+                        render_waveform(f);
+                    }
                 }
+
+                render_text(f);
+                
                 dpy->draw->blit(src.x, src.y, f->bgra_data);
             }
         }

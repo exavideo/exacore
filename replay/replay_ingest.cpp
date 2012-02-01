@@ -72,14 +72,10 @@ void ReplayIngest::run_thread( ) {
             /* scale input and make JPEG thumbnail */
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
             //enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
-            delete thumb;
-
             buf->finish_frame_write( );
 
             /* scale down frame to send to monitor */
-            monitor_frame = new ReplayRawFrame(
-                input->convert->BGRAn8_scale_1_4( )
-            );
+            monitor_frame = new ReplayRawFrame(thumb);
             
             /* fill in monitor status info */
             monitor_frame->source_name = buf->get_name( );
