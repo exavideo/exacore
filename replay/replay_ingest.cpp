@@ -34,6 +34,11 @@ ReplayIngest::~ReplayIngest( ) {
 
 }
 
+void ReplayIngest::debug( ) {
+    fprintf(stderr, "ingest for %s\n", buf->get_name( ));
+    iadp->output_pipe( ).debug( );
+}
+
 void ReplayIngest::run_thread( ) {
     RawFrame *input, *thumb;
     ReplayRawFrame *monitor_frame;
