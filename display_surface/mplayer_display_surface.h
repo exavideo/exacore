@@ -17,5 +17,20 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%include "mplayer_display_surface.i"
-%include "framebuffer_display_surface.i"
+#ifndef _MPLAYER_DISPLAY_SURFACE_H
+#define _MPLAYER_DISPLAY_SURFACE_H
+
+#include "display_surface.h"
+
+class MplayerDisplaySurface : public DisplaySurface {
+    public:
+        MplayerDisplaySurface(const char *cmd = "mplayer -demuxer rawvideo -rawvideo bgra:w=1920:h=1080 -");
+        ~MplayerDisplaySurface( );
+        virtual void flip( );
+    protected:
+        int _fd;
+        int fork_mplayer(const char *cmd);
+};
+
+
+#endif
