@@ -155,7 +155,7 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
     frame_data.data_size = frame_size;
 
     /* read-ahead the next frame so we have somewhere to put it*/
-    try_readahead(tc_current + 1);
+    try_readahead(tc_current + 1, 128);
 
     // write_lock.set_position(this, tc_current);
 }
@@ -206,7 +206,7 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     frame_data.data_ptr = data + frame_index * frame_size;
     frame_data.data_size = frame_size;
 
-    try_readahead(tc, 4);
+    try_readahead(tc, 128);
 }
 
 const char *ReplayBuffer::get_name( ) {
@@ -366,6 +366,7 @@ void ReplayBufferLocker::move_range(ReplayBuffer *buf,
 void ReplayBuffer::try_readahead(timecode_t tc, unsigned int n) {
     for (unsigned int i = 0; i < n; i++) {
         try_readahead(tc + i);
+        try_readahead(tc - i);
     }
 }
 
