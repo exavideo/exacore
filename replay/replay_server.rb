@@ -159,7 +159,7 @@ class ReplayLocalControl < ShuttleProInput
 
     def preview_source(source)
         @current_preview_source = source
-        @app.preview.shot = current_event.shots[source] if current_event[source]
+        @app.preview.shot = current_event.shots[source] if current_event.shots[source]
     end
 
     def capture_event
