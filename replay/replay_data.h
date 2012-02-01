@@ -114,11 +114,18 @@ struct ReplayRawFrame {
         frame_data = f; 
         source_name = NULL;
         source_name2 = NULL;
+        bgra_data = NULL;
         tc = 0;
     }
-    ~ReplayRawFrame( ) { delete frame_data; }
+    ~ReplayRawFrame( ) { 
+        delete frame_data;
+        if (bgra_data) {
+            delete bgra_data;    
+        }
+    }
 
     RawFrame *frame_data;
+    RawFrame *bgra_data;
     /* other stuff goes here */
     const char *source_name;
     const char *source_name2;
