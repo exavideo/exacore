@@ -97,12 +97,7 @@ void ReplayMjpegIngest::run_thread( ) {
         buf->finish_frame_write( );
 
         /* scale down frame to send to monitor */
-        monitor_frame = new ReplayRawFrame(
-            decoded_monitor->convert->BGRAn8( )
-        );
-
-
-        delete decoded_monitor;
+        monitor_frame = new ReplayRawFrame(decoded_monitor);
         
         /* fill in monitor status info */
         monitor_frame->source_name = buf->get_name( );

@@ -167,6 +167,16 @@ class Pipe {
             }
         }
 
+        void debug(void) {
+            MutexLock lock(mut);
+            if (read_ptr <= write_ptr) {
+                fprintf(stderr, "pipe: %u used\n", (write_ptr - read_ptr));
+            } else {
+                fprintf(stderr, "pipe: %u used\n", 
+                        (buf_len - read_ptr) + (write_ptr - 1));
+            }
+        }
+
         ~Pipe( ) { 
             for (unsigned int i = 0; i < buf_len; i++) {
                 if (buf[i] != NULL) {

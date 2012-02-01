@@ -28,6 +28,8 @@ class RsvgFrame : public CairoFrame {
 
     public:
         static RawFrame *render_svg(const char *svg_data, size_t size);
+        static RawFrame *render_svg_file(const char *filename);       
+
 };
 
 #endif

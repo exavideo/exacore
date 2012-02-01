@@ -38,6 +38,10 @@ module Replay
             end
         end
 
+        def debug
+            @ingest.debug
+        end
+
         def suspend_encode
             @ingest.suspend_encode
         end
@@ -197,6 +201,10 @@ module Replay
 
         def resume_encode
             @sources.each { |source| source.resume_encode }
+        end
+
+        def debug
+            @sources.each { |source| source.debug }
         end
 
         def start_irb

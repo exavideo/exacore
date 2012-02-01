@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="256"
+   height="256"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.1 r9760"
+   sodipodi:docname="New document 1">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.1679688"
+     inkscape:cx="75.284834"
+     inkscape:cy="128"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="986"
+     inkscape:window-x="0"
+     inkscape:window-y="31"
+     inkscape:window-maximized="1">
+    <sodipodi:guide
+       orientation="1,0"
+       position="16,204.54747"
+       id="guide2985" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="240,137.62762"
+       id="guide2987" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="128,153.72626"
+       id="guide2989" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="-69.12947,16"
+       id="guide2991" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="-29.67201,240"
+       id="guide2993" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="-61.869297,128"
+       id="guide2995" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="120,143.94081"
+       id="guide3005" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="136,158.77682"
+       id="guide3007" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="107.32429,120"
+       id="guide3009" />
+    <sodipodi:guide
+       orientation="0,1"
+       position="104.16769,136"
+       id="guide3011" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-796.36218)">
+    <rect
+       style="fill:#000000;stroke:none;stroke-width:1.13777769000000006;fill-opacity:1;opacity:0.5"
+       id="rect3055"
+       width="254.86223"
+       height="254.86223"
+       x="0.56888884"
+       y="796.93103" />
+    <path
+       sodipodi:type="arc"
+       style="fill:none;stroke:#ff6600;stroke-opacity:1"
+       id="path3001"
+       sodipodi:cx="128"
+       sodipodi:cy="128"
+       sodipodi:rx="112"
+       sodipodi:ry="112"
+       d="m 240,128 a 112,112 0 1 1 -224,0 112,112 0 1 1 224,0 z"
+       transform="translate(0,796.36218)" />
+    <path
+       style="fill:none;stroke:#ff6600;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 128,240 0,-224 0,0"
+       id="path3013"
+       inkscape:connector-curvature="0"
+       transform="translate(0,796.36218)" />
+    <path
+       style="fill:none;stroke:#ff6600;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 16,128 224,0"
+       id="path3015"
+       inkscape:connector-curvature="0"
+       transform="translate(0,796.36218)" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3025"
+       style="fill:black;stroke:none;stroke-opacity:1;stroke-width:1px;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;font-family:DejaVu Sans Mono;font-style:normal;font-weight:normal;font-size:40px;line-height:125%;letter-spacing:0px;word-spacing:0px;-inkscape-font-specification:DejaVu Sans Mono;font-stretch:normal;font-variant:normal"><flowRegion
+         id="flowRegion3027"><rect
+           id="rect3029"
+           width="112.37485"
+           height="60.606659"
+           x="-152.77928"
+           y="42.929718" /></flowRegion><flowPara
+         id="flowPara3031"></flowPara></flowRoot>    <text
+       xml:space="preserve"
+       x="-179.92603"
+       y="41.035759"
+       id="text3033"
+       transform="translate(0,796.36218)"
+       style="-inkscape-font-specification:DejaVu Sans Mono;font-family:DejaVu Sans Mono;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:10px"><tspan
+         sodipodi:role="line"
+         id="tspan3035"
+         x="-179.92603"
+         y="41.035759" /></text>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3037"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ff6600;fill-opacity:1;stroke:none;font-family:DejaVu Sans Mono;-inkscape-font-specification:DejaVu Sans Mono"
+       transform="translate(277.3125,768.58141)"><flowRegion
+         id="flowRegion3039"><rect
+           id="rect3041"
+           width="50.821209"
+           height="38.510483"
+           x="-155.30457"
+           y="28.725031"
+           style="fill:#ff6600;fill-opacity:1" /></flowRegion><flowPara
+         id="flowPara3043">C<flowSpan
+   style="font-size:65.00091553000000033%;baseline-shift:sub;fill:#ff6600;fill-opacity:1"
+   id="flowSpan3045">r</flowSpan></flowPara></flowRoot>    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ff6600;fill-opacity:1;stroke:none;font-family:DejaVu Sans Mono;-inkscape-font-specification:DejaVu Sans Mono"
+       x="243.37634"
+       y="924.36218"
+       id="text3047"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3049"
+         x="243.37634"
+         y="924.36218">C<tspan
+   style="font-size:65.00091553000000033%;baseline-shift:sub;fill:#ff6600;fill-opacity:1"
+   id="tspan3051">b</tspan></tspan></text>
+  </g>
+</svg>

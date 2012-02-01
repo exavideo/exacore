@@ -26,18 +26,10 @@
 
 static int rsvg_is_init = 0;
 
-RawFrame *RsvgFrame::render_svg(const char *svg_data, size_t size) {
-    RsvgHandle *rsvg;
+static RawFrame *render_from_rsvg_handle(RsvgHandle *rsvg) {
     RsvgDimensionData dim;
     CairoFrame *crf;
     cairo_t *cr;
-    
-    if (!rsvg_is_init) {
-        rsvg_init( );
-        rsvg_set_default_dpi_x_y(75.0, 75.0);
-    }
-
-    rsvg = rsvg_handle_new_from_data((guint8 *) svg_data, (gsize) size, NULL);
 
     if (rsvg == NULL) {
         throw std::runtime_error("rsvg_handle_new_from_data failed");
@@ -62,4 +54,27 @@ RawFrame *RsvgFrame::render_svg(const char *svg_data, size_t size) {
     g_object_unref(rsvg);
 
     return crf;
+}
+
+static void rsvg_tryinit( ) {
+    if (!rsvg_is_init) {
+        rsvg_init( );
+        rsvg_set_default_dpi_x_y(75.0, 75.0);
+    }
+}
+
+RawFrame *RsvgFrame::render_svg(const char *svg_data, size_t size) {
+    RsvgHandle *rsvg;
+    
+    rsvg_tryinit( );
+    rsvg = rsvg_handle_new_from_data((guint8 *) svg_data, (gsize) size, NULL);
+    return render_from_rsvg_handle(rsvg);
+}
+
+RawFrame *RsvgFrame::render_svg_file(const char *filename) {
+    RsvgHandle *rsvg;
+    
+    rsvg_tryinit( );
+    rsvg = rsvg_handle_new_from_file((gchar *) filename, NULL);
+    return render_from_rsvg_handle(rsvg);
 }

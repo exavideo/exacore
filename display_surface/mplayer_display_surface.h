@@ -17,21 +17,20 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_ingest.h"
-%}
+#ifndef _MPLAYER_DISPLAY_SURFACE_H
+#define _MPLAYER_DISPLAY_SURFACE_H
 
-%rename("monitor") ReplayIngest::get_monitor( );
+#include "display_surface.h"
 
-class ReplayIngest : public Thread {
+class MplayerDisplaySurface : public DisplaySurface {
     public:
-        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT,
-            ReplayGameData *INPUT = NULL);
-        ~ReplayIngest( );
-        AsyncPort<ReplayRawFrame> *get_monitor( );
-
-        void suspend_encode( );
-        void resume_encode( );
-        void debug( );
+        MplayerDisplaySurface(const char *cmd = "mplayer -demuxer rawvideo -rawvideo bgra:w=1920:h=1080 -");
+        ~MplayerDisplaySurface( );
+        virtual void flip( );
+    protected:
+        int _fd;
+        int fork_mplayer(const char *cmd);
 };
 
+
+#endif

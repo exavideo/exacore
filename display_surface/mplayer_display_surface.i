@@ -18,20 +18,11 @@
  */
 
 %{
-    #include "replay_ingest.h"
+    #include "mplayer_display_surface.h"
 %}
 
-%rename("monitor") ReplayIngest::get_monitor( );
-
-class ReplayIngest : public Thread {
+class MplayerDisplaySurface : public DisplaySurface {
     public:
-        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT,
-            ReplayGameData *INPUT = NULL);
-        ~ReplayIngest( );
-        AsyncPort<ReplayRawFrame> *get_monitor( );
-
-        void suspend_encode( );
-        void resume_encode( );
-        void debug( );
+        MplayerDisplaySurface(const char * = "mplayer -demuxer rawvideo -rawvideo bgra:w=1920:h=1080 -");
+        ~MplayerDisplaySurface( );
 };
-

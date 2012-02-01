@@ -25,8 +25,10 @@
 #include "display_surface.h"
 #include "async_port.h"
 #include "replay_data.h"
+#include "mutex.h"
 
 class FreetypeFont;
+class RawFrame;
 
 struct ReplayMultiviewerSourceParams {
     AsyncPort<ReplayRawFrame> *source;
@@ -41,16 +43,25 @@ class ReplayMultiviewer : public Thread {
 
         void add_source(const ReplayMultiviewerSourceParams &params);
         void start( );
+        void change_mode( );
 
     protected:
         void run_thread( );
         void render_text(ReplayRawFrame *f);
+        void render_vector(ReplayRawFrame *f);
+        void render_waveform(ReplayRawFrame *f);
         DisplaySurface *dpy;
         
         FreetypeFont *large_font;
         FreetypeFont *small_font;
+        RawFrame *waveform_graticule;
+        RawFrame *vector_graticule;
+
+        enum overlay_mode_t { NONE, WAVEFORM, VECTORSCOPE, OVERLAY_MAX } overlay_mode;
 
         std::vector<ReplayMultiviewerSourceParams> sources;
+
+        Mutex m;
 };
 
 #endif
