@@ -38,7 +38,7 @@ void CbYCrY8422_BGRAn8_scale_1_2_vector(size_t, uint8_t *,
 extern "C" void CbYCrY8422_BGRAn8_vector(size_t, uint8_t *, uint8_t *);
 extern "C" void CbYCrY8422_YCbCr8P422_vector(size_t, uint8_t *, uint8_t *,
         uint8_t *, uint8_t *);
-extern "C" void CbYCrY8422_CbYCrY8422_scale_1_4_vector(size_t, uint8_t *,
+void CbYCrY8422_CbYCrY8422_scale_1_4_vector(size_t, uint8_t *,
         uint8_t *, unsigned int);
 
 #endif

@@ -50,8 +50,8 @@ CbYCrY8422_YCbCr8P422_vector:
     psrlw       xmm4, 8                         ; xmm4 = [y y y y y y y y ]
 
     packuswb    xmm0, xmm4                      ; xmm0 = [yyyyyyyyyyyyyyyy]
-    packusdw    xmm1, xmm5                      ; xmm1 = [u u u u u u u u ]
-    packusdw    xmm2, xmm6                      ; xmm2 = [v v v v v v v v ]
+    packssdw    xmm1, xmm5                      ; xmm1 = [u u u u u u u u ]
+    packssdw    xmm2, xmm6                      ; xmm2 = [v v v v v v v v ]
     packuswb    xmm1, xmm1                      ; xmm1 = [uuuuuuuu........]
     packuswb    xmm2, xmm2                      ; xmm2 = [vvvvvvvv........]
 
