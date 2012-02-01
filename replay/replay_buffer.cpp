@@ -231,7 +231,9 @@ void ReplayBuffer::lock_frame(timecode_t frame) {
     }
 
     if (flag) {
-        mlock(data + frame_offset * frame_size, frame_size);
+        if (mlock(data + frame_offset * frame_size, frame_size) != 0) {
+            perror("mlock");
+        }
     }
 }
 
