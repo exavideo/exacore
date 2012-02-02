@@ -17,28 +17,16 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%include "typemaps.i"
+#ifndef _UNPACK_BGRAN8_H
+#define _UNPACK_BGRAN8_H
 
-%{
-    #include "replay_multiviewer.h"
-%}
+void BGRAn8_BGRAn8_default(size_t, uint8_t *src, uint8_t *dst);
 
-
-%include "types.i"
-%rename("real_add_source") ReplayMultiviewer::add_source(const ReplayMultiviewerSourceParams &);
-
-class ReplayMultiviewer : public Thread {
+class BGRAn8Unpacker : public RawFrameUnpacker {
     public:
-        ReplayMultiviewer(DisplaySurface *);
-        ~ReplayMultiviewer( );
-
-        void add_source(const ReplayMultiviewerSourceParams &INPUT);
-        void start( );
-        void change_mode( );
+        BGRAn8Unpacker(RawFrame *f) : RawFrameUnpacker(f) {
+            do_BGRAn8 = BGRAn8_BGRAn8_default;
+        }
 };
 
-struct ReplayMultiviewerSourceParams {
-    AsyncPort<ReplayRawFrame> *source;
-    coord_t x, y;
-};
-
+#endif

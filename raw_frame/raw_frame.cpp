@@ -23,6 +23,7 @@
 #include <assert.h>
 #include "pack_CbYCrY8422.h"
 #include "unpack_CbYCrY8422.h"
+#include "unpack_BGRAn8.h"
 #include "draw_CbYCrY8422.h"
 #include "draw_BGRAn8.h"
 #include <string.h>
@@ -152,6 +153,10 @@ void RawFrame::make_unpacker(void) {
         /* specific handlers go here */
         case CbYCrY8422:
             unpack = new CbYCrY8422Unpacker(this);
+            break;
+
+        case BGRAn8:
+            unpack = new BGRAn8Unpacker(this);
             break;
 
         default:

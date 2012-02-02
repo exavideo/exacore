@@ -17,28 +17,9 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%include "typemaps.i"
+#include <string.h>
+#include <stdint.h>
 
-%{
-    #include "replay_multiviewer.h"
-%}
-
-
-%include "types.i"
-%rename("real_add_source") ReplayMultiviewer::add_source(const ReplayMultiviewerSourceParams &);
-
-class ReplayMultiviewer : public Thread {
-    public:
-        ReplayMultiviewer(DisplaySurface *);
-        ~ReplayMultiviewer( );
-
-        void add_source(const ReplayMultiviewerSourceParams &INPUT);
-        void start( );
-        void change_mode( );
-};
-
-struct ReplayMultiviewerSourceParams {
-    AsyncPort<ReplayRawFrame> *source;
-    coord_t x, y;
-};
-
+void BGRAn8_BGRAn8_default(size_t sz, uint8_t *src, uint8_t *dst) {
+    memcpy(dst, src, sz);
+}
