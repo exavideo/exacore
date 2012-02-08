@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#define IN_PIPE_SIZE 32
+#define IN_PIPE_SIZE 128
 #define OUT_PIPE_SIZE 15 
 
 struct decklink_norm {
@@ -177,7 +177,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             start_video( );
 
-            thread_priority_hack( );
+            //thread_priority_hack( );
 
             fprintf(stderr, "DeckLink: initialized using norm %s\n", 
                     norms[norm].name);
