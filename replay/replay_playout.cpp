@@ -131,11 +131,7 @@ void ReplayPlayout::run_thread( ) {
 
     int barsfd;
 
-    AudioPacket *audio;
-
     AvspipeInputAdapter *current_avspipe = NULL;
-
-    AvspipeNTSCSyncAudioAllocator audio_allocator;
 
     timecode_t avs_tc = 0;
 
@@ -203,13 +199,9 @@ void ReplayPlayout::run_thread( ) {
 
             /* send the full CbYCrY frame to output */
             oadp->input_pipe( ).put(out);
-            audio = audio_allocator.allocate( );
-            memset(audio->data( ), 0, audio->size( ));
-            oadp->audio_input_pipe( )->put(audio);
         } else {
             try {
                 out = current_avspipe->output_pipe( ).get( );
-                audio = current_avspipe->audio_output_pipe( )->get( );
                 monitor_frame = new ReplayRawFrame(
                     out->convert->BGRAn8_scale_1_2( )
                 );
@@ -220,7 +212,6 @@ void ReplayPlayout::run_thread( ) {
                 monitor.put(monitor_frame);
 
                 oadp->input_pipe( ).put(out);
-                oadp->audio_input_pipe( )->put(audio);
 
                 avs_tc++;
             } catch (BrokenPipe &ex) {
@@ -242,7 +233,7 @@ void ReplayPlayout::avspipe_playout(const char *cmd) {
         return;
     }
 
-    next_avspipe = new AvspipeInputAdapter(cmd, false);
+    next_avspipe = new AvspipeInputAdapter(cmd, true);
 
 }
 

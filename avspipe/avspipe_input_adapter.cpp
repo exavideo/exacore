@@ -187,6 +187,18 @@ pid_t AvspipeInputAdapter::start_subprocess(const char *cmd, int &vpfd, int &apf
         /* child */
         close(vpipe[0]);
         close(apipe[0]);
+
+        size_t frames_delay = 30;
+        size_t samples_per_frame = 1601;
+        size_t bytes_per_sample = 4;
+
+        size_t bogus_audio_size = frames_delay * samples_per_frame 
+                * bytes_per_sample;
+        /* artificial audio delay */
+        void *bogus_audio = malloc(bogus_audio_size);
+        memset(bogus_audio, 0, bogus_audio_size);
+        write_all(apipe[1], bogus_audio, bogus_audio_size);
+
         close(STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL); 
 
@@ -215,7 +227,7 @@ pid_t AvspipeInputAdapter::start_aplay(int apfd) {
     } else if (child == 0) {
         dup2(apfd, STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", 
-            "aplay -c 2 -f s16_le -r 48000 -", NULL);
+            "aplay -c 2 -f s16_le -r 48000 -B 500000 -", NULL);
         perror("execl");
         exit(1);
     } else {

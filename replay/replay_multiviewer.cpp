@@ -21,6 +21,7 @@
 #include "freetype_font.h"
 #include "rsvg_frame.h"
 #include <stdio.h>
+#include <unistd.h>
 
 ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     dpy = dpy_;
@@ -95,10 +96,13 @@ void ReplayMultiviewer::run_thread( ) {
                 render_text(f);
                 
                 dpy->draw->blit(src.x, src.y, f->bgra_data);
+
+                delete f->bgra_data;
             }
         }
         dpy->flip( );
     }
+    usleep(20000);
 }
 
 void ReplayMultiviewer::render_vector(ReplayRawFrame *f) {
@@ -129,18 +133,23 @@ void ReplayMultiviewer::render_waveform(ReplayRawFrame *f) {
 
     coord_t h = src->h( );      /* height */
     coord_t w = src->w( );      /* source width */
-    coord_t st = w / 256;       /* stride */
-    uint8_t *d = src->data( );
-    uint8_t y;                  /* luma */
-    const coord_t xofs = 16;
+    coord_t st = w / 240;       /* stride */
+    uint8_t *s = src->data( );
+    uint8_t y, yw;              /* luma */
+    uint8_t *d;
+    const coord_t xofs = 20;
 
-    for (coord_t line = 0; line < h; y++) {
-        d = src->scanline(line);
-        for (coord_t x = 0; x < w; x += st) {
-            y = d[2*x];
-            wfm->scanline(255 - y)[4*x + 4*xofs] = 0xff;
-            wfm->scanline(255 - y)[4*x + 4*xofs + 1] = 0xff;
-            wfm->scanline(255 - y)[4*x + 4*xofs + 2] = 0xff;
+    for (coord_t line = 0; line < h; line++) {
+        s = src->scanline(line);
+
+        for (coord_t x = 0, xw = 0; x < w && xw < 240; x += st, xw++) {
+            y = s[2*x+1];
+            yw = 127 - (y >> 1);
+
+            d = wfm->pixel(xofs + xw, yw);
+            d[0] = 0xff;
+            d[1] = 0xff;
+            d[2] = 0xff;            
         }
     }
 

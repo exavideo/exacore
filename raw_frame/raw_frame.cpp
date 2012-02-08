@@ -23,6 +23,7 @@
 #include <assert.h>
 #include "pack_CbYCrY8422.h"
 #include "unpack_CbYCrY8422.h"
+#include "unpack_BGRAn8.h"
 #include "draw_CbYCrY8422.h"
 #include "draw_BGRAn8.h"
 #include <string.h>
@@ -95,18 +96,22 @@ RawFrame::~RawFrame( ) {
 }
 
 size_t RawFrame::minpitch( ) const {
+    return pixel_size( ) * _w;
+}
+
+size_t RawFrame::pixel_size( ) const {
     switch (_pixel_format) {
         case RGB8:
         case YCbCr8:
-            return 3 * _w;
+            return 3;
 
         case CbYCrY8422:
-            return 2 * _w;
+            return 2;
 
         case RGBAn8:
         case BGRAn8:
         case YCbCrAn8:
-            return 4 * _w;
+            return 4;
 
         default:
             throw std::runtime_error("invalid pixel format");
@@ -152,6 +157,10 @@ void RawFrame::make_unpacker(void) {
         /* specific handlers go here */
         case CbYCrY8422:
             unpack = new CbYCrY8422Unpacker(this);
+            break;
+
+        case BGRAn8:
+            unpack = new BGRAn8Unpacker(this);
             break;
 
         default:

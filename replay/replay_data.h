@@ -119,9 +119,6 @@ struct ReplayRawFrame {
     }
     ~ReplayRawFrame( ) { 
         delete frame_data;
-        if (bgra_data) {
-            delete bgra_data;    
-        }
     }
 
     RawFrame *frame_data;

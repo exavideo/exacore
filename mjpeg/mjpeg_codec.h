@@ -30,7 +30,7 @@
 class Mjpeg422Encoder {
     public:
         Mjpeg422Encoder(coord_t w_, coord_t h_, 
-                size_t max_frame_size = 524288);
+                int qual = 70, size_t max_frame_size = 524288);
         void encode(RawFrame *f);
         void encode_to(RawFrame *f, void *buf, size_t size);
         void *get_data(void) { return jpeg_data; }
@@ -54,6 +54,8 @@ class Mjpeg422Encoder {
         JSAMPARRAY y_scans, cb_scans, cr_scans;
 
         std::string comment;
+
+        int quality;
 };
 
 class Mjpeg422Decoder {

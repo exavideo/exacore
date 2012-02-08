@@ -17,21 +17,15 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_frame_extractor.h"
-%}
+#include <execinfo.h>
+#include <unistd.h>
 
-%include "typemaps.i"
-%include "std_string.i"
+void print_backtrace( ) {
+    const unsigned int TRACE_SIZE = 64;
+    void *trace[TRACE_SIZE];
+    int size;
 
-class ReplayFrameExtractor {
-    public:
-        ReplayFrameExtractor( );
-        ~ReplayFrameExtractor( );
-        void extract_scaled_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT, int);
-        void extract_thumbnail_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT);
-        void extract_raw_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT);
-};
+    size = backtrace(trace, TRACE_SIZE);
+    backtrace_symbols_fd(trace, size, STDERR_FILENO);
+}
+

@@ -17,21 +17,16 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_frame_extractor.h"
-%}
+#ifndef _UNPACK_BGRAN8_H
+#define _UNPACK_BGRAN8_H
 
-%include "typemaps.i"
-%include "std_string.i"
+void BGRAn8_BGRAn8_default(size_t, uint8_t *src, uint8_t *dst);
 
-class ReplayFrameExtractor {
+class BGRAn8Unpacker : public RawFrameUnpacker {
     public:
-        ReplayFrameExtractor( );
-        ~ReplayFrameExtractor( );
-        void extract_scaled_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT, int);
-        void extract_thumbnail_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT);
-        void extract_raw_jpeg(const ReplayShot &, timecode_t, 
-                std::string &OUTPUT);
+        BGRAn8Unpacker(RawFrame *f) : RawFrameUnpacker(f) {
+            do_BGRAn8 = BGRAn8_BGRAn8_default;
+        }
 };
+
+#endif

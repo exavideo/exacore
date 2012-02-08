@@ -48,6 +48,12 @@ class RawFrame {
         virtual ~RawFrame( );
 
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
+        uint8_t *pixel(coord_t x, coord_t y) { 
+            if (x >= _w || y >= _h) {
+                throw std::runtime_error("invalid pixel access");
+            }
+            return scanline(y) + pixel_size( ) * x; 
+        }
         uint8_t *data( ) { return _data; }
 
         uint8_t global_alpha( ) { return _global_alpha; }
@@ -87,6 +93,7 @@ class RawFrame {
         RawFrame(PixelFormat pf);
 
         void initialize_pf(PixelFormat pf);
+        size_t pixel_size( ) const;
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );

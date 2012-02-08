@@ -83,8 +83,7 @@ void ReplayPreview::run_thread( ) {
                     rfd.main_jpeg_size( ), 960);
 
             /* send to multiview */
-            monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
-            delete new_frame;
+            monitor_frame = new ReplayRawFrame(new_frame);
             
             /* fill in timecode and source info for monitor */
             monitor_frame->source_name = "Preview";
