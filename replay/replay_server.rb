@@ -10,6 +10,8 @@ require_relative '../input/shuttlepro'
 app = Replay::ReplayApp.new
 $app = app # hack
 
+CLIP_BASE_PATH='/root/saved_clips'
+
 def configure
     yield $app
 end
@@ -141,14 +143,45 @@ class ReplayLocalControl < ShuttleProInput
             end
         when 264
             @shifted = 2
+
+        when 265
+            save_preview_shot 'rpi_goal'
+        when 266
+            save_preview_shot 'rpi_penalty'
+        when 267
+            save_preview_shot 'away_goal'
+        when 268
+            save_preview_shot 'away_penalty'
         when 269
             capture_event
+        when 270
+            @app.mv_mode
         end
+
 
         if @shifted == 2
             @shifted = 1
         elsif @shifted == 1
             @shifted = 0
+        end
+    end
+
+    def save_preview_shot(prefix)
+        shot = @app.preview.shot
+        n = 0
+        fn = sprintf('%s_%04d.mjpg', prefix, n)
+        path = File.join(CLIP_BASE_PATH, fn)
+
+        while File.exists?(path)
+            n += 1
+            fn = sprintf('%s_%04d.mjpg', prefix, n)
+            path = File.join(CLIP_BASE_PATH, fn)
+        end
+
+        File.open(path, 'wb') do |file|
+            (0..shot.length).each do |frame|
+                file.write shot.frame(frame)
+            end
         end
     end
 
@@ -276,7 +309,7 @@ class ReplayServer < Patchbay
 
     get '/files.json' do
         ROLLOUT_DIR = '/root/rollout'
-        render :json => Dir.glob(ROLLOUT_DIR + '/*.mov').to_json
+        render :json => Dir.glob(ROLLOUT_DIR + '/*.{mov,mpg}').to_json
     end
 
     put '/ffmpeg_rollout.json' do

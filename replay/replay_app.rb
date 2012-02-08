@@ -102,6 +102,11 @@ module Replay
             @@previewer.extract_thumbnail_jpeg(self, 0)
         end
 
+        def frame(x)
+            @@previewer ||= ReplayFrameExtractor.new
+            @@previewer.extract_raw_jpeg(self, x)
+        end
+
         def make_json(source_id)
             {
                 "source" => source_id,
@@ -155,6 +160,10 @@ module Replay
             @mvw = 1920
             @mvx = 0
             @mvy = 540
+        end
+
+        def mv_mode
+            @multiviewer.change_mode
         end
 
         def add_source(opts={})
