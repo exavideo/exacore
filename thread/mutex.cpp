@@ -23,6 +23,10 @@
 
 #include "posix_util.h"
 
+#include <sys/time.h>
+#include <stdio.h>
+#include "backtrace.h"
+
 static void throw_on_error(int ret, const char *msg) {
     if (ret != 0) {
         throw POSIXError(msg, ret);
@@ -64,8 +68,30 @@ void Mutex::unlock( ) {
 }
 
 MutexLock::MutexLock(Mutex &mut) {
+    /* instrumented to determine if we're having lock performance issues */
+    struct timeval tv1, tv2;
     _mut = &mut;
+
+    gettimeofday(&tv1, NULL);
     _mut->lock( );
+    gettimeofday(&tv2, NULL);
+
+    /* subtract time values tv2-tv1 */
+    if (tv1.tv_usec > tv2.tv_usec) {
+        /* borrow if necessary */
+        tv2.tv_sec -= 1;
+        tv2.tv_usec += 1000000;
+    }
+
+    tv2.tv_sec -= tv1.tv_sec;
+    tv2.tv_usec -= tv1.tv_usec;
+
+    if (tv2.tv_sec > 1 || tv2.tv_usec > 20000) {
+        fprintf(stderr, "mutex %p blocked for %d.%06d sec\n", 
+            _mut, (int) tv2.tv_sec, (int) tv2.tv_usec);
+        print_backtrace( );
+    }
+    
     locked = true;
 }
 
