@@ -97,7 +97,7 @@ class ReplayBuffer {
 
         uint8_t *data;
 
-        timecode_t tc_current;
+        volatile timecode_t tc_current;
 
         int *locks;
 

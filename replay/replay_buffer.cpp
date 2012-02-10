@@ -56,7 +56,7 @@ class ReplayBuffer::MsyncBackground : public Thread {
 
             for (;;) {
                 req = request_queue.get( );
-                msync(req.base, req.size, MS_SYNC);
+                //msync(req.base, req.size, MS_SYNC);
             }
         };
 };
@@ -65,7 +65,11 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
         size_t frame_size, const char *name) {
     int error;
 
+#ifdef ENABLE_MSYNC
     mst = new MsyncBackground( );
+#else
+    mst = NULL;
+#endif
 
     _field_dominance = RawFrame::UNKNOWN;
 
@@ -117,7 +121,6 @@ ReplayBuffer::~ReplayBuffer( ) {
 }
 
 ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
-    MutexLock l(m);
     ReplayShot *shot = new ReplayShot;
     timecode_t start_offset;
 
@@ -146,7 +149,6 @@ ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
 }
 
 void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
-    MutexLock l(m);
     unsigned int frame_index = tc_current % n_frames;
 
     frame_data.source = this;
@@ -161,7 +163,7 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
 }
 
 void ReplayBuffer::finish_frame_write( ) {
-    MutexLock l(m);
+#ifdef ENABLE_MSYNC
     unsigned int frame_index = tc_current % n_frames;
 
     unsigned int block_index = frame_index & ~0x3fU;
@@ -175,6 +177,7 @@ void ReplayBuffer::finish_frame_write( ) {
         req.size = block_size;
         mst->request_queue.put(req);
     }
+#endif
 
     /* 
      * force the issue of re-syncing these pages to disk 
@@ -187,8 +190,6 @@ void ReplayBuffer::finish_frame_write( ) {
 
 void ReplayBuffer::get_readable_frame(timecode_t tc, 
         ReplayFrameData &frame_data) {
-    MutexLock l(m);
-
     if (tc >= tc_current) {
         fprintf(stderr, "past the end: tc=%d tc_current=%d\n",
                 (int) tc, (int) tc_current);
@@ -214,6 +215,7 @@ const char *ReplayBuffer::get_name( ) {
 }
 
 void ReplayBuffer::lock_frame(timecode_t frame) {
+#ifdef ENABLE_MLOCK
     bool flag;
     unsigned int frame_offset = frame % n_frames;
 
@@ -235,9 +237,13 @@ void ReplayBuffer::lock_frame(timecode_t frame) {
             perror("mlock");
         }
     }
+#else
+    (void) frame;
+#endif
 }
 
 void ReplayBuffer::unlock_frame(timecode_t frame) {
+#ifdef ENABLE_MLOCK
     bool flag;
     unsigned int frame_offset = frame % n_frames;
 
@@ -257,6 +263,9 @@ void ReplayBuffer::unlock_frame(timecode_t frame) {
     if (flag) {
         munlock(data + frame_offset * frame_size, frame_size);
     }
+#else
+    (void) frame;
+#endif
 }
 
 ReplayBufferLocker::ReplayBufferLocker( ) {
