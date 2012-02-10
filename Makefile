@@ -10,7 +10,7 @@ CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC
 
 # don't use -Werror for swig-generated code
 SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -fPIC
-LDFLAGS=-g -rdynamic $(LOCAL_LDFLAGS)
+LDFLAGS=-g -rdynamic -ltcmalloc $(LOCAL_LDFLAGS)
 RUBY_INCLUDES=`ruby ruby_cflags.rb`
 ASM=yasm -f elf64 -g dwarf2
 

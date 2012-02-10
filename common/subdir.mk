@@ -4,4 +4,5 @@ common_OBJECTS = \
 	common/cpu_dispatch.o \
     common/rational.o \
     common/backtrace.o \
+    common/new_delete_malloc.o \
 
