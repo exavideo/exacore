@@ -17,16 +17,29 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "svg_subprocess_character_generator.h"
-#include "rsvg_frame.h"
+#ifndef _KEYDAEMON_SUBPROCESS_CHARACTER_GENERATOR_H
+#define _KEYDAEMON_SUBPROCESS_CHARACTER_GENERATOR_H
 
-SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(
-    const char *cmd, unsigned int dirty_level
-) : SubprocessCharacterGenerator(cmd, dirty_level) {
+#include "character_generator.h"
 
-}
+class SubprocessCharacterGenerator : public CharacterGenerator {
+    public:
+        SubprocessCharacterGenerator(const char *cmd, 
+                unsigned int dirty_level = 0);
+        virtual ~SubprocessCharacterGenerator( );
+        unsigned int dirty_level( ) { return _dirty_level; }
+    protected:
+        virtual void run_thread( );
+        void do_fork( );
 
-RawFrame *SvgSubprocessCharacterGenerator::do_render(void *data, size_t size) {
-    return RsvgFrame::render_svg((const char *)data, size);
-}
+        void request( );
+        char *read_data(size_t length);
+        virtual RawFrame *do_render(void *data, size_t size);
 
+        char *_cmd;
+
+        int send_fd, recv_fd;
+        unsigned int _dirty_level;
+};
+
+#endif

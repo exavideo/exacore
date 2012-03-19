@@ -47,6 +47,8 @@ class RawFrame {
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
         virtual ~RawFrame( );
 
+        RawFrame *copy( );
+
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
         uint8_t *data( ) { return _data; }
 
@@ -63,6 +65,8 @@ class RawFrame {
 
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
+
+        static RawFrame *from_png_data(void *data, size_t size);
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);

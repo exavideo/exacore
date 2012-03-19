@@ -26,6 +26,7 @@
 
 ssize_t read_all(int fd, void *data, size_t size) {
     ssize_t nread;
+    ssize_t total_read = 0;
     uint8_t *buf = (uint8_t *) data;
 
     while (size > 0) {
@@ -33,9 +34,10 @@ ssize_t read_all(int fd, void *data, size_t size) {
         if (nread > 0) {
             size -= nread;
             buf += nread;
+            total_read += nread;
         } else if (nread == 0) {
             /* EOF */
-            return 0;
+            return total_read;
         } else {
             if (errno == EAGAIN || errno == EINTR) {
                 /* don't worry about these */

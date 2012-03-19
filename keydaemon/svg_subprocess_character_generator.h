@@ -20,25 +20,14 @@
 #ifndef _KEYDAEMON_SVG_SUBPROCESS_CHARACTER_GENERATOR_H
 #define _KEYDAEMON_SVG_SUBPROCESS_CHARACTER_GENERATOR_H
 
-#include "character_generator.h"
+#include "subprocess_character_generator.h"
 
-class SvgSubprocessCharacterGenerator : public CharacterGenerator {
+class SvgSubprocessCharacterGenerator : public SubprocessCharacterGenerator {
     public:
         SvgSubprocessCharacterGenerator(const char *cmd, 
                 unsigned int dirty_level = 0);
-        ~SvgSubprocessCharacterGenerator( );
-        unsigned int dirty_level( ) { return _dirty_level; }
     protected:
-        virtual void run_thread( );
-        void do_fork( );
-
-        void request( );
-        char *read_svg(size_t length);
-
-        char *_cmd;
-
-        int send_fd, recv_fd;
-        unsigned int _dirty_level;
+        RawFrame *do_render(void *data, size_t size);
 };
 
 #endif
