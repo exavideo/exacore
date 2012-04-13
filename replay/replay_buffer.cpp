@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+#define ENABLE_MSYNC
 
 struct msync_req {
     void *base;
@@ -56,7 +57,7 @@ class ReplayBuffer::MsyncBackground : public Thread {
 
             for (;;) {
                 req = request_queue.get( );
-                //msync(req.base, req.size, MS_SYNC);
+                msync(req.base, req.size, MS_SYNC);
             }
         };
 };
