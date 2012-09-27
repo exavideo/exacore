@@ -171,7 +171,6 @@ class SenderThread : public Thread {
 
             _fpipe = fpipe;
             _out_fd = out_fd;
-
             start_thread( );
         }
     protected:
@@ -194,7 +193,9 @@ class SenderThread : public Thread {
 };
 
 void usage(const char *argv0) {
-    fprintf(stderr, "usage: %s [-c n] 'command'\n", argv0);
+    fprintf(stderr, "usage: %s [-c n] [-f] 'command'\n", argv0);
+    fprintf(stderr, "-c n: use card 'n'");
+    fprintf(stderr, "-f: enable ffmpeg streaming hack");
     fprintf(stderr, "in 'command':\n");
     fprintf(stderr, "%%a = audio pipe fd\n");
     fprintf(stderr, "%%v = video pipe fd\n");
@@ -213,10 +214,15 @@ int main(int argc, char * const *argv) {
     };
 
     int card = 0;
+    int ffmpeg_hack = 0;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "c:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "fc:", options, NULL)) != -1) {
         switch (opt) {
+            case 'f':
+                ffmpeg_hack = 1;
+                break;
+
             case 'c':
                 card = atoi(optarg);
                 break;
@@ -240,12 +246,14 @@ int main(int argc, char * const *argv) {
 
     /* bogus ffmpeg workaround (i.e. writing filler to the pipes) goes here */
     /* (It may be unnecessary with an audio stream?) */
-    RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-    AudioPacket *dummy_audio = new AudioPacket(48000, 2, 2, 1601);
+    if (ffmpeg_hack) {
+        RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+        AudioPacket *dummy_audio = new AudioPacket(48000, 2, 2, 1601);
 
-    for (int i = 0; i < 2; i++) {
-        empty->write_to_fd(vpfd);
-        dummy_audio->write_to_fd(apfd);
+        for (int i = 0; i < 2; i++) {
+            empty->write_to_fd(vpfd);
+            dummy_audio->write_to_fd(apfd);
+        }
     }
 
     iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
