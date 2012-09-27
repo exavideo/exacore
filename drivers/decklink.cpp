@@ -25,8 +25,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h> // debug
 
-#define IN_PIPE_SIZE 32
+#define IN_PIPE_SIZE 256 
 #define OUT_PIPE_SIZE 8 
 
 struct decklink_norm {
@@ -523,6 +524,9 @@ class DeckLinkInputAdapter : public InputAdapter,
                 : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
+            start_time = 0;
+            n_frames = 0;
+            n_audio_frames = 0;
 
             pf = pf_;
             bpf = convert_pf(pf_);
@@ -532,7 +536,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             open_input(norm_);
 
             if (enable_audio) {
-                n_channels = 2;
+                n_channels = 8;
                 select_audio_input_connection( );
                 open_audio_input( );
             }
@@ -582,6 +586,9 @@ class DeckLinkInputAdapter : public InputAdapter,
             
             RawFrame *out;
             AudioPacket *audio_out;
+            struct timespec tp;
+            uint64_t frame_time;
+            uint64_t theoretical_nframes;
             void *data;
             uint8_t *bytes;
             size_t i, spitch, h;
@@ -590,6 +597,38 @@ class DeckLinkInputAdapter : public InputAdapter,
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
+                    /* get time now in us */
+                    if (clock_gettime(CLOCK_MONOTONIC_RAW, &tp) == -1) {
+                        fprintf(stderr, "DeckLink: cannot get monotonic clock\n");
+                    }
+                    frame_time = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+                    if (start_time == 0) {
+                        start_time = frame_time - 33366;
+                    }
+
+                    n_frames++;
+                    if ((n_frames % 256) == 0) {
+                        theoretical_nframes = (frame_time - start_time) 
+                            * 1000L / 1001L * 30L / 1000000L;
+                        
+                        fprintf(stderr, "%ld frames in %ld us = %f fps\n",
+                            n_frames, frame_time - start_time, 
+                            1000000.0 * ((double) n_frames 
+                                / (double) (frame_time - start_time))
+                        );
+
+                        fprintf(stderr, 
+                            "should have captured %ld frames... "
+                            "est dropped frames = %ld\n", 
+                            theoretical_nframes, 
+                            theoretical_nframes - n_frames
+                        );
+
+                        fprintf(stderr, "a-v=%ld\n\n", 
+                            n_audio_frames - n_frames);
+                    }
+
                     out = new RawFrame(in->GetWidth(), in->GetHeight(), pf);
                     out->set_field_dominance(dominance);
                     spitch = in->GetRowBytes( );
@@ -622,6 +661,8 @@ class DeckLinkInputAdapter : public InputAdapter,
                     );
                 }
 
+                n_audio_frames++;
+
                 memcpy(audio_out->data( ), data, audio_out->size( ));
                 audio_pipe->put(audio_out);
             }
@@ -646,6 +687,9 @@ class DeckLinkInputAdapter : public InputAdapter,
         RawFrame::FieldDominance dominance;
 
         BMDPixelFormat bpf;
+        uint64_t start_time;
+        uint64_t n_frames;
+        uint64_t n_audio_frames;
 
         unsigned int audio_rate;
         unsigned int n_channels;
