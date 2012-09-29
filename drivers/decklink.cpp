@@ -604,6 +604,10 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             audio_pipe = NULL;
 
+            n_frames = 0;
+            start_time = 0;
+            avsync = 0;
+
             pf = pf_;
             bpf = convert_pf(pf_);
 
@@ -612,12 +616,16 @@ class DeckLinkInputAdapter : public InputAdapter,
             open_input(norm_);
 
             if (enable_audio) {
-                n_channels = 2;
-                select_audio_input_connection( );
-                open_audio_input( );
+                audio_pipe = new Pipe<AudioPacket *>(IN_PIPE_SIZE);
             }
 
+            n_channels = 2;
+            select_audio_input_connection( );
+            open_audio_input( );
+
+
             start_capture( );
+
         }
 
         ~DeckLinkInputAdapter( ) {
@@ -662,12 +670,43 @@ class DeckLinkInputAdapter : public InputAdapter,
             
             RawFrame *out;
             AudioPacket *audio_out;
+
             void *data;
+
 
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
+                    #ifdef GUESS_FRAMEDROPS
+                    uint64_t frame_time, theoretical_n_frames;
+                    struct timespec tp;
+                    if (clock_gettime(CLOCK_MONOTONIC_RAW, &tp) == -1) {
+                        fprintf(stderr, "DeckLink: can't get monotonic clock");
+                    }
+
+                    frame_time = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
+
+                    if (start_time == 0) {
+                        start_time = frame_time - 33366;
+                    }
+
+                    n_frames++;
+                    if ((n_frames % 2048) == 0) {
+                        theoretical_n_frames = (frame_time - start_time)
+                            * 1000L * 30L / 1001L / 1000000L;
+                        fprintf(stderr, "(%p)%lu frames / %lu us = %f fps\n",
+                            this, n_frames, frame_time - start_time,
+                            1000000.0 * ((double) n_frames
+                                / (double) (frame_time - start_time))
+                        );
+                        fprintf(stderr, "(%p)approx frame drops=%lu\n",
+                            this, theoretical_n_frames - n_frames);
+                    }
+                    #endif
+
+                    avsync++;
+
                     out = new DecklinkInputRawFrame(in, pf);
                     out->set_field_dominance(dominance);
                     
@@ -680,18 +719,27 @@ class DeckLinkInputAdapter : public InputAdapter,
                 }
             }
 
-            if (audio_in != NULL && audio_pipe != NULL) {
-                audio_out = new AudioPacket(audio_rate, n_channels, 2, 
-                        audio_in->GetSampleFrameCount( ));
+            if (audio_in != NULL) {
+                avsync--;
 
-                if (audio_in->GetBytes(&data) != S_OK) {
-                    throw std::runtime_error(
-                        "DeckLink audio input: GetBytes failed"
-                    );
+                if (audio_pipe != NULL) {
+                    audio_out = new AudioPacket(audio_rate, n_channels, 2, 
+                            audio_in->GetSampleFrameCount( ));
+
+                    if (audio_in->GetBytes(&data) != S_OK) {
+                        throw std::runtime_error(
+                            "DeckLink audio input: GetBytes failed"
+                        );
+                    }
+
+                    memcpy(audio_out->data( ), data, audio_out->size( ));
+                    audio_pipe->put(audio_out);
                 }
+            }
 
-                memcpy(audio_out->data( ), data, audio_out->size( ));
-                audio_pipe->put(audio_out);
+            if (avsync > 20 || avsync < -20) {
+                fprintf(stderr, "(%p) avsync drifted %d\n", this, avsync);
+                avsync = 0;
             }
 
             return S_OK;
@@ -717,6 +765,11 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         unsigned int audio_rate;
         unsigned int n_channels;
+
+        uint64_t n_frames;
+        uint64_t start_time;
+
+        int avsync;
 
         Pipe<AudioPacket *> *audio_pipe;
 
@@ -788,8 +841,6 @@ class DeckLinkInputAdapter : public InputAdapter,
         void open_audio_input( ) {
             assert(deckLink != NULL);
             assert(deckLinkInput != NULL);
-
-            audio_pipe = new Pipe<AudioPacket *>(IN_PIPE_SIZE);
 
             if (deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz,
                     bmdAudioSampleType16bitInteger, n_channels) != S_OK) {

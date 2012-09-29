@@ -65,6 +65,8 @@ class ReplayLocalControl < ShuttleProInput
         @current_event = @app.each_source.map { |src| nil }
         @current_preview_source = 0
         @event_id = 0
+        @event_list = []
+        @event_ptr = 0
         super()
     end
 
@@ -109,14 +111,14 @@ class ReplayLocalControl < ShuttleProInput
     def on_button_down(button)
         case button
         when 256
-            @app.preview.mark_in
+            prev_event
         when 257
             @app.program.stop
         when 258
             @app.preview.mark_in
             @app.program.shot = @app.preview.shot
         when 259
-            @app.preview.mark_out
+            next_event
         when 260
             if @shifted == 1
                 preview_source 4
@@ -197,6 +199,9 @@ class ReplayLocalControl < ShuttleProInput
 
     def capture_event
         @current_event = ReplayEvent.new
+        @event_list << @current_event
+        @event_ptr = @event_list.length - 1
+
         @current_event.id = @event_id
         @current_event.type = 'Uncategorized'
         @event_id += 1
@@ -204,6 +209,27 @@ class ReplayLocalControl < ShuttleProInput
         @app.preview.shot = @current_event.shots[@current_preview_source]
 
         @web_interface.send_event(@current_event)
+    end
+
+    def prev_event
+        @event_ptr = @event_ptr - 1
+        if @event_ptr < 0
+            @event_ptr = 0
+        end
+
+        @current_event = @event_list[@event_ptr]
+        @app.preview.shot = @current_event.shots[@current_preview_source]
+
+    end
+
+    def next_event
+        @event_ptr = @event_ptr + 1
+        if @event_ptr >= @event_list.length
+            @event_ptr = @event_list.length - 1
+        end
+
+        @current_event = @event_list[@event_ptr]
+        @app.preview.shot = @current_event.shots[@current_preview_source]
     end
 
     def start_irb
@@ -318,7 +344,7 @@ class ReplayServer < Patchbay
         # THIS IS A GLARINC SECURITY HOLE
         p inbound_json
         filename = inbound_json["filename"]
-        cmd = "ffmpeg -i #{filename} -f rawvideo -s 1920x1080 -pix_fmt uyvy422 pipe:%v -f s16le -ac 2 -ar 48000 pipe:%a </dev/null"
+        cmd = "ffmpeg -i \"#{filename}\" -f rawvideo -s 1920x1080 -pix_fmt uyvy422 pipe:%v -f s16le -ac 2 -ar 48000 pipe:%a </dev/null"
         p cmd
         replay_app.suspend_encode
         replay_app.program.avspipe_playout(cmd)

@@ -36,6 +36,8 @@ AvspipeInputAdapter::AvspipeInputAdapter(const char *cmd,
 
     vpfd = apfd = -1;
 
+    fprintf(stderr, "Starting subprocess: %s\n", cmd);
+
     child = start_subprocess(cmd, vpfd, apfd);
 
     if (child == -1) {
@@ -227,7 +229,7 @@ pid_t AvspipeInputAdapter::start_aplay(int apfd) {
     } else if (child == 0) {
         dup2(apfd, STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", 
-            "aplay -c 2 -f s16_le -r 48000 -B 500000 -", NULL);
+            "aplay -c 2 -f s16_le -r 48000 -", NULL);
         perror("execl");
         exit(1);
     } else {

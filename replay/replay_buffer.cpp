@@ -27,6 +27,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <linux/fs.h> /* for block device size ioctls */
+#include <sys/ioctl.h>
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -65,7 +68,8 @@ class ReplayBuffer::MsyncBackground : public Thread {
 ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
         size_t frame_size, const char *name) {
     int error;
-
+    struct stat stat;
+    
 #ifdef ENABLE_MSYNC
     mst = new MsyncBackground( );
 #else
@@ -74,15 +78,28 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
 
     _field_dominance = RawFrame::UNKNOWN;
 
-    /* open and allocate buffer file */
-    fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
+    /* open and allocate (if necessary) buffer file */
+    fd = open(path, O_CREAT | O_RDWR, 0644);
     if (fd < 0) {
         throw POSIXError("open");
     }
 
-    error = posix_fallocate(fd, 0, buffer_size);
-    if (error != 0) {
-        throw POSIXError("posix_fallocate", error);
+    if (fstat(fd, &stat) != 0) {
+        throw POSIXError("fstat");
+    }
+
+    if (S_ISREG(stat.st_mode)) {
+        error = posix_fallocate(fd, 0, buffer_size);
+        if (error != 0) {
+            throw POSIXError("posix_fallocate", error);
+        }
+    } else if (S_ISBLK(stat.st_mode)) {
+        __u64 disk_size;
+        ioctl(fd, BLKGETSIZE64, &disk_size);
+        buffer_size = disk_size;
+        fprintf(stderr, "using raw disk io (buffer size %zu)\n", buffer_size);
+    } else {
+        throw std::runtime_error("cannot use this thing as a buffer");
     }
 
     /* memory map entire buffer file */
