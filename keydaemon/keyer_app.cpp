@@ -120,7 +120,7 @@ void KeyerApp::run( ) {
 #endif
 
                     if (!cg->output_pipe( ).data_ready( )) {
-                        fprintf(stderr, "not keying this frame on account of staleness\n");
+                        fprintf(stderr, "using stale frame from keyer %d\n", i);
                         continue;
                     } else {
                         cgout = cg->output_pipe( ).get( );
