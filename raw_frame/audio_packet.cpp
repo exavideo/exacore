@@ -18,6 +18,7 @@
  */
 
 #include "audio_packet.h"
+#include <string.h>
 #include <stdlib.h>
 #include <stdexcept>
 
@@ -41,6 +42,14 @@ AudioPacket::~AudioPacket( ) {
     if (_data != NULL) {
         free(_data);
     }
+}
+
+AudioPacket *AudioPacket::copy( ) {
+    AudioPacket *ret = new AudioPacket(_rate, _channels, 
+            _sample_size, n_frames( ));
+
+    memcpy(ret->_data, _data, _size);
+    return ret;
 }
 
 #ifdef RAWFRAME_POSIX_IO
