@@ -31,15 +31,23 @@ RawFrame *RsvgFrame::render_svg(const char *svg_data, size_t size) {
     RsvgDimensionData dim;
     CairoFrame *crf;
     cairo_t *cr;
-    
+    GError *error = NULL;
+
     if (!rsvg_is_init) {
         g_type_init( );
         rsvg_set_default_dpi_x_y(75.0, 75.0);
     }
 
-    rsvg = rsvg_handle_new_from_data((guint8 *) svg_data, (gsize) size, NULL);
+    rsvg = rsvg_handle_new_from_data((guint8 *) svg_data, (gsize) size, &error);
 
     if (rsvg == NULL) {
+        fprintf(stderr, "rsvg_handle_new_from_data: %s\n", error->message);
+
+        fprintf(stderr, "svg_data size=%zd\n", size);
+        fprintf(stderr, "dumping SVG...\n");
+        fprintf(stderr, "%s\n", svg_data);
+
+        g_error_free(error);
         throw std::runtime_error("rsvg_handle_new_from_data failed");
     }
 
