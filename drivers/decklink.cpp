@@ -363,8 +363,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             audio_in_pipe = new Pipe<AudioPacket *>(OUT_PIPE_SIZE);
 
-            audio_size = 25626*4;
-            audio_end = 25626*4;
+            audio_size = 1601*4*4*4;
+            audio_end = 1601*4*4;
             audio_data = new uint8_t[audio_size];
             memset(audio_data, 0, audio_size);
 
