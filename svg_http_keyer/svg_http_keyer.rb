@@ -123,7 +123,7 @@ class KeyerServer < Patchbay
 
     post '/dirty_level/:n' do
         Thread.exclusive do
-            $dirty_level = params[:n].to_ik
+            $dirty_level = params[:n].to_i
         end
         render :json => ''
     end
