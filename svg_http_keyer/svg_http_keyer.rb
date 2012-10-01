@@ -3,6 +3,7 @@
 require 'rubygems'
 require 'patchbay'
 require 'thin'
+require 'base64'
 
 Thin::Logging.silent = true
 
@@ -94,6 +95,17 @@ class KeyerServer < Patchbay
         render :json => ''
     end
 
+    put '/key_dataurl' do
+        data = incoming_data
+        md = /^data:image\/png;base64,/.match(data)
+        if (md) 
+            rawdata = Base64.decode64(md.post_match)
+            Thread.exclusive do
+                $svgdata = rawdata
+            end
+        end
+    end
+
     post '/dissolve_in/:frames' do
         Thread.exclusive do
             if $trans_state == DOWN
@@ -136,6 +148,8 @@ class KeyerServer < Patchbay
 
         params[:incoming_data]
     end
+
+    self.files_dir = 'public_html'
 end
 
 app = KeyerServer.new
