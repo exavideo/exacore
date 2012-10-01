@@ -33,7 +33,7 @@ RawFrame *RsvgFrame::render_svg(const char *svg_data, size_t size) {
     cairo_t *cr;
     
     if (!rsvg_is_init) {
-        rsvg_init( );
+        g_type_init( );
         rsvg_set_default_dpi_x_y(75.0, 75.0);
     }
 
