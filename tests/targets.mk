@@ -114,7 +114,7 @@ test_decklink_output_random_audio_OBJECTS = \
 	tests/decklink_output_random_audio.o
 
 tests/decklink_output_random_audio: $(test_decklink_output_random_audio_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lpng
 
 all_TARGETS += tests/decklink_output_random_audio
 
@@ -196,3 +196,15 @@ tests/freetype_test: $(test_freetype_test_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/freetype_test    
+
+test_png_decode_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(graphics_OBJECTS) \
+        $(thread_OBJECTS) \
+	tests/png_decode.o
+
+tests/png_decode: $(test_png_decode_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -lpng -ljpeg -ldl -pthread $(graphics_LIBS)
+
+all_TARGETS += tests/png_decode    
