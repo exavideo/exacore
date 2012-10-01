@@ -59,6 +59,8 @@ Thread.new do
                 STDOUT.write(alphastr)
                 STDOUT.write($svgdata)
                 STDOUT.flush
+
+                $svgdata = ''
             end
 
         end
