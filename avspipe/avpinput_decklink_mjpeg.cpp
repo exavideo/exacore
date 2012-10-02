@@ -167,7 +167,7 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
 class CompressorThread : public Thread {
     public:
         CompressorThread(Pipe<RawFrame *> *fpipe, int out_fd) 
-                : enc(1920, 1080) {
+                : enc(1920, 1080, 16*1024*1024) {
             assert(fpipe != NULL);
             assert(out_fd >= 0);
 
