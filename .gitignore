@@ -6,5 +6,6 @@
 *.so
 test_files/*
 *.d
+*.a
 local.mk
 

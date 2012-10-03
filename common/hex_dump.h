@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,16 +17,12 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "svg_subprocess_character_generator.h"
-#include "rsvg_frame.h"
+#ifndef _HEX_DUMP_H
+#define _HEX_DUMP_H
 
-SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(
-    const char *cmd, unsigned int dirty_level
-) : SubprocessCharacterGenerator(cmd, dirty_level) {
+#include <stddef.h>
 
-}
+void hex_dump(void *data, size_t size);
 
-RawFrame *SvgSubprocessCharacterGenerator::do_render(void *data, size_t size) {
-    return RsvgFrame::render_svg((const char *)data, size);
-}
+#endif
 

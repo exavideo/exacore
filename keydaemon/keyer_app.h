@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,16 +17,24 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "svg_subprocess_character_generator.h"
-#include "rsvg_frame.h"
+#include <vector>
+#include "adapter.h"
+#include "character_generator.h"
 
-SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(
-    const char *cmd, unsigned int dirty_level
-) : SubprocessCharacterGenerator(cmd, dirty_level) {
+class KeyerApp {
+    protected:
+        std::vector<CharacterGenerator *> cgs;
+        InputAdapter *iadp;
+        std::vector<OutputAdapter *> oadps;
+        std::vector<bool> flags;
 
-}
+        void clear_all_flags( );
+    public:
+        KeyerApp( );
+        ~KeyerApp( );
 
-RawFrame *SvgSubprocessCharacterGenerator::do_render(void *data, size_t size) {
-    return RsvgFrame::render_svg((const char *)data, size);
-}
-
+        void input(InputAdapter *iadp_);
+        void output(OutputAdapter *oadp_);
+        void cg(CharacterGenerator *cg);
+        void run( );
+};

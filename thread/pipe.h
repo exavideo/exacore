@@ -190,6 +190,21 @@ class PipeLocked {
             delete [] buf;
         }
 
+        unsigned int fill( ) {
+            MutexLock lock(mut);
+
+            if (read_ptr == write_ptr) {
+                return 0;
+            } else if (read_ptr < write_ptr) {
+                /* [read_ptr .. write_ptr - 1] is full */
+                return write_ptr - read_ptr;
+            } else { /* if (write_ptr < read_ptr)  */
+                /* [0..write_ptr - 1] slots full at the beginning */
+                /* [read_ptr..buf_len - 1] slots full at the end */
+                return (buf_len - read_ptr) + (write_ptr);
+            }
+        }
+
     protected:
         /* Return the position one past "i". */
         unsigned int advance(unsigned int i) {

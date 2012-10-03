@@ -17,16 +17,30 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "svg_subprocess_character_generator.h"
-#include "rsvg_frame.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-SvgSubprocessCharacterGenerator::SvgSubprocessCharacterGenerator(
-    const char *cmd, unsigned int dirty_level
-) : SubprocessCharacterGenerator(cmd, dirty_level) {
+#include "mjpeg_codec.h"
+#include "raw_frame.h"
+#include "posix_util.h"
+#include "cpu_dispatch.h"
+#include "hex_dump.h"
 
+int main(int argc, char **argv) {
+    if (argc > 1 && strcmp(argv[1], "-n") == 0) {
+        cpu_force_no_simd( );
+    }
+    
+    /* allocate 4MB buffer */
+    const size_t bufsize = 4*1024*1024;
+
+    void *buf = malloc(bufsize);
+    ssize_t size = read_all(STDIN_FILENO, buf, bufsize);
+
+    for (int i = 0; i < 1000; i++) {
+        fprintf(stderr, "buf=%p size=%zu\n", buf, size);
+        RawFrame *frame = RawFrame::from_png_data(buf, size);
+        delete frame;
+    }
 }
-
-RawFrame *SvgSubprocessCharacterGenerator::do_render(void *data, size_t size) {
-    return RsvgFrame::render_svg((const char *)data, size);
-}
-

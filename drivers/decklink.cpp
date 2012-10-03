@@ -26,8 +26,8 @@
 #include <assert.h>
 #include <string.h>
 
-#define IN_PIPE_SIZE 128
-#define OUT_PIPE_SIZE 15 
+#define IN_PIPE_SIZE 32
+#define OUT_PIPE_SIZE 4
 
 struct decklink_norm {
     const char *name;
@@ -197,6 +197,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 deckLinkOutput(NULL), frame_counter(0),
                 last_frame(NULL), in_pipe(OUT_PIPE_SIZE), audio_in_pipe(NULL) {
 
+            frames_written = 0;
             norm = norm_;
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
             time_base = norms[norm].time_base;
@@ -208,7 +209,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             deckLink = find_card(card_index);
             configure_card( );
             open_card( );
-            preroll_video_frames(16);
+            preroll_video_frames(4);
 
             if (enable_audio) {
                 setup_audio( );
@@ -290,36 +291,29 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         }
 
         virtual HRESULT RenderAudioSamples(bool preroll) {
-            if (preroll) {
-                if (current_audio_pkt != NULL) {
-                    try_finish_current_audio_packet( );
-                    if (current_audio_pkt == NULL) {
-                        audio_preroll_done = 1;
-                    }
-                } 
-            } else {
-                /* Cram as much audio into the buffer as we can. */
-                for (;;) {
-                    if (current_audio_pkt != NULL) {
-                        if (try_finish_current_audio_packet( ) == 0) {
-                            /* 
-                             * if we are writing nothing... the buffer must
-                             * be full. Stop now.
-                             */
-                            break;
-                        }
-                    } else if (audio_in_pipe->data_ready( )) {
-                        current_audio_pkt = audio_in_pipe->get( );
-                        samples_written_from_current_audio_pkt = 0;
-                    } else {
-                        /* 
-                         * current audio packet is NULL.
-                         * Nothing is in the pipe.
-                         * Stop now.
-                         */
-                        break;
-                    }
+            AudioPacket *audio;
+            uint32_t n_consumed;
+
+            if (!preroll) {
+                /* read from audio input pipe */
+                while (audio_end < audio_size / 4 && audio_in_pipe->data_ready( )) {
+                    audio = audio_in_pipe->get( );
+                    memcpy(audio_data + audio_end, audio->data( ), audio->size( ));
+                    audio_end += audio->size( );
+                    delete audio;
                 }
+            }
+
+            if (audio_end > 0) {
+                deckLinkOutput->ScheduleAudioSamples(audio_data, 
+                        audio_end / 4, 0, 0, &n_consumed);
+
+                memmove(audio_data, audio_data + 4*n_consumed, 
+                        audio_end - 4*n_consumed);
+
+                audio_end -= 4*n_consumed;
+            } else if (preroll) {
+                audio_preroll_done = 1;
             }
 
             return S_OK;
@@ -354,6 +348,11 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         AudioPacket *current_audio_pkt;
         uint32_t samples_written_from_current_audio_pkt;
+
+        uint32_t frames_written;
+
+        uint8_t *audio_data;
+        size_t audio_start, audio_end, audio_size;
 
         void open_card( ) {
             IDeckLinkDisplayModeIterator *it;
@@ -402,10 +401,10 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             audio_in_pipe = new Pipe<AudioPacket *>(OUT_PIPE_SIZE);
 
-            /* FIXME magic 29.97 related number */
-            /* Set up empty audio packet for prerolling */
-            current_audio_pkt = new AudioPacket(48000, n_channels, 2, 25626);
-            samples_written_from_current_audio_pkt = 0;
+            audio_size = 1601*4*4*4;
+            audio_end = 1601*4*4;
+            audio_data = new uint8_t[audio_size];
+            memset(audio_data, 0, audio_size);
 
             assert(deckLinkOutput != NULL);
 
@@ -489,6 +488,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
         void preroll_video_frames(unsigned int n_frames) {
             IDeckLinkMutableVideoFrame *frame;
+            IDeckLinkVideoFrameAncillary *anc;
             for (unsigned int i = 0; i < n_frames; i++) {
                 if (deckLinkOutput->CreateVideoFrame(norms[norm].w, 
                         norms[norm].h, 2*norms[norm].w, bpf,
@@ -497,8 +497,36 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                     throw std::runtime_error("Failed to create frame"); 
                 }
 
+                if (deckLinkOutput->CreateAncillaryData(bpf, &anc) != S_OK) {
+                    throw std::runtime_error("failed to set frame ancillary data");
+                }
+
+                if (frame->SetAncillaryData(anc) != S_OK) {
+                    throw std::runtime_error("failed to set frame ancillary data");
+                }
+
                 schedule_frame(frame);
             }
+        }
+
+        void set_frame_timecode(IDeckLinkMutableVideoFrame *frame) {
+            uint32_t frames = frames_written;
+
+            uint8_t fr = frames % 30;
+            frames /= 30;
+
+            uint8_t sec = frames % 60;
+            frames /= 60;
+
+            uint8_t min = frames % 60;
+            frames /= 60;
+
+            uint8_t hr = frames;
+
+            frame->SetTimecodeFromComponents(bmdTimecodeVITC, hr, min, 
+                sec, fr, bmdTimecodeFlagDefault);
+        
+            frames_written++;
         }
 
         void schedule_frame(IDeckLinkMutableVideoFrame *frame) {
@@ -523,6 +551,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 fprintf(stderr, "DeckLink: on fire\n");
             }
             
+            set_frame_timecode(frame);
+
             deckLinkOutput->ScheduleVideoFrame(frame, 
                 frame_counter * frame_duration, frame_duration, time_base);
 
@@ -549,6 +579,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
          * if it is fully consumed.
          * Return number of samples consumed.
          */
+#if 1
         int try_finish_current_audio_packet( ) {
             uint32_t n_consumed;
             uint32_t n_left;
@@ -590,6 +621,22 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             return n_consumed;
         }
+#else
+
+        int try_finish_current_audio_packet( ) {
+            uint32_t n_consumed;
+
+            if (current_audio_pkt != NULL) {
+                delete current_audio_pkt;
+                current_audio_pkt = NULL;
+            }
+
+            deckLinkOutput->ScheduleAudioSamples(waveform, 1000, 0, 0, &n_consumed);
+
+            return (int) (n_consumed / 4);
+        }
+#endif
+
 };
 
 class DeckLinkInputAdapter : public InputAdapter, 
@@ -603,6 +650,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
+            started = false;
 
             n_frames = 0;
             start_time = 0;
@@ -636,6 +684,10 @@ class DeckLinkInputAdapter : public InputAdapter,
             if (deckLink != NULL) {
                 deckLink->Release( );
             }
+        }
+
+        virtual void start( ) {
+            started = true;
         }
 
         virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv) { 
@@ -674,43 +726,15 @@ class DeckLinkInputAdapter : public InputAdapter,
             void *data;
 
 
+            /* Process video frame if available. */
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
-                    #ifdef GUESS_FRAMEDROPS
-                    uint64_t frame_time, theoretical_n_frames;
-                    struct timespec tp;
-                    if (clock_gettime(CLOCK_MONOTONIC_RAW, &tp) == -1) {
-                        fprintf(stderr, "DeckLink: can't get monotonic clock");
-                    }
-
-                    frame_time = tp.tv_sec * 1000000 + tp.tv_nsec / 1000;
-
-                    if (start_time == 0) {
-                        start_time = frame_time - 33366;
-                    }
-
-                    n_frames++;
-                    if ((n_frames % 2048) == 0) {
-                        theoretical_n_frames = (frame_time - start_time)
-                            * 1000L * 30L / 1001L / 1000000L;
-                        fprintf(stderr, "(%p)%lu frames / %lu us = %f fps\n",
-                            this, n_frames, frame_time - start_time,
-                            1000000.0 * ((double) n_frames
-                                / (double) (frame_time - start_time))
-                        );
-                        fprintf(stderr, "(%p)approx frame drops=%lu\n",
-                            this, theoretical_n_frames - n_frames);
-                    }
-                    #endif
-
-                    avsync++;
-
                     out = new DecklinkInputRawFrame(in, pf);
                     out->set_field_dominance(dominance);
                     
-                    if (out_pipe.can_put( )) {
+                    if (out_pipe.can_put( ) && started) {
                         out_pipe.put(out);
                     } else {
                         fprintf(stderr, "DeckLink: dropping input frame on floor\n");
@@ -719,27 +743,21 @@ class DeckLinkInputAdapter : public InputAdapter,
                 }
             }
 
-            if (audio_in != NULL) {
-                avsync--;
+            /* Process audio, if available. */
+            if (audio_in != NULL && audio_pipe != NULL) {
+                audio_out = new AudioPacket(audio_rate, n_channels, 2, 
+                        audio_in->GetSampleFrameCount( ));
 
-                if (audio_pipe != NULL) {
-                    audio_out = new AudioPacket(audio_rate, n_channels, 2, 
-                            audio_in->GetSampleFrameCount( ));
-
-                    if (audio_in->GetBytes(&data) != S_OK) {
-                        throw std::runtime_error(
-                            "DeckLink audio input: GetBytes failed"
-                        );
-                    }
-
-                    memcpy(audio_out->data( ), data, audio_out->size( ));
-                    audio_pipe->put(audio_out);
+                if (audio_in->GetBytes(&data) != S_OK) {
+                    throw std::runtime_error(
+                        "DeckLink audio input: GetBytes failed"
+                    );
                 }
-            }
 
-            if (avsync > 20 || avsync < -20) {
-                fprintf(stderr, "(%p) avsync drifted %d\n", this, avsync);
-                avsync = 0;
+                assert(audio_out->size( ) == (size_t) (4*audio_in->GetSampleFrameCount( )));
+
+                memcpy(audio_out->data( ), data, audio_out->size( ));
+                audio_pipe->put(audio_out);
             }
 
             return S_OK;
@@ -757,6 +775,8 @@ class DeckLinkInputAdapter : public InputAdapter,
         IDeckLink *deckLink;
         IDeckLinkInput *deckLinkInput;
         Pipe<RawFrame *> out_pipe;
+
+        bool started;
 
         RawFrame::PixelFormat pf;
         RawFrame::FieldDominance dominance;

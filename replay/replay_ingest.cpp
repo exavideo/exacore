@@ -47,6 +47,8 @@ void ReplayIngest::run_thread( ) {
     Mjpeg422Encoder enc(1920, 1080, 70); /* FIXME: hard coded frame size */
     Mjpeg422Encoder thumb_enc(480, 272, 30);
 
+    iadp->start( );
+
     for (;;) {
 
         /* obtain writable frame from buffer */

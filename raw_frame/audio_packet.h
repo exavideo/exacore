@@ -30,6 +30,8 @@ class AudioPacket {
                 size_t sample_size, size_t n_frames);
         virtual ~AudioPacket( );
 
+        AudioPacket *copy( );
+
         uint8_t *data( ) { return _data; }
         size_t size( ) { return _size; }
         size_t n_frames( ) { return _size / (_sample_size * _channels); }
@@ -50,6 +52,7 @@ class AudioPacket {
         unsigned int _rate;
         unsigned int _channels;
         size_t _sample_size;
+        static size_t npackets;
 };
 
 #endif

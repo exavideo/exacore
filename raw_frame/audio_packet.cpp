@@ -18,8 +18,12 @@
  */
 
 #include "audio_packet.h"
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdexcept>
+
+size_t AudioPacket::npackets = 0;
 
 AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
         size_t sample_size, size_t n_frames) {
@@ -32,15 +36,33 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
 
     _data = (uint8_t *)malloc(_size);
 
+    npackets++;
+    if (npackets > 1000) {
+        fprintf(stderr,
+            "More than 1000 AudioPackets are outstanding!\n"
+            "This is a sign of a memory leak.\n"
+            "Please check your code!\n"
+        );
+    }
+
     if (_data == NULL) {
         throw std::runtime_error("AudioPacket: failed to allocate data");
     }
 }
 
 AudioPacket::~AudioPacket( ) {
+    npackets--;
     if (_data != NULL) {
         free(_data);
     }
+}
+
+AudioPacket *AudioPacket::copy( ) {
+    AudioPacket *ret = new AudioPacket(_rate, _channels, 
+            _sample_size, n_frames( ));
+
+    memcpy(ret->_data, _data, _size);
+    return ret;
 }
 
 #ifdef RAWFRAME_POSIX_IO

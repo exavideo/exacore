@@ -47,6 +47,8 @@ class RawFrame {
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
         virtual ~RawFrame( );
 
+        RawFrame *copy( );
+
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
         uint8_t *pixel(coord_t x, coord_t y) { 
             if (x >= _w || y >= _h) {
@@ -69,6 +71,8 @@ class RawFrame {
 
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
+
+        static RawFrame *from_png_data(void *data, size_t size);
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
@@ -106,6 +110,8 @@ class RawFrame {
         void make_converter( );
         
         FieldDominance _field_dominance;
+
+        static int n_frames;
 };
 
 #define CHECK(x) check((void *)(x))
@@ -219,6 +225,7 @@ class RawFrameUnpacker {
                 uint8_t *, unsigned int);
         void (*do_CbYCrY8422_scan_triple)(size_t, uint8_t *,
                 uint8_t *, unsigned int);
+
 };
 
 class RawFrameConverter {

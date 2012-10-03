@@ -28,6 +28,10 @@
 #include "draw_BGRAn8.h"
 #include <string.h>
 
+#include <png.h>
+
+int RawFrame::n_frames = 0;
+
 RawFrame::RawFrame( ) {
     _pixel_format = UNDEF;
     _w = 0;
@@ -80,6 +84,12 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
     make_ops( );
 }
 
+RawFrame *RawFrame::copy( ) {
+    RawFrame *ret = new RawFrame(_w, _h, _pixel_format, _pitch);
+    memcpy(ret->_data, _data, _pitch*_h);
+    return ret;
+}
+
 void RawFrame::make_ops(void) {
     make_packer( );
     make_unpacker( );
@@ -120,6 +130,17 @@ size_t RawFrame::pixel_size( ) const {
 }
 
 void RawFrame::alloc( ) { 
+    n_frames++;
+
+    /* print scary warning if RawFrames aren't being freed */
+    if (n_frames > 1000) {
+        fprintf(stderr, 
+            "WARNING: More than 1000 RawFrames are currently allocated!\n"
+            "This may be an indication of a memory leak somewhere.\n"
+            "Please check your code!\n"
+        );
+    }
+
     assert(_w > 0);
     assert(_h > 0);
     assert(_pitch >= minpitch( ));
@@ -131,6 +152,7 @@ void RawFrame::alloc( ) {
 }
 
 void RawFrame::free_data( ) {
+    n_frames--;
     if (_data) {
         free(_data);
     }
@@ -196,6 +218,94 @@ ssize_t RawFrame::read_from_fd(int fd) {
 
 ssize_t RawFrame::write_to_fd(int fd) {
     return write_all(fd, _data, size( ));
+}
+
+struct pngmem_data {
+    uint8_t *data_ptr;
+    size_t length;
+};
+
+static void pngmem_read_data(png_structp read_ptr, png_bytep data, 
+        png_size_t length) {
+    struct pngmem_data *io = (struct pngmem_data *) png_get_io_ptr(read_ptr);
+
+    if (length > io->length) {
+        png_error(read_ptr, "out of input data");
+    } else {
+        memcpy(data, io->data_ptr, length);
+        io->data_ptr += length;
+        io->length -= length;
+    }
+}
+
+RawFrame *RawFrame::from_png_data(void *data, size_t size) {
+    /* based on sample at zarb.org/~gc/html/libpng.html */
+    RawFrame *out;
+    int w0, h0;
+    png_byte color_type;
+
+    png_structp png_dec;
+    png_infop png_info;
+    pngmem_data pngmem;
+
+    pngmem.data_ptr = (uint8_t *)data;
+    pngmem.length = size;
+
+    if (png_sig_cmp((png_bytep)data, 0, 8)) {
+        throw std::runtime_error("Invalid PNG data passed to from_png_data");    
+    }
+
+    png_dec = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (png_dec == NULL) {
+        throw std::runtime_error("png_create_read_struct failed");
+    }
+
+    png_info = png_create_info_struct(png_dec);
+    if (png_info == NULL) {
+        throw std::runtime_error("png_create_info_struct failed");
+    }
+
+    if (setjmp(png_jmpbuf(png_dec))) {
+        throw std::runtime_error("libpng longjmp'd");
+    }
+
+    png_set_read_fn(png_dec, (void *) &pngmem, pngmem_read_data);
+    png_read_info(png_dec, png_info);
+
+    w0 = png_get_image_width(png_dec, png_info);
+    h0 = png_get_image_height(png_dec, png_info);
+    color_type = png_get_color_type(png_dec, png_info);
+
+    if (png_get_bit_depth(png_dec, png_info) != 8) {
+        throw std::runtime_error(
+            "Invalid bit depth (stop trying to poison it, Reilly!)"
+        );
+    }
+
+    png_set_interlace_handling(png_dec);
+
+    if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) {
+        png_set_bgr(png_dec);
+    } else {
+        throw std::runtime_error("Cannot use non-RGBA PNG");
+    }
+
+    out = new RawFrame(w0, h0, RawFrame::BGRAn8);
+
+    png_bytep *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * h0);
+    
+    for (int y = 0; y < h0; y++) {
+        row_pointers[y] = out->scanline(y);
+    }
+
+    png_read_image(png_dec, row_pointers);
+
+    free(row_pointers);
+
+    png_read_end(png_dec, NULL);
+    png_destroy_read_struct(&png_dec, &png_info, NULL);
+
+    return out;
 }
 
 ssize_t RawFrame::write_tga_to_fd(int fd) {
