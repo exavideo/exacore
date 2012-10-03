@@ -29,6 +29,8 @@
 
 #include <png.h>
 
+int RawFrame::n_frames = 0;
+
 RawFrame::RawFrame( ) {
     _pixel_format = UNDEF;
     _w = 0;
@@ -123,6 +125,17 @@ size_t RawFrame::minpitch( ) const {
 }
 
 void RawFrame::alloc( ) { 
+    n_frames++;
+
+    /* print scary warning if RawFrames aren't being freed */
+    if (n_frames > 1000) {
+        fprintf(stderr, 
+            "WARNING: More than 1000 RawFrames are currently allocated!\n"
+            "This may be an indication of a memory leak somewhere.\n"
+            "Please check your code!\n"
+        );
+    }
+
     assert(_w > 0);
     assert(_h > 0);
     assert(_pitch >= minpitch( ));
@@ -134,6 +147,7 @@ void RawFrame::alloc( ) {
 }
 
 void RawFrame::free_data( ) {
+    n_frames--;
     if (_data) {
         free(_data);
     }

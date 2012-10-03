@@ -103,6 +103,8 @@ class RawFrame {
         void make_converter( );
         
         FieldDominance _field_dominance;
+
+        static int n_frames;
 };
 
 #define CHECK(x) check((void *)(x))
@@ -216,6 +218,7 @@ class RawFrameUnpacker {
                 uint8_t *, unsigned int);
         void (*do_CbYCrY8422_scan_triple)(size_t, uint8_t *,
                 uint8_t *, unsigned int);
+
 };
 
 class RawFrameConverter {

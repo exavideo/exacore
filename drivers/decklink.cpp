@@ -263,6 +263,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                     audio = audio_in_pipe->get( );
                     memcpy(audio_data + audio_end, audio->data( ), audio->size( ));
                     audio_end += audio->size( );
+                    delete audio;
                 }
             }
 

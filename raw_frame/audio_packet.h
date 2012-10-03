@@ -52,6 +52,7 @@ class AudioPacket {
         unsigned int _rate;
         unsigned int _channels;
         size_t _sample_size;
+        static size_t npackets;
 };
 
 #endif
