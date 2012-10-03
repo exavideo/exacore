@@ -30,6 +30,7 @@ class ReplayIngest : public Thread {
         ~ReplayIngest( );
         AsyncPort<ReplayRawFrame> *get_monitor( );
 
+        virtual void trigger( );
         void suspend_encode( );
         void resume_encode( );
         void debug( );

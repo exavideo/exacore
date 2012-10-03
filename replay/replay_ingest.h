@@ -40,6 +40,8 @@ class ReplayIngest : public Thread {
         void suspend_encode( );
         void resume_encode( );
 
+        virtual void trigger( );
+
         void debug( );
 
     protected:

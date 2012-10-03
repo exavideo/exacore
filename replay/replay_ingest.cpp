@@ -104,3 +104,7 @@ void ReplayIngest::resume_encode( ) {
     MutexLock l(m);
     encode_suspended = false;
 }
+
+void ReplayIngest::trigger( ) {
+    /* stub for "normal" (continuous) ingest */
+}

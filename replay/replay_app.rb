@@ -51,6 +51,7 @@ module Replay
         end
 
         def make_shot_now
+            @ingest.trigger     # trigger buffer dump from remote camera
             @buffer.make_shot(0, ReplayBuffer::END)
         end
 

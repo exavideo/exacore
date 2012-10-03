@@ -26,13 +26,19 @@
 
 ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd, 
         ReplayBuffer *buf_) {
-    int pipefd[2];
+    int jpeg_pipefd[2];
+    int cmd_pipefd[2];
 
     buf = buf_;
     iadp = NULL;
 
     /* make a pipe for the mjpeg data */
-    if (pipe(pipefd) < 0) {
+    if (pipe(jpeg_pipefd) < 0) {
+        throw POSIXError("ReplayMjpegIngest pipe()");
+    }
+
+    /* and another one for command output */
+    if (pipe(cmd_pipefd) < 0) {
         throw POSIXError("ReplayMjpegIngest pipe()");
     }
 
@@ -41,16 +47,20 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
     if (child_pid < 0) {
         throw POSIXError("ReplayMjpegIngest fork()");
     } else if (child_pid == 0) {
-        close(pipefd[0]);
-        close(STDIN_FILENO);
-        dup2(pipefd[1], STDOUT_FILENO);
+        close(jpeg_pipefd[0]);
+        close(cmd_pipefd[1]);
+        dup2(cmd_pipefd[0], STDIN_FILENO);
+        dup2(jpeg_pipefd[1], STDOUT_FILENO);
         execlp("sh", "sh", "-c", cmd, NULL);
         /* we should never get here */
         perror("execlp");
         abort( );
     } else {
-        close(pipefd[1]);
-        child_fd = pipefd[0];
+        close(jpeg_pipefd[1]);
+        jpeg_fd = jpeg_pipefd[0];
+
+        close(cmd_pipefd[0]);
+        cmd_fd = cmd_pipefd[1];
 
         jpegbuf = new uint8_t[BUFSIZE];
         buf_size = BUFSIZE;
@@ -61,7 +71,8 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
 }
 
 ReplayMjpegIngest::~ReplayMjpegIngest( ) {
-    close(child_fd);
+    close(jpeg_fd);
+    close(cmd_fd);
 }
 
 void ReplayMjpegIngest::run_thread( ) {
@@ -115,7 +126,7 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
     for (;;) {
         /* try to read more data into the buffer */
         if (buf_fill < buf_size) {
-            ret = read(child_fd, jpegbuf + buf_fill, buf_size - buf_fill);
+            ret = read(jpeg_fd, jpegbuf + buf_fill, buf_size - buf_fill);
             if (ret < 0) {
                 throw POSIXError("ReplayMjpegIngest read()");
             } else if (ret == 0) {
@@ -166,4 +177,9 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
             throw std::runtime_error("data stream appears not to be JPEG");
         }
     }
+}
+
+void ReplayMjpegIngest::trigger( ) {
+    const char *cmd = "DUMP\n";
+    write_all(cmd_fd, cmd, strlen(cmd));
 }
