@@ -23,6 +23,7 @@
 #include "mjpeg_codec.h"
 #include "cairo_frame.h"
 #include "avspipe_allocators.h"
+#include "instrument.h"
 #include <string.h>
 #include <fcntl.h>
 
@@ -49,7 +50,8 @@ ReplayPlayout::~ReplayPlayout( ) {
 void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     MutexLock l(m);
     current_source = shot.source;
-    /* 1/2 frame of timecode between output fields */
+    
+    /* this translates to 3/4 of realtime playback */
     field_rate = Rational(3, 8);
     current_pos = Rational((int) shot.start);
     shot_end = shot.start + shot.length;
@@ -157,27 +159,17 @@ void ReplayPlayout::run_thread( ) {
 
 
         if (current_avspipe == NULL) {
-            try {
-                get_and_advance_current_fields(rfd1, rfd2, pos);
-            } catch (ReplayFrameNotFoundException &ex) {
-                /* we've run off the end of the buffer */
-                rfd1.clear( );
-                rfd2.clear( );
-            }
-
+            get_and_advance_current_fields(rfd1, rfd2, pos);
             out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-
-            if (!rfd1.valid( )) {
-                /* throw up our color bars */
-                memcpy(out->data( ), bars->data( ), out->size( ));
-            } else {
-                /* decode the replay */
+    
+            try {
                 decode_field(out, rfd1, rfd_cache, f_cache, true);
                 decode_field(out, rfd2, rfd_cache, f_cache, false);
+            } catch (ReplayFrameNotFoundException &ex) {
+                memcpy(out->data( ), bars->data( ), out->size( ));
             }
 
             apply_dsks(out);
-
             add_clock(out);
 
             /* scale down to BGRAn8 and send to monitor port */
@@ -291,18 +283,23 @@ void ReplayPlayout::apply_dsks(RawFrame *target) {
     }
 }
 
+/* 
+ * Note, this only fills in timecode and source data for f1 and f2,
+ * it does not call get_readable_frame().
+ */
 void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         ReplayFrameData &f2, Rational &pos) {
     MutexLock l(m);
     timecode_t tc;
 
+    Instrument instr("get_and_advance_current_fields", 25);
+
     if (current_source != NULL) {
         pos = current_pos;
         tc = current_pos.integer_part( );
-        current_source->get_readable_frame(tc, f1);
 
-        /* keep nearby frames in memory when possible */
-        lock.set_position(current_source, tc);
+        f1.pos = tc;
+        f1.source = current_source;
 
         if (current_pos.fractional_part( ).less_than_one_half( )) {
             f1.use_first_field = true;
@@ -313,8 +310,10 @@ void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
         current_pos += field_rate;
         
         tc = current_pos.integer_part( );
-        current_source->get_readable_frame(tc, f2);
-        
+       
+        f2.pos = tc;
+        f2.source = current_source;
+
         if (current_pos.fractional_part( ).less_than_one_half( )) {
             f2.use_first_field = true;
         } else {
@@ -354,24 +353,27 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
     RawFrame *tmp;
     std::string com;
 
-    /* decode the field data if we don't have it cached */
-    if (field.main_jpeg( ) != cache_data.main_jpeg( )) {
+    if (field.source == NULL) {
+        throw ReplayFrameNotFoundException();
+    }
+
+    /* check if we have moved to a different frame; if so, decode it. */
+    if (field.pos != cache_data.pos || field.source != cache_data.source) {
         delete cache_frame;
+        field.source->get_readable_frame(field.pos, field);
         cache_frame = dec.decode(field.main_jpeg( ), field.main_jpeg_size( ));
 
-        /* load game state data if available */
-        /* FIXME this should coome from field aux data */
-        dec.get_comment(com);
-        game_data.from_jpeg_comment(com);
+        cache_data.source = field.source;
+        cache_data.pos = field.pos;
 
-        /* Scale up video to 1920x1080 */
-        /* FIXME this assumes we always want 1920x1080 output */
-        if (cache_frame->w( ) < 1920) {
-            tmp = cache_frame->convert->CbYCrY8422_1080( ); 
+        field.source->finish_frame_read(field);
+
+        /* scale to 1080i if needed */
+        if (cache_frame->w() < 1920) {
+            tmp = cache_frame->convert->CbYCrY8422_1080( );
             delete cache_frame;
             cache_frame = tmp;
         }
-        cache_data = field;
     }
 
     /* figure which lines we're taking and where they're going */

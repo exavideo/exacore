@@ -105,7 +105,7 @@ void ReplayMjpegIngest::run_thread( ) {
         thm_enc.encode_to(decoded_monitor, dest.thumb_jpeg( ),
                 dest.thumb_jpeg_size( ));
 
-        buf->finish_frame_write( );
+        buf->finish_frame_write(dest);
 
         /* scale down frame to send to monitor */
         monitor_frame = new ReplayRawFrame(decoded_monitor);

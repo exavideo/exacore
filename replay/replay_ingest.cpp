@@ -50,10 +50,6 @@ void ReplayIngest::run_thread( ) {
     iadp->start( );
 
     for (;;) {
-
-        /* obtain writable frame from buffer */
-        buf->get_writable_frame(dest);
-
         /* obtain frame from input adapter */
         input = iadp->output_pipe( ).get( );
 
@@ -64,6 +60,9 @@ void ReplayIngest::run_thread( ) {
         }
 
         if (!suspended) {
+            /* obtain writable frame from buffer */
+            buf->get_writable_frame(dest);
+
             /* set field dominance if necessary */
             if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
                 buf->set_field_dominance(input->field_dominance( ));
@@ -81,7 +80,7 @@ void ReplayIngest::run_thread( ) {
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
             thumb_enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
 
-            buf->finish_frame_write( );
+            buf->finish_frame_write(dest);
 
             /* scale down frame to send to monitor */
             monitor_frame = new ReplayRawFrame(thumb);

@@ -42,6 +42,7 @@ void ReplayFrameExtractor::extract_raw_jpeg(const ReplayShot &shot,
             return;
         }
     }
+    shot.source->finish_frame_read(rfd);
 
     throw std::runtime_error("no valid JPEG frame found");
 }
@@ -58,6 +59,7 @@ void ReplayFrameExtractor::extract_thumbnail_jpeg(const ReplayShot &shot,
             return;
         }
     }
+    shot.source->finish_frame_read(rfd);
 }
 
 void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
@@ -72,4 +74,6 @@ void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
     delete rf;
 
     jpeg.assign((char *)enc.get_data( ), enc.get_data_size( ));
+
+    shot.source->finish_frame_read(rfd);
 }

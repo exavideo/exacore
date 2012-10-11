@@ -35,7 +35,7 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-#define ENABLE_MSYNC
+//#define ENABLE_MSYNC
 
 struct msync_req {
     void *base;
@@ -102,14 +102,8 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
         throw std::runtime_error("cannot use this thing as a buffer");
     }
 
-    /* memory map entire buffer file */
-    void *mp;
-    mp = mmap(NULL, buffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (mp == MAP_FAILED) {
-        throw POSIXError("mmap");
-    }
+    data = NULL;
 
-    data = (uint8_t *) mp;
     tc_current = 0;
     this->buffer_size = buffer_size;
     this->frame_size = frame_size;
@@ -125,10 +119,6 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
-    if (munmap(data, buffer_size) != 0) {
-        throw POSIXError("munmap");
-    }
-
     if (close(fd) != 0) {
         throw POSIXError("close");
     }
@@ -171,16 +161,18 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
 
     frame_data.source = this;
     frame_data.pos = tc_current + 1;
-    frame_data.data_ptr = data + frame_index * frame_size;
     frame_data.data_size = frame_size;
+    frame_data.data_ptr = mmap(
+        NULL, frame_size, PROT_READ | PROT_WRITE, 
+        MAP_SHARED | MAP_LOCKED, fd, frame_index * frame_size
+    );
 
-    /* read-ahead the next frame so we have somewhere to put it*/
-    try_readahead(tc_current + 1, 128);
-
-    // write_lock.set_position(this, tc_current);
+    if (frame_data.data_ptr == MAP_FAILED) {
+        throw POSIXError("mmap failed in get_writable_frame");
+    }
 }
 
-void ReplayBuffer::finish_frame_write( ) {
+void ReplayBuffer::finish_frame_write(ReplayFrameData &rfd) {
 #ifdef ENABLE_MSYNC
     unsigned int frame_index = tc_current % n_frames;
 
@@ -196,12 +188,10 @@ void ReplayBuffer::finish_frame_write( ) {
         mst->request_queue.put(req);
     }
 #endif
-
-    /* 
-     * force the issue of re-syncing these pages to disk 
-     * so pdflush doesn't block the whole process at a bad time
-     */
-    //msync(data_ptr, frame_size, MS_SYNC);
+    
+    if (munmap(rfd.data_ptr, rfd.data_size) != 0) {
+        throw std::runtime_error("munmap failed in finish_frame_write");
+    }
     
     tc_current++;
 }
@@ -222,10 +212,26 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     
     frame_data.source = this;
     frame_data.pos = tc;
-    frame_data.data_ptr = data + frame_index * frame_size;
+
+    void *dp = mmap(
+        NULL, frame_size, PROT_READ, MAP_SHARED | MAP_LOCKED, 
+        fd, frame_index * frame_size
+    );
+
+    if (dp == MAP_FAILED) {
+        throw POSIXError("mmap failed in get_readable_frame");
+    }
+
+    frame_data.data_ptr = dp;
     frame_data.data_size = frame_size;
 
-    try_readahead(tc, 128);
+    //try_readahead(tc, 128);
+}
+
+void ReplayBuffer::finish_frame_read(ReplayFrameData &frame_data) {
+    if (munmap(frame_data.data_ptr, frame_data.data_size) != 0) {
+        throw POSIXError("munmap failed in finish_frame_read");
+    }
 }
 
 const char *ReplayBuffer::get_name( ) {
@@ -401,5 +407,11 @@ void ReplayBuffer::try_readahead(timecode_t tc, unsigned int n) {
 
 void ReplayBuffer::try_readahead(timecode_t tc) {
     unsigned int frame_index = tc % n_frames;
+//    int ret;
     madvise(data + frame_index * frame_size, frame_size, MADV_WILLNEED);
+#if 0
+    if (ret != 0) {
+        perror("madvise");
+    }
+#endif
 }

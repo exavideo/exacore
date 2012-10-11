@@ -81,6 +81,7 @@ void ReplayPreview::run_thread( ) {
             /* decode at 960 max width */
             new_frame = dec.decode(rfd.main_jpeg( ), 
                     rfd.main_jpeg_size( ), 960);
+            rfd.source->finish_frame_read(rfd);
 
             /* send to multiview */
             monitor_frame = new ReplayRawFrame(new_frame);

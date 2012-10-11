@@ -70,9 +70,10 @@ class ReplayBuffer {
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
 
         void get_writable_frame(ReplayFrameData &frame_data);
-        void finish_frame_write( );
+        void finish_frame_write(ReplayFrameData &frame_data);
 
         void get_readable_frame(timecode_t tc, ReplayFrameData &frame_data);
+        void finish_frame_read(ReplayFrameData &frame_data);
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
         void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }
