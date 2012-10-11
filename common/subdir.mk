@@ -1,4 +1,5 @@
 common_OBJECTS = \
+        common/clocks.o \
         common/xmalloc.o \
         common/posix_util.o \
         common/cpu_dispatch.o \
@@ -6,4 +7,4 @@ common_OBJECTS = \
         common/backtrace.o \
         common/new_delete_malloc.o \
         common/hex_dump.o \
-
+        common/instrument.o \

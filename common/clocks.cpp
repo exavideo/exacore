@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,37 +17,21 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MUTEX_H
-#define _MUTEX_H
+#include "clocks.h"
+#include <time.h>
+#include <stdio.h>
 
-#include <pthread.h>
-#include <stdint.h>
+uint64_t clock_monotonic_msec( ) {
+    uint64_t ret;
+    struct timespec ts;
 
-class Condition;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        perror("clock_gettime");
+    }
 
-class Mutex {
-    public:
-        Mutex( );
-        ~Mutex( );
-        void lock( );
-        void unlock( );
-    protected:
-        void thread_acquired( );
-        void thread_released( );
-        pthread_mutex_t mut;
-        uint64_t msec_locked;
-        friend class Condition;
-};
+    ret = ts.tv_sec;
+    ret *= 1000;
+    ret += (ts.tv_nsec / 1000000);
 
-class MutexLock {
-    public:
-        MutexLock(Mutex &mut);
-        void force_unlock( );
-        ~MutexLock( );
-    protected:
-        Mutex *_mut;
-        bool locked;
-};
-
-#endif
-
+    return ret;    
+}

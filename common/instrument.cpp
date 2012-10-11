@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,37 +17,25 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MUTEX_H
-#define _MUTEX_H
+#include "instrument.h"
+#include "clocks.h"
+#include <stdio.h>
 
-#include <pthread.h>
-#include <stdint.h>
+Instrument::Instrument(const char *fname, uint64_t threshold_ms) 
+        : fn(fname), threshold(threshold_ms) {
+    
+    start_ms = clock_monotonic_msec( );
+}
 
-class Condition;
+Instrument::~Instrument() {
+    uint64_t time_taken;
 
-class Mutex {
-    public:
-        Mutex( );
-        ~Mutex( );
-        void lock( );
-        void unlock( );
-    protected:
-        void thread_acquired( );
-        void thread_released( );
-        pthread_mutex_t mut;
-        uint64_t msec_locked;
-        friend class Condition;
-};
+    time_taken = clock_monotonic_msec( ) - start_ms;
 
-class MutexLock {
-    public:
-        MutexLock(Mutex &mut);
-        void force_unlock( );
-        ~MutexLock( );
-    protected:
-        Mutex *_mut;
-        bool locked;
-};
-
-#endif
-
+    if (time_taken > threshold) {
+        fprintf(
+            stderr, "function %s took %lu msec to finish\n", 
+            fn, time_taken
+        );
+    }
+}

@@ -25,6 +25,7 @@
 
 #include <sys/time.h>
 #include <stdio.h>
+#include "clocks.h"
 #include "backtrace.h"
 
 static void throw_on_error(int ret, const char *msg) {
@@ -59,39 +60,33 @@ Mutex::~Mutex( ) {
 
 void Mutex::lock( ) {
     throw_on_error(pthread_mutex_lock(&mut), "Failed to lock mutex");
+    thread_acquired( );
 }
 
 void Mutex::unlock( ) {
+    thread_released( );
     if (pthread_mutex_unlock(&mut) != 0) {
         throw std::runtime_error("Failed to unlock mutex");
     }
 }
 
-MutexLock::MutexLock(Mutex &mut) {
-    /* instrumented to determine if we're having lock performance issues */
-    struct timeval tv1, tv2;
-    _mut = &mut;
+void Mutex::thread_acquired( ) {
+    msec_locked = clock_monotonic_msec( );
+}
 
-    gettimeofday(&tv1, NULL);
-    _mut->lock( );
-    gettimeofday(&tv2, NULL);
+void Mutex::thread_released( ) {
+    msec_locked = clock_monotonic_msec( ) - msec_locked;
 
-    /* subtract time values tv2-tv1 */
-    if (tv1.tv_usec > tv2.tv_usec) {
-        /* borrow if necessary */
-        tv2.tv_sec -= 1;
-        tv2.tv_usec += 1000000;
-    }
-
-    tv2.tv_sec -= tv1.tv_sec;
-    tv2.tv_usec -= tv1.tv_usec;
-
-    if (tv2.tv_sec > 1 || tv2.tv_usec > 20000) {
-        fprintf(stderr, "mutex %p blocked for %d.%06d sec\n", 
-            _mut, (int) tv2.tv_sec, (int) tv2.tv_usec);
+    if (msec_locked > 500) {
+        fprintf(stderr, "mutex locked for %lu msec, backtrace follows\n", 
+            msec_locked);
         print_backtrace( );
     }
-    
+}
+
+MutexLock::MutexLock(Mutex &mut) {
+    _mut = &mut;
+    _mut->lock( );
     locked = true;
 }
 

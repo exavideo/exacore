@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,37 +17,11 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MUTEX_H
-#define _MUTEX_H
+#ifndef _CLOCKS_H
+#define _CLOCKS_H
 
-#include <pthread.h>
 #include <stdint.h>
 
-class Condition;
-
-class Mutex {
-    public:
-        Mutex( );
-        ~Mutex( );
-        void lock( );
-        void unlock( );
-    protected:
-        void thread_acquired( );
-        void thread_released( );
-        pthread_mutex_t mut;
-        uint64_t msec_locked;
-        friend class Condition;
-};
-
-class MutexLock {
-    public:
-        MutexLock(Mutex &mut);
-        void force_unlock( );
-        ~MutexLock( );
-    protected:
-        Mutex *_mut;
-        bool locked;
-};
+uint64_t clock_monotonic_msec( );
 
 #endif
-
