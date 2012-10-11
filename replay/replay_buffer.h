@@ -84,9 +84,6 @@ class ReplayBuffer {
         void unlock_frame(timecode_t frame);
 
     private:
-        class MsyncBackground;
-        MsyncBackground *mst;
-
         RawFrame::FieldDominance _field_dominance;
 
         char *name;

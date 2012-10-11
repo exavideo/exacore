@@ -35,47 +35,11 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-//#define ENABLE_MSYNC
-
-struct msync_req {
-    void *base;
-    size_t size;
-};
-
-class ReplayBuffer::MsyncBackground : public Thread {
-    public:
-        MsyncBackground( ) : request_queue(256) {
-            start_thread( );        
-        };
-
-        ~MsyncBackground( ) {
-        
-        };
-
-        Pipe<msync_req> request_queue;
-
-    protected:
-        void run_thread( ) {
-            msync_req req;
-
-            for (;;) {
-                req = request_queue.get( );
-                msync(req.base, req.size, MS_SYNC);
-            }
-        };
-};
-
 ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
         size_t frame_size, const char *name) {
     int error;
     struct stat stat;
     
-#ifdef ENABLE_MSYNC
-    mst = new MsyncBackground( );
-#else
-    mst = NULL;
-#endif
-
     _field_dominance = RawFrame::UNKNOWN;
 
     /* open and allocate (if necessary) buffer file */
@@ -173,22 +137,6 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
 }
 
 void ReplayBuffer::finish_frame_write(ReplayFrameData &rfd) {
-#ifdef ENABLE_MSYNC
-    unsigned int frame_index = tc_current % n_frames;
-
-    unsigned int block_index = frame_index & ~0x3fU;
-    unsigned int block_size = frame_size * 0x40;
-
-    /* have our background thread msync() this stuff */
-    if ((frame_index & 0x3fU) == 0x3fU) {
-        void *data_ptr = data + block_index * frame_size;
-        msync_req req;
-        req.base = data_ptr;
-        req.size = block_size;
-        mst->request_queue.put(req);
-    }
-#endif
-    
     if (munmap(rfd.data_ptr, rfd.data_size) != 0) {
         throw std::runtime_error("munmap failed in finish_frame_write");
     }
