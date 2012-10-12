@@ -105,6 +105,19 @@ unsigned int ReplayPlayout::add_svg_dsk(const std::string &svg,
     return dsks.size( ) - 1;
 }
 
+unsigned int ReplayPlayout::add_png_file_dsk(const std::string &pngpath,
+        coord_t xoffset, coord_t yoffset) {
+    MutexLock l(dskm);
+    struct dsk the_dsk;
+
+    the_dsk.x = xoffset;
+    the_dsk.y = yoffset;
+    the_dsk.key = RawFrame::from_png_file(pngpath.c_str());
+
+    dsks.push_back(the_dsk);
+    return dsks.size( ) - 1;
+}
+
 void ReplayPlayout::show_clock( ) {
     MutexLock l(clockm);
     render_clock = true;
@@ -360,7 +373,7 @@ void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
     /* check if we have moved to a different frame; if so, decode it. */
     if (field.pos != cache_data.pos || field.source != cache_data.source) {
         delete cache_frame;
-        field.source->get_readable_frame(field.pos, field);
+        field.source->get_readable_frame(field.pos, field, true);
         cache_frame = dec.decode(field.main_jpeg( ), field.main_jpeg_size( ));
 
         cache_data.source = field.source;

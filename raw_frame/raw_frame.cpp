@@ -30,6 +30,10 @@
 
 #include <png.h>
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
 int RawFrame::n_frames = 0;
 
 RawFrame::RawFrame( ) {
@@ -236,6 +240,32 @@ static void pngmem_read_data(png_structp read_ptr, png_bytep data,
         io->data_ptr += length;
         io->length -= length;
     }
+}
+
+RawFrame *RawFrame::from_png_file(const char *file) {
+    int fd;
+    struct stat st;
+    void *data;
+    RawFrame *ret;
+
+    fd = open(file, O_RDONLY);
+
+    if (fd == -1) {
+        throw POSIXError("open png file");
+    }
+
+    if (fstat(fd, &st) != 0) {
+        throw POSIXError("stat png file");
+    }
+
+    data = malloc(st.st_size);
+    if (read_all(fd, data, st.st_size) != 1) {
+        throw std::runtime_error("failed to read PNG file");
+    }
+
+    ret = RawFrame::from_png_data(data, st.st_size);
+    free(data);
+    return ret;
 }
 
 RawFrame *RawFrame::from_png_data(void *data, size_t size) {

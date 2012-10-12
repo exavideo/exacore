@@ -61,6 +61,9 @@ class ReplayPlayout : public Thread {
         unsigned int add_svg_dsk(const std::string &svg, 
             coord_t xoffset = 0, coord_t yoffset = 0);
 
+        unsigned int add_png_file_dsk(const std::string &path, 
+            coord_t xoffset = 0, coord_t yoffset = 0);
+
     protected:
         void run_thread( );
         void get_and_advance_current_fields(ReplayFrameData &f1, 
