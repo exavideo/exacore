@@ -251,3 +251,13 @@ tests/png_decode: $(test_png_decode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -lpng -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += tests/png_decode    
+
+test_clock_monotonic_OBJECTS = \
+	$(common_OBJECTS) \
+        $(thread_OBJECTS) \
+	tests/clock_monotonic.o
+
+tests/clock_monotonic: $(test_clock_monotonic_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -pthread -lrt
+
+all_TARGETS += tests/clock_monotonic    
