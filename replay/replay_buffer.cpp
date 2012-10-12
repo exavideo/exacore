@@ -163,8 +163,8 @@ void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
     frame_data.pos = tc_current + 1;
     frame_data.data_size = frame_size;
     frame_data.data_ptr = mmap(
-        NULL, frame_size, PROT_READ | PROT_WRITE, 
-        MAP_SHARED | MAP_LOCKED, fd, frame_index * frame_size
+        NULL, frame_size, PROT_WRITE, MAP_SHARED, 
+        fd, frame_index * frame_size
     );
 
     if (frame_data.data_ptr == MAP_FAILED) {
@@ -198,7 +198,7 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     frame_data.pos = tc;
 
     void *dp = mmap(
-        NULL, frame_size, PROT_READ, MAP_SHARED | MAP_LOCKED, 
+        NULL, frame_size, PROT_READ, MAP_SHARED, 
         fd, frame_index * frame_size
     );
 
