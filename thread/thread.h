@@ -27,6 +27,7 @@ class Thread {
         Thread( );
         virtual ~Thread( );
         void priority(int scheduler, int priority);
+        void stick_to_cpu(unsigned int cpu);
 
     protected:
         void start_thread(void);

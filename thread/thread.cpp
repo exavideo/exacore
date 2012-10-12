@@ -37,6 +37,16 @@ void Thread::start_thread(void) {
     fprintf(stderr, "new thread %d\n", (int) pthread);
 }
 
+void Thread::stick_to_cpu(unsigned int cpu) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu, &cpuset);
+
+    if (pthread_setaffinity_np(pthread, sizeof(cpuset), &cpuset) != 0) {
+        fprintf(stderr, "pthread_setaffinity_np failed\n");
+    }
+}
+
 void Thread::priority(int policy, int priority) {
     struct sched_param param;
     param.sched_priority = priority;
