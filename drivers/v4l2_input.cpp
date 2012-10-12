@@ -158,7 +158,7 @@ class V4L2UpscaledInputAdapter : public InputAdapter,
 
 /* open Video4Linux2 device and try to set up certain parameters */
 V4L2UpscaledInputAdapter::V4L2UpscaledInputAdapter(const char *device) 
-        : out_pipe(32) {
+        : out_pipe(256) {
     buffers = NULL;
     n_buffers = 0;
 
