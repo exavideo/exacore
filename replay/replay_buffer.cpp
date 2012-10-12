@@ -35,6 +35,40 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+class ReplayBuffer::ReadaheadThread : public Thread {
+    public:
+        ReadaheadThread(int fd) : request_queue(1024) {
+            fd_ = fd;
+            start_thread( );
+        }
+
+        void request(off64_t offset, size_t count) {
+            ReadaheadRequest req;
+            req.offset = offset;
+            req.count = count;
+            request_queue.put(req);
+        }
+    protected:
+        struct ReadaheadRequest {
+            off64_t offset;
+            size_t count;
+        };
+
+        void run_thread( ) {
+            struct ReadaheadRequest req;
+
+            for (;;) {
+                req = request_queue.get( );
+                if (readahead(fd_, req.offset, req.count) != 0) {
+                    perror("readahead");
+                }
+            }
+        }
+
+        Pipe<ReadaheadRequest> request_queue;
+        int fd_;
+};
+
 ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
         size_t frame_size, const char *name) {
     int error;
@@ -65,6 +99,8 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
     } else {
         throw std::runtime_error("cannot use this thing as a buffer");
     }
+
+    readahead_thread = new ReadaheadThread(fd);
 
     data = NULL;
 
@@ -145,7 +181,7 @@ void ReplayBuffer::finish_frame_write(ReplayFrameData &rfd) {
 }
 
 void ReplayBuffer::get_readable_frame(timecode_t tc, 
-        ReplayFrameData &frame_data) {
+        ReplayFrameData &frame_data, bool readahead) {
     if (tc >= tc_current) {
         fprintf(stderr, "past the end: tc=%d tc_current=%d\n",
                 (int) tc, (int) tc_current);
@@ -173,7 +209,9 @@ void ReplayBuffer::get_readable_frame(timecode_t tc,
     frame_data.data_ptr = dp;
     frame_data.data_size = frame_size;
 
-    //try_readahead(tc, 128);
+    if (readahead) {
+        try_readahead(tc, 30);
+    }
 }
 
 void ReplayBuffer::finish_frame_read(ReplayFrameData &frame_data) {
@@ -347,19 +385,14 @@ void ReplayBufferLocker::move_range(ReplayBuffer *buf,
 }
 
 void ReplayBuffer::try_readahead(timecode_t tc, unsigned int n) {
-    for (unsigned int i = 0; i < n; i++) {
+    for (unsigned int i = 1; i < n; i++) {
         try_readahead(tc + i);
-        try_readahead(tc - i);
     }
 }
 
 void ReplayBuffer::try_readahead(timecode_t tc) {
     unsigned int frame_index = tc % n_frames;
-//    int ret;
-    madvise(data + frame_index * frame_size, frame_size, MADV_WILLNEED);
-#if 0
-    if (ret != 0) {
-        perror("madvise");
+    if (readahead_thread != NULL) {
+        readahead_thread->request(frame_index * frame_size, frame_size);
     }
-#endif
 }
