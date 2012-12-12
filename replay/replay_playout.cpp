@@ -143,6 +143,7 @@ void ReplayPlayout::run_thread( ) {
     RawFrame *f_cache = NULL;
     RawFrame *out = NULL;
     RawFrame *bars = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+    AudioPacket *aout = NULL;
 
     int barsfd;
 
@@ -204,9 +205,17 @@ void ReplayPlayout::run_thread( ) {
 
             /* send the full CbYCrY frame to output */
             oadp->input_pipe( ).put(out);
+            write_dummy_audio( );
         } else {
             try {
                 out = current_avspipe->output_pipe( ).get( );
+                if (current_avspipe->audio_output_pipe( )) {
+                    aout = current_avspipe->audio_output_pipe( )->get( );
+                    oadp->audio_input_pipe( )->put(aout);
+                } else {
+                    write_dummy_audio( );
+                }
+
                 monitor_frame = new ReplayRawFrame(
                     out->convert->BGRAn8_scale_1_2( )
                 );
@@ -230,6 +239,11 @@ void ReplayPlayout::run_thread( ) {
     }
 }
 
+void ReplayPlayout::write_dummy_audio( ) {
+    AudioPacket *apkt = apkt_allocator.allocate( );
+    oadp->audio_input_pipe( )->put(apkt);
+}
+
 void ReplayPlayout::avspipe_playout(const char *cmd) {
     MutexLock l(m);
 
@@ -238,7 +252,7 @@ void ReplayPlayout::avspipe_playout(const char *cmd) {
         return;
     }
 
-    next_avspipe = new AvspipeInputAdapter(cmd, true);
+    next_avspipe = new AvspipeInputAdapter(cmd, false);
 
 }
 

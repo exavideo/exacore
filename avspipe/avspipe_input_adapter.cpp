@@ -189,8 +189,8 @@ pid_t AvspipeInputAdapter::start_subprocess(const char *cmd, int &vpfd, int &apf
         /* child */
         close(vpipe[0]);
         close(apipe[0]);
-
-        size_t frames_delay = 30;
+#if 0
+        size_t frames_delay = 4;
         size_t samples_per_frame = 1601;
         size_t bytes_per_sample = 4;
 
@@ -200,7 +200,7 @@ pid_t AvspipeInputAdapter::start_subprocess(const char *cmd, int &vpfd, int &apf
         void *bogus_audio = malloc(bogus_audio_size);
         memset(bogus_audio, 0, bogus_audio_size);
         write_all(apipe[1], bogus_audio, bogus_audio_size);
-
+#endif
         close(STDIN_FILENO);
         execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL); 
 

@@ -29,6 +29,7 @@
 #include "async_port.h"
 #include "rational.h"
 #include "mjpeg_codec.h"
+#include "avspipe_allocators.h"
 #include "avspipe_input_adapter.h"
 
 #include <list>
@@ -78,6 +79,8 @@ class ReplayPlayout : public Thread {
         void apply_dsks(RawFrame *target);
         void add_clock(RawFrame *target);
 
+        void write_dummy_audio( );
+
         OutputAdapter *oadp;
 
         ReplayBuffer *current_source;
@@ -109,6 +112,8 @@ class ReplayPlayout : public Thread {
         coord_t clock_y;
 
         ReplayGameData game_data;
+
+        AvspipeNTSCSyncAudioAllocator apkt_allocator;
 };
 
 #endif

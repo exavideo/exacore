@@ -35,6 +35,7 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
     _size = _channels * _sample_size * n_frames;
 
     _data = (uint8_t *)malloc(_size);
+    memset(_data, 0, _size);
 
     npackets++;
     if (npackets > 1000) {

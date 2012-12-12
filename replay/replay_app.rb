@@ -88,7 +88,7 @@ module Replay
     # abstraction for what will someday be a config file parser
     class ReplayConfig
         def make_output_adapter
-            Replay::create_decklink_output_adapter(7, 0, RawFrame::CbYCrY8422)
+            Replay::create_decklink_output_adapter_with_audio(7, 0, RawFrame::CbYCrY8422)
         end
     end
 
