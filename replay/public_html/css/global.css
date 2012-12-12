@@ -4,14 +4,67 @@ body {
     background-attachment: fixed;
     background-position: bottom right;
     background-repeat: no-repeat;
-    min-width: 1920px;
 }
 
-#timelines img {
-    width: 120px;
-    height: 67px;
+.shotView {
+    height: 140px;
+    width: 380px;
+
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -khtml-border-radius: 5px;
+    border-radius: 5px;
+    
+    border: 1px dotted #808080;
+
+    padding: 10px;
+    margin: 10px;
+
+    text-align: left;
 }
 
-.timeline {
-    padding: 2px;
+.shotViewUnselected {
+    background-color: #808080;
+}
+
+.shotViewSelected {
+    background-color: #00ff00;
+}
+
+.shotView #shotPreview {
+    height: 100%;
+    float: left;
+    margin-right: 10px;
+    text-align: center;
+}
+
+.shotView #shotPreview img {
+    height: 100px;
+}
+
+
+.shotList {
+    text-align: center;
+    float: left;
+
+    min-width: 440px;
+
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -khtml-border-radius: 5px;
+    border-radius: 5px;
+    
+    border: 1px dotted red;
+
+    margin: 20px;
+    padding: 10px;
+}
+
+.shotScroll {
+    height: 700px;
+    overflow: auto;
+}
+
+.help {
+    background-color: #808080;
 }

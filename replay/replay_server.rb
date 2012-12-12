@@ -147,13 +147,20 @@ class ReplayLocalControl < ShuttleProInput
             @shifted = 2
 
         when 265
-            save_preview_shot 'rpi_goal'
+            store_shot
+            #save_preview_shot 'rpi_goal'
         when 266
-            save_preview_shot 'rpi_penalty'
+            store_shot
+            #save_preview_shot 'rpi_penalty'
+        #    capture_event
         when 267
-            save_preview_shot 'away_goal'
+            store_shot
+            #save_preview_shot 'away_goal'
+        #    capture_event
         when 268
-            save_preview_shot 'away_penalty'
+            store_shot
+            #save_preview_shot 'away_penalty'
+        #    capture_event
         when 269
             capture_event
         when 270
@@ -166,6 +173,11 @@ class ReplayLocalControl < ShuttleProInput
         elsif @shifted == 1
             @shifted = 0
         end
+    end
+
+    def store_shot
+        shot = @app.preview.shot
+        @web_interface.send_shot(shot)
     end
 
     def save_preview_shot(prefix)
@@ -262,8 +274,23 @@ end
 
 class ReplayServer < Patchbay
     # Get all shots currently saved.
+    get '/shots.json' do
+        shots = []
+        events.reverse_each do |evt|
+            evt.shots.each_with_index do |shot, source|
+                shots << shot.make_json(source)
+            end 
+        end
+        render :json => shots.to_json
+        #render :json => shots.map { |x| x.make_json( ) }.to_json
+    end
+
     get '/events.json' do
         render :json => (events.each_with_index.map { |x, i| x.make_json( ) }).to_json
+    end
+
+    put '/clear_events' do
+        @events = { }    
     end
 
     # Throw this shot up on the local operator's preview.
@@ -360,6 +387,15 @@ class ReplayServer < Patchbay
 
     def events
         @events.values.sort_by! { |event| event.id }
+    end
+
+    def shots
+        @shots
+    end
+
+    def send_shot(shot)
+        @shots ||= []
+        @shots << shot
     end
 
     def send_event(event)
