@@ -62,6 +62,10 @@ module Replay
         def monitor
             @ingest.monitor
         end
+
+        def buffer
+            @buffer
+        end
     end
 
     class ReplayPreview

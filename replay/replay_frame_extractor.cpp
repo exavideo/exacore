@@ -19,6 +19,7 @@
 
 #include "replay_frame_extractor.h"
 #include "replay_buffer.h"
+#include "audio_packet.h"
 
 ReplayFrameExtractor::ReplayFrameExtractor( ) 
         : dec(1920, 1080), enc(1920, 1080) {
@@ -85,7 +86,7 @@ void ReplayFrameExtractor::extract_raw_audio(const ReplayShot &shot,
 
     if (rfd.has_audio( )) {
         AudioPacket apkt(rfd.audio( ), rfd.audio_size( ));
-        data.assign(apkt.data( ), apkt.size( ));
+        data.assign((char *)apkt.data( ), apkt.size( ));
     }
 
     shot.source->finish_frame_read(rfd);

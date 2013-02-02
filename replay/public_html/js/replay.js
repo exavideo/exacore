@@ -125,6 +125,8 @@ function makeDivForShot(shot) {
     new_div.find('#forward').click(seekForwardButton);
     new_div.find('#in').click(markIn);
     new_div.find('#out').click(markOut);
+    new_div.find("#dlvideo").click(downloadVideo);
+    new_div.find("#dlaudio").click(downloadAudio);
 
     new_div.find('#queue').show( );
     new_div.find('#copy').hide( );
@@ -187,6 +189,22 @@ function markOut() {
     shotDiv.data('shot', shot);
 
     updateShotData(shotDiv); 
+}
+
+function downloadVideo() {
+    var shotDiv = $(this).parent();
+    var shot = shotDiv.data('shot');
+
+    url = '/sources/'+shot.source+'/'+shot.start+'/'+shot.length+'/video/shot.mjpg';
+    window.open(url, 'Video Download');
+}
+
+function downloadAudio() {
+    var shotDiv = $(this).parent();
+    var shot = shotDiv.data('shot');
+
+    url = '/sources/'+shot.source+'/'+shot.start+'/'+shot.length+'/audio/2ch_48khz/shot.raw';
+    window.open(url, 'Audio Download');
 }
 
 function seekBackButton() {

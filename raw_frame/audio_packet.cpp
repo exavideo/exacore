@@ -37,6 +37,14 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
     _data = (uint8_t *)malloc(_size);
     memset(_data, 0, _size);
 
+    leak_detect( );
+
+    if (_data == NULL) {
+        throw std::runtime_error("AudioPacket: failed to allocate data");
+    }
+}
+
+void AudioPacket::leak_detect( ) {
     npackets++;
     if (npackets > 1000) {
         fprintf(stderr,
@@ -44,10 +52,6 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
             "This is a sign of a memory leak.\n"
             "Please check your code!\n"
         );
-    }
-
-    if (_data == NULL) {
-        throw std::runtime_error("AudioPacket: failed to allocate data");
     }
 }
 
@@ -65,6 +69,7 @@ AudioPacket::AudioPacket(void *src, size_t size) {
 
     memcpy(_data, sd->_data, _size);
 
+    leak_detect( );
 }
 
 AudioPacket::~AudioPacket( ) {

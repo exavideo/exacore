@@ -20,6 +20,7 @@
 #include "replay_ingest.h"
 #include "mjpeg_codec.h"
 #include <assert.h>
+#include <string.h>
 
 ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_,
         ReplayGameData *gds) {
@@ -90,6 +91,7 @@ void ReplayIngest::run_thread( ) {
             if (input_audio) {
                 input_audio->serialize(dest.audio( ), dest.audio_size( ));
                 dest.enable_audio( );
+                delete input_audio;
             } else {
                 memset(dest.audio( ), 0, dest.audio_size( ));
                 dest.no_audio( );

@@ -259,7 +259,7 @@ class MjpegIterator
 
     def each
         shot = Replay::ReplayShot.new
-        shot.source = @source
+        shot.source = @source.buffer
         length = @length
         pos = @pos
 
@@ -273,7 +273,7 @@ class MjpegIterator
 end
 
 class RawAudioIterator
-    def initialize(source, start, length
+    def initialize(source, start, length)
         @source = source
         @pos = start
         @length = length
@@ -281,8 +281,8 @@ class RawAudioIterator
 
     def each
         shot = Replay::ReplayShot.new
-        shot.source = @source
-        shot.length = @length
+        shot.source = @source.buffer
+        length = @length
         pos = @pos
         while length > 0
             shot.start = pos
@@ -372,7 +372,7 @@ class ReplayServer < Patchbay
         end
     end
 
-    get '/sources/:id/:start/:length/video.mjpg' do
+    get '/sources/:id/:start/:length/video/:filename.mjpg' do
         srcid = params[:id].to_i
         source = replay_app.source(srcid)
         start = params[:start].to_i
@@ -381,7 +381,7 @@ class ReplayServer < Patchbay
         render :mjpg => MjpegIterator.new(source, start, length)
     end
 
-    get '/sources/:id/:start/:length/audio_2ch_48khz.raw' do
+    get '/sources/:id/:start/:length/audio/2ch_48khz/:filename.raw' do
         srcid = params[:id].to_i
         source = replay_app.source(srcid)
         start = params[:start].to_i
