@@ -79,6 +79,26 @@ struct ReplayFrameData {
         return sizeof(aux( )->thumbnail);
     }
 
+    void *audio( ) {
+        return aux( )->audio;
+    }
+
+    size_t audio_size( ) {
+        return sizeof(aux( )->audio);
+    }
+
+    bool has_audio( ) {
+        return aux( )->has_audio;
+    }
+
+    void enable_audio( ) {
+        aux( )->has_audio = true;
+    }
+
+    void no_audio( ) {
+        aux( )->has_audio = false;
+    }
+
     bool valid( ) {
         return (data_ptr != NULL);
     }
@@ -90,6 +110,8 @@ struct ReplayFrameData {
     friend class ReplayBuffer;
 protected:
     struct aux_data {
+        bool has_audio;
+        uint8_t audio[8192];
         uint8_t thumbnail[81920];
         uint8_t game_data[4096];
     };

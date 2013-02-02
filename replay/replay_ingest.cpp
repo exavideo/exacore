@@ -41,6 +41,7 @@ void ReplayIngest::debug( ) {
 
 void ReplayIngest::run_thread( ) {
     RawFrame *input, *thumb;
+    AudioPacket *input_audio;
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     std::string com;
@@ -50,8 +51,13 @@ void ReplayIngest::run_thread( ) {
     iadp->start( );
 
     for (;;) {
-        /* obtain frame from input adapter */
+        /* obtain frame (and maybe audio) from input adapter */
         input = iadp->output_pipe( ).get( );
+        if (iadp->audio_output_pipe( )) {
+            input_audio = iadp->audio_output_pipe( )->get( );
+        } else {
+            input_audio = NULL;
+        }
 
         bool suspended;
 
@@ -79,6 +85,15 @@ void ReplayIngest::run_thread( ) {
             /* scale input and make JPEG thumbnail */
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
             thumb_enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
+
+            /* store audio (if we have it) */
+            if (input_audio) {
+                input_audio->serialize(dest.audio( ), dest.audio_size( ));
+                dest.enable_audio( );
+            } else {
+                memset(dest.audio( ), 0, dest.audio_size( ));
+                dest.no_audio( );
+            }
 
             buf->finish_frame_write(dest);
 

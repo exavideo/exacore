@@ -98,6 +98,11 @@ module Replay
             @@previewer.extract_raw_jpeg(self, 0)
         end
 
+        def audio
+            @@previewer ||= ReplayFrameExtractor.new
+            @@previewer.extract_raw_audio(self, 0)
+        end
+
         def thumbnail
             @@previewer ||= ReplayFrameExtractor.new
             @@previewer.extract_thumbnail_jpeg(self, 0)

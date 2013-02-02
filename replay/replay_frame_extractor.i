@@ -34,4 +34,6 @@ class ReplayFrameExtractor {
                 std::string &OUTPUT);
         void extract_raw_jpeg(const ReplayShot &, timecode_t, 
                 std::string &OUTPUT);
+        void extract_raw_audio(const ReplayShot &, timecode_t, 
+                std::string &OUTPUT);
 };

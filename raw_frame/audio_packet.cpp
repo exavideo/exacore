@@ -51,6 +51,22 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
     }
 }
 
+AudioPacket::AudioPacket(void *src, size_t size) {
+    struct sdata *sd = (struct sdata *)src;
+    _rate = sd->_rate;
+    _channels = sd->_channels;
+    _size = sd->_size;
+    _sample_size = sd->_sample_size;
+    _data = (uint8_t *)malloc(_size);
+
+    if (size < sizeof(struct sdata) + _size) {
+        throw std::runtime_error("Tried to deserialize invalid AudioPacket");
+    }
+
+    memcpy(_data, sd->_data, _size);
+
+}
+
 AudioPacket::~AudioPacket( ) {
     npackets--;
     if (_data != NULL) {
@@ -64,6 +80,19 @@ AudioPacket *AudioPacket::copy( ) {
 
     memcpy(ret->_data, _data, _size);
     return ret;
+}
+
+void AudioPacket::serialize(void *dest, size_t size) {
+    if (size < sizeof(struct sdata) + _size) {
+        throw std::runtime_error("cannot serialize audio, not enough space");
+    }
+
+    struct sdata *sd = (struct sdata *)dest;
+    sd->_size = _size;
+    sd->_rate = _rate;
+    sd->_channels = _channels;
+    sd->_sample_size = _sample_size;
+    memcpy(sd->_data, _data, _size);
 }
 
 #ifdef RAWFRAME_POSIX_IO

@@ -272,6 +272,27 @@ class MjpegIterator
     end
 end
 
+class RawAudioIterator
+    def initialize(source, start, length
+        @source = source
+        @pos = start
+        @length = length
+    end
+
+    def each
+        shot = Replay::ReplayShot.new
+        shot.source = @source
+        shot.length = @length
+        pos = @pos
+        while length > 0
+            shot.start = pos
+            yield shot.audio
+            length -= 1
+            pos += 1
+        end 
+    end
+end
+
 class ReplayServer < Patchbay
     # Get all shots currently saved.
     get '/shots.json' do
@@ -358,6 +379,15 @@ class ReplayServer < Patchbay
         length = params[:length].to_i
 
         render :mjpg => MjpegIterator.new(source, start, length)
+    end
+
+    get '/sources/:id/:start/:length/audio_2ch_48khz.raw' do
+        srcid = params[:id].to_i
+        source = replay_app.source(srcid)
+        start = params[:start].to_i
+        length = params[:length].to_i
+
+        render :raw => RawAudioIterator.new(source, start, length)
     end
 
     get '/files.json' do

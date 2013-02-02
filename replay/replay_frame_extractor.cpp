@@ -77,3 +77,16 @@ void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
 
     shot.source->finish_frame_read(rfd);
 }
+
+void ReplayFrameExtractor::extract_raw_audio(const ReplayShot &shot,
+        timecode_t offset, std::string &data) {
+    ReplayFrameData rfd;
+    shot.source->get_readable_frame(shot.start + offset, rfd);
+
+    if (rfd.has_audio( )) {
+        AudioPacket apkt(rfd.audio( ), rfd.audio_size( ));
+        data.assign(apkt.data( ), apkt.size( ));
+    }
+
+    shot.source->finish_frame_read(rfd);
+}

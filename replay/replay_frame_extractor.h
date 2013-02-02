@@ -38,6 +38,9 @@ class ReplayFrameExtractor {
 
         void extract_raw_jpeg(const ReplayShot &shot, timecode_t offset,
                 std::string &jpeg);
+
+        void extract_raw_audio(const ReplayShot &shot, timecode_t offset,
+                std::string &data);
     protected:
         Mjpeg422Decoder dec;
         Mjpeg422Encoder enc;

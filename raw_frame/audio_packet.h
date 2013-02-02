@@ -26,11 +26,19 @@
 
 class AudioPacket {
     public:
+        /* create new AudioPacket */
         AudioPacket(unsigned int rate, unsigned int channels,
                 size_t sample_size, size_t n_frames);
+
+        /* reconstitute serialize()'d AudioPacket */
+        AudioPacket(void *src, size_t size);
+
         virtual ~AudioPacket( );
 
         AudioPacket *copy( );
+
+        /* save audio packet to a block of memory */
+        void serialize(void *dest, size_t size);
 
         uint8_t *data( ) { return _data; }
         size_t size( ) { return _size; }
@@ -47,6 +55,14 @@ class AudioPacket {
 #endif
 
     protected:
+        struct sdata {
+            size_t _size;
+            unsigned int _rate;
+            unsigned int _channels;
+            size_t _sample_size;
+            uint8_t data[0];
+        };
+
         uint8_t *_data;
         size_t _size;
         unsigned int _rate;
