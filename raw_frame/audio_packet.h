@@ -60,7 +60,7 @@ class AudioPacket {
             unsigned int _rate;
             unsigned int _channels;
             size_t _sample_size;
-            uint8_t data[0];
+            uint8_t _data[0];
         };
 
         uint8_t *_data;
