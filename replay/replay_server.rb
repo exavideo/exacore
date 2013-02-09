@@ -352,7 +352,7 @@ class ReplayServer < Patchbay
         now = replay_app.source(src).make_shot_now
         
         if tc < 0 or tc > now.start
-            render :json => '', :status => 404
+            render :json => '', :error => 404
         else
             shot = replay_app.source(src).make_shot_at(tc)
             render :jpg => shot.preview
@@ -365,7 +365,7 @@ class ReplayServer < Patchbay
         now = replay_app.source(src).make_shot_now
         
         if tc < 0 or tc > now.start
-            render :json => '', :status => 404
+            render :json => '', :error => 404
         else
             shot = replay_app.source(src).make_shot_at(tc)
             render :jpg => shot.thumbnail
