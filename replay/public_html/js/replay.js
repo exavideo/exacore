@@ -302,6 +302,26 @@ function handleKeyboard(evt) {
     }
 }
 
+function loadFiles( ) {
+    loadJson('/files.json', function(files) {
+        $.each(files, function(i, x) {
+            $('#filepicker').append('<option value="'+x+'">'+x+'</option>');
+        });
+    });
+}
+
+function rolloutFile( ) {
+    var file = $('#filepicker').val( );
+
+    if (file.length > 0) {
+        putJson({filename : file }, '/ffmpeg_rollout.json', function(){});
+    }
+}
+
+function resumeEncode( ) {
+    putJson('/resume_encode.json', { });
+}
+
 $(function() {
     //loadJson('/shots.json', populateShots);
     //refreshTimeoutLoop();
@@ -327,5 +347,9 @@ $(function() {
 
     $('#help').dialog({ autoOpen: false });
     $(document).keydown(handleKeyboard);
+
+    loadFiles( );
+    $("#rollout_file").click(rolloutFile);
+    $("#resume_encode").click(resumeEncode);
 });
 
