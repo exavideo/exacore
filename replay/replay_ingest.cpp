@@ -91,7 +91,6 @@ void ReplayIngest::run_thread( ) {
             if (input_audio) {
                 input_audio->serialize(dest.audio( ), dest.audio_size( ));
                 dest.enable_audio( );
-                delete input_audio;
             } else {
                 memset(dest.audio( ), 0, dest.audio_size( ));
                 dest.no_audio( );
@@ -107,6 +106,10 @@ void ReplayIngest::run_thread( ) {
             monitor_frame->tc = dest.pos;
 
             monitor.put(monitor_frame);
+        }
+
+        if (input_audio) {
+            delete input_audio;
         }
         
         delete input;
