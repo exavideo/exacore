@@ -392,7 +392,7 @@ class ReplayServer < Patchbay
 
     get '/files.json' do
         ROLLOUT_DIR = '/root/rollout'
-        render :json => Dir.glob(ROLLOUT_DIR + '/*.{mov,mpg}').to_json
+        render :json => Dir.glob(ROLLOUT_DIR + '/*.{avi,mov,mpg}').to_json
     end
 
     put '/ffmpeg_rollout.json' do
