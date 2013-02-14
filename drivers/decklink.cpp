@@ -741,6 +741,9 @@ class DeckLinkInputAdapter : public InputAdapter,
                         delete out;
                     }
                 }
+            } else {
+                fprintf(stderr, "DeckLink warning: frame with no video\n");
+                out_pipe.put(NULL);
             }
 
             /* Process audio, if available. */
@@ -758,6 +761,8 @@ class DeckLinkInputAdapter : public InputAdapter,
 
                 memcpy(audio_out->data( ), data, audio_out->size( ));
                 audio_pipe->put(audio_out);
+            } else if (audio_pipe != NULL) {
+                fprintf(stderr, "DeckLink warning: frame with no audio\n");
             }
 
             return S_OK;

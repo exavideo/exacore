@@ -41,7 +41,7 @@ void ReplayIngest::debug( ) {
 }
 
 void ReplayIngest::run_thread( ) {
-    RawFrame *input, *thumb;
+    RawFrame *input, *thumb, *last_input;
     AudioPacket *input_audio;
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
@@ -51,6 +51,8 @@ void ReplayIngest::run_thread( ) {
 
     iadp->start( );
 
+    last_input = NULL;
+
     for (;;) {
         /* obtain frame (and maybe audio) from input adapter */
         input = iadp->output_pipe( ).get( );
@@ -58,6 +60,12 @@ void ReplayIngest::run_thread( ) {
             input_audio = iadp->audio_output_pipe( )->get( );
         } else {
             input_audio = NULL;
+        }
+
+        /* if a frame was dropped, use the last one */
+        if (input == NULL) {
+            fprintf(stderr, "ReplayIngest warning: video input returned a NULL frame\n");
+            input = last_input;
         }
 
         bool suspended;
@@ -112,7 +120,11 @@ void ReplayIngest::run_thread( ) {
             delete input_audio;
         }
         
-        delete input;
+        /* if this frame was good, keep it */
+        if (input != last_input) {
+            delete last_input;
+            last_input = input;
+        }
     }
 }
 
