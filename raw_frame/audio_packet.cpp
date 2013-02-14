@@ -45,12 +45,15 @@ AudioPacket::AudioPacket(unsigned int rate, unsigned int channels,
 }
 
 void AudioPacket::leak_detect( ) {
-    npackets++;
-    if (npackets > 1000) {
+    //npackets++;
+    size_t current_npackets = __sync_add_and_fetch(&npackets, 1);
+
+    if (current_npackets > 1000) {
         fprintf(stderr,
-            "More than 1000 AudioPackets are outstanding!\n"
+            "More than 1000 (%zd) AudioPackets are outstanding!\n"
             "This is a sign of a memory leak.\n"
-            "Please check your code!\n"
+            "Please check your code!\n",
+            npackets
         );
     }
 }
@@ -63,17 +66,19 @@ AudioPacket::AudioPacket(void *src, size_t size) {
     _sample_size = sd->_sample_size;
     _data = (uint8_t *)malloc(_size);
 
+    leak_detect( );
+
     if (size < sizeof(struct sdata) + _size) {
         throw std::runtime_error("Tried to deserialize invalid AudioPacket");
     }
 
     memcpy(_data, sd->_data, _size);
-
-    leak_detect( );
 }
 
 AudioPacket::~AudioPacket( ) {
-    npackets--;
+    //npackets--;
+    __sync_sub_and_fetch(&npackets, 1);
+
     if (_data != NULL) {
         free(_data);
     }
