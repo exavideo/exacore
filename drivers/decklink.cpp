@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#define IN_PIPE_SIZE 32
+#define IN_PIPE_SIZE 256
 #define OUT_PIPE_SIZE 4
 
 struct decklink_norm {
@@ -145,6 +145,23 @@ static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode,
     return RawFrame::UNKNOWN; 
 }
 
+RawFrame *create_raw_frame_from_decklink(IDeckLinkVideoFrame *frame,
+        RawFrame::PixelFormat pf) {
+    void *dp;
+    RawFrame *ret = new RawFrame(
+        frame->GetWidth( ),
+        frame->GetHeight( ),
+        pf, frame->GetRowBytes( )
+    );
+
+    if (frame->GetBytes(&dp) != S_OK) {
+        throw std::runtime_error("Cannot get pointer to raw data");
+    }
+
+    memcpy(ret->data( ), dp, ret->size( ));
+
+    return ret;
+}
 /* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
 class DecklinkInputRawFrame : public RawFrame {
     public:
@@ -725,26 +742,29 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             void *data;
 
+            if (in == NULL && audio_in == NULL) {
+                fprintf(stderr, "VideoInputFrameArrived got nothing??\n");
+            }
 
             /* Process video frame if available. */
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
                     fprintf(stderr, "DeckLink input: no signal\n");
                 } else {
-                    out = new DecklinkInputRawFrame(in, pf);
+                    //out = new DecklinkInputRawFrame(in, pf);
+                    out = create_raw_frame_from_decklink(in, pf);
                     out->set_field_dominance(dominance);
                     
                     if (out_pipe.can_put( ) && started) {
                         out_pipe.put(out);
+                        avsync++;
                     } else {
                         fprintf(stderr, "DeckLink: dropping input frame on floor\n");
                         delete out;
                     }
                 }
-            } else {
-                fprintf(stderr, "DeckLink warning: frame with no video\n");
-                out_pipe.put(NULL);
-            }
+
+            } 
 
             /* Process audio, if available. */
             if (audio_in != NULL && audio_pipe != NULL) {
@@ -760,9 +780,18 @@ class DeckLinkInputAdapter : public InputAdapter,
                 assert(audio_out->size( ) == (size_t) (4*audio_in->GetSampleFrameCount( )));
 
                 memcpy(audio_out->data( ), data, audio_out->size( ));
-                audio_pipe->put(audio_out);
-            } else if (audio_pipe != NULL) {
-                fprintf(stderr, "DeckLink warning: frame with no audio\n");
+                if (audio_pipe->can_put( ) && started) {
+                    audio_pipe->put(audio_out);
+                    avsync--;
+                } else {
+                    fprintf(stderr, "DeckLink: dropping input AudioPacket\n");
+                    delete audio_out;
+                }
+            } 
+
+
+            if ((avsync > 10 || avsync < -10) && audio_pipe != NULL) {
+                fprintf(stderr, "DeckLink warning: avsync drift = %d\n", avsync);
             }
 
             return S_OK;
