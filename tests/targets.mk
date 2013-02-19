@@ -8,7 +8,7 @@ test_mjpeg_422_encode_OBJECTS = \
 	tests/mjpeg_422_encode.o
 
 tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -lpng -lrt
 
 all_TARGETS += tests/mjpeg_422_encode    
 
@@ -135,6 +135,19 @@ test_decklink_output_random_OBJECTS = \
 
 tests/decklink_output_random: $(test_decklink_output_random_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
+
+test_decklink_multi_capture_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(mjpeg_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_multi_capture.o
+
+tests/decklink_multi_capture: $(test_decklink_multi_capture_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lpng -lrt
+
+all_TARGETS += tests/decklink_multi_capture
 
 test_v4l2_input_OBJECTS = \
 	$(common_OBJECTS) \
