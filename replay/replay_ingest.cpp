@@ -46,7 +46,7 @@ void ReplayIngest::run_thread( ) {
     ReplayRawFrame *monitor_frame;
 
     ReplayFrameData data_to_write;
-    Mjpeg422Encoder enc(1920, 1080, 70); /* FIXME: hard coded frame size */
+    Mjpeg422Encoder enc(1920, 1080, 90); /* FIXME: hard coded frame size */
     Mjpeg422Encoder thumb_enc(480, 272, 30);
     timecode_t pos;
 
