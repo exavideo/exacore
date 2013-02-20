@@ -19,8 +19,6 @@
 #ifndef _OPENREPLAY_POSIX_UTIL_H
 #define _OPENREPLAY_POSIX_UTIL_H
 
-
-#include <sys/types.h>
 #include <stdexcept>
 
 /* 
@@ -36,14 +34,14 @@ ssize_t write_all(int fd, const void *data, size_t size);
 /*
  * A C++ exception wrapper around POSIX errors.
  */
-class POSIXError : public std::exception {
+class POSIXError : public std::runtime_error {
     public:
-        POSIXError( ) throw();
-        POSIXError(const char *msg) throw();
-        POSIXError(const char *msg, int en) throw();
-        const char *what( ) const throw() { return what_; }
+        POSIXError( ) noexcept(true);
+        POSIXError(const char *msg) noexcept(true);
+        POSIXError(const char *msg, int en) noexcept(true);
+        const char *what( ) const noexcept(true) { return what_; } 
     private:
-        void format_message(const char *msg, int errno) throw();
+        void format_message(const char *msg, int en) noexcept(true);
         char what_[256];
 };
 

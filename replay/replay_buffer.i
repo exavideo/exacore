@@ -23,7 +23,7 @@
 
 class ReplayBuffer {
     public:
-        ReplayBuffer(const char *, size_t, size_t, const char * = "(unnamed)");
+        ReplayBuffer(const char *, const char * = "(unnamed)");
         ~ReplayBuffer( );
 
         enum whence_t { ZERO, START, END };

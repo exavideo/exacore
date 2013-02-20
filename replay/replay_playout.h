@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -23,14 +23,10 @@
 #include "thread.h"
 #include "mutex.h"
 #include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
-#include "replay_gamedata.h"
 #include "async_port.h"
 #include "rational.h"
-#include "mjpeg_codec.h"
-#include "avspipe_allocators.h"
-#include "avspipe_input_adapter.h"
+#include "replay_data.h"
+#include "replay_playout_source.h"
 
 #include <list>
 #include <vector>
@@ -40,80 +36,41 @@ class ReplayPlayout : public Thread {
         ReplayPlayout(OutputAdapter *oadp_);
         ~ReplayPlayout( );
 
-        /* Roll a shot and clear the queue of shots to follow. */
-        void roll_shot(const ReplayShot &shot);
-        /* Queue a shot to roll after the current shot passes its end */
-        void queue_shot(const ReplayShot &shot);
-        /* Stop the playout right now */
-        void stop( );
-        /* Adjust the playout rate */
-        void set_speed(int num, int denom);
+        /* 
+         * Change the source of media to be played out. 
+         * We will read frames from this source until it runs out.
+         * Any playout source that is currently in use will be deleted.
+         */
+        //void set_source(ReplayPlayoutSource *src);
 
-        /* Play input from a pipe */
-        void avspipe_playout(const char *cmd);
-
-        void show_clock( );
-        void hide_clock( );
-        void position_clock(coord_t x, coord_t y);
+        //void set_speed(int num, int denom);
 
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
-        unsigned int add_svg_dsk(const std::string &svg, 
-            coord_t xoffset = 0, coord_t yoffset = 0);
+        //unsigned int add_svg_dsk(const std::string &svg, 
+        //    coord_t xoffset = 0, coord_t yoffset = 0);
 
-        unsigned int add_png_file_dsk(const std::string &path, 
-            coord_t xoffset = 0, coord_t yoffset = 0);
+        //unsigned int add_png_file_dsk(const std::string &path, 
+        //    coord_t xoffset = 0, coord_t yoffset = 0);
 
     protected:
         void run_thread( );
-        void get_and_advance_current_fields(ReplayFrameData &f1, 
-                ReplayFrameData &f2, Rational &pos);
-
-        void decode_field(RawFrame *out, ReplayFrameData &field, 
-                ReplayFrameData &cache_data, RawFrame *&cache_frame,
-                bool is_first_field);
-
-        void roll_next_shot( );
-
-        void apply_dsks(RawFrame *target);
-        void add_clock(RawFrame *target);
-
-        void write_dummy_audio( );
 
         OutputAdapter *oadp;
-
-        ReplayBuffer *current_source;
-        AvspipeInputAdapter *next_avspipe;
-
-        ReplayBufferLocker lock;
-
-        Rational current_pos;
-        Rational field_rate;
-        timecode_t shot_end;
 
         struct dsk {
             RawFrame *key;
             coord_t x;
             coord_t y;
+            bool enabled;
         };
 
-        std::list<ReplayShot> next_shots;
+        Pipe<ReplayPlayoutSource *> next_source_pipe;
         std::vector<dsk> dsks;
 
-        Mutex m;
-        Mutex dskm;
-        Mutex clockm;
-
-        Mjpeg422Decoder dec;
-
-        bool render_clock;
-        coord_t clock_x;
-        coord_t clock_y;
-
-        ReplayGameData game_data;
-
-        AvspipeNTSCSyncAudioAllocator apkt_allocator;
+        ReplayPlayoutSource *idle_source;
+        Rational speed;
 };
 
 #endif

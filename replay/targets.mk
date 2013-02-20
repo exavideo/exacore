@@ -11,7 +11,6 @@ replay_replay_test_OBJECTS = \
     $(graphics_OBJECTS) \
     replay/replay_buffer.o \
     replay/replay_ingest.o \
-    replay/replay_mjpeg_ingest.o \
     replay/replay_preview.o \
     replay/replay_playout.o \
     replay/replay_multiviewer.o \
@@ -28,13 +27,18 @@ replay_replay_so_OBJECTS = \
 	$(graphics_OBJECTS) \
         $(avspipe_OBJECTS) \
 	replay/replay_buffer.o \
+        replay/replay_buffer_index.o \
+        replay/replay_buffer_reader.o \
+        replay/replay_buffer_writer.o \
 	replay/replay_ingest.o \
-        replay/replay_mjpeg_ingest.o \
 	replay/replay_preview.o \
 	replay/replay_playout.o \
 	replay/replay_multiviewer.o \
 	replay/replay_frame_extractor.o \
         replay/replay_gamedata.o \
+        replay/replay_frame_data.o \
+        replay/replay_frame_cache.o \
+        replay/replay_playout_bars_source.o \
 	replay/replay_global.rbo 
 
 replay/replay.so: $(replay_replay_so_OBJECTS)

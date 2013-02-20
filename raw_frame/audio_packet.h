@@ -44,9 +44,9 @@ class AudioPacket {
         size_t size( ) { return _size; }
         size_t n_frames( ) { return _size / (_sample_size * _channels); }
         /* return pointer to tne n'th sample frame */
-        uint8_t *sample(unsigned int n) { 
+        int16_t *sample(unsigned int n) { 
             assert(n < n_frames( ));
-            return _data + (n * _sample_size * _channels);
+            return (int16_t *)(_data + (n * _sample_size * _channels));
         }
 
 #ifdef RAWFRAME_POSIX_IO

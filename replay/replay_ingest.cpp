@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -41,17 +41,19 @@ void ReplayIngest::debug( ) {
 }
 
 void ReplayIngest::run_thread( ) {
-    RawFrame *input, *thumb, *last_input;
+    RawFrame *input, *thumb;
     AudioPacket *input_audio;
     ReplayRawFrame *monitor_frame;
-    ReplayFrameData dest;
-    std::string com;
+    ReplayBufferWriter *writer;
+
+    ReplayFrameData data_to_write;
     Mjpeg422Encoder enc(1920, 1080, 70); /* FIXME: hard coded frame size */
     Mjpeg422Encoder thumb_enc(480, 272, 30);
+    timecode_t pos;
+
+    writer = buf->make_writer( );
 
     iadp->start( );
-
-    last_input = NULL;
 
     for (;;) {
         /* obtain frame (and maybe audio) from input adapter */
@@ -62,12 +64,6 @@ void ReplayIngest::run_thread( ) {
             input_audio = NULL;
         }
 
-        /* if a frame was dropped, use the last one */
-        if (input == NULL) {
-            fprintf(stderr, "ReplayIngest warning: video input returned a NULL frame\n");
-            input = last_input;
-        }
-
         bool suspended;
 
         { MutexLock l(m);
@@ -75,43 +71,30 @@ void ReplayIngest::run_thread( ) {
         }
 
         if (!suspended) {
-            /* obtain writable frame from buffer */
-            buf->get_writable_frame(dest);
-
             /* set field dominance if necessary */
             if (buf->field_dominance( ) == RawFrame::UNKNOWN) {
                 buf->set_field_dominance(input->field_dominance( ));
             }
 
-            if (gd != NULL) {
-                gd->as_jpeg_comment(com);
-                enc.set_comment(com);
-            }
-
             /* encode to M-JPEG */
-            enc.encode_to(input, dest.main_jpeg( ), dest.main_jpeg_size( ));
+            enc.encode(input);
+            data_to_write.video_data = enc.get_data( );
+            data_to_write.video_size = enc.get_data_size( );
 
             /* scale input and make JPEG thumbnail */
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
-            thumb_enc.encode_to(thumb, dest.thumb_jpeg( ), dest.thumb_jpeg_size( ));
+            thumb_enc.encode(thumb);
+            data_to_write.thumbnail_data = thumb_enc.get_data( );
+            data_to_write.thumbnail_size = thumb_enc.get_data_size( );
 
-            /* store audio (if we have it) */
-            if (input_audio) {
-                input_audio->serialize(dest.audio( ), dest.audio_size( ));
-                dest.enable_audio( );
-            } else {
-                memset(dest.audio( ), 0, dest.audio_size( ));
-                dest.no_audio( );
-            }
-
-            buf->finish_frame_write(dest);
+            pos = writer->write_frame(data_to_write);
 
             /* scale down frame to send to monitor */
             monitor_frame = new ReplayRawFrame(thumb);
             
             /* fill in monitor status info */
             monitor_frame->source_name = buf->get_name( );
-            monitor_frame->tc = dest.pos;
+            monitor_frame->tc = pos;
 
             monitor.put(monitor_frame);
         }
@@ -120,11 +103,7 @@ void ReplayIngest::run_thread( ) {
             delete input_audio;
         }
         
-        /* if this frame was good, keep it */
-        if (input != last_input) {
-            delete last_input;
-            last_input = input;
-        }
+        delete input;
     }
 }
 

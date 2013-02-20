@@ -27,57 +27,19 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-#include <linux/fs.h> /* for block device size ioctls */
-#include <sys/ioctl.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdexcept>
 
-class ReplayBuffer::ReadaheadThread : public Thread {
-    public:
-        ReadaheadThread(int fd) : request_queue(1024) {
-            fd_ = fd;
-            start_thread( );
-        }
 
-        void request(off64_t offset, size_t count) {
-            ReadaheadRequest req;
-            req.offset = offset;
-            req.count = count;
-            request_queue.put(req);
-        }
-    protected:
-        struct ReadaheadRequest {
-            off64_t offset;
-            size_t count;
-        };
-
-        void run_thread( ) {
-            struct ReadaheadRequest req;
-
-            for (;;) {
-                req = request_queue.get( );
-                if (readahead(fd_, req.offset, req.count) != 0) {
-                    perror("readahead");
-                }
-            }
-        }
-
-        Pipe<ReadaheadRequest> request_queue;
-        int fd_;
-};
-
-ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
-        size_t frame_size, const char *name) {
-    int error;
+ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     struct stat stat;
     
     _field_dominance = RawFrame::UNKNOWN;
 
     /* open and allocate (if necessary) buffer file */
-    fd = open(path, O_CREAT | O_RDWR, 0644);
+    fd = open(path, O_CREAT | O_WRONLY, 0644);
     if (fd < 0) {
         throw POSIXError("open");
     }
@@ -86,36 +48,23 @@ ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size,
         throw POSIXError("fstat");
     }
 
-    if (S_ISREG(stat.st_mode)) {
-        error = posix_fallocate(fd, 0, buffer_size);
-        if (error != 0) {
-            throw POSIXError("posix_fallocate", error);
-        }
-    } else if (S_ISBLK(stat.st_mode)) {
-        __u64 disk_size;
-        ioctl(fd, BLKGETSIZE64, &disk_size);
-        buffer_size = disk_size;
-        fprintf(stderr, "using raw disk io (buffer size %zu)\n", buffer_size);
-    } else {
-        throw std::runtime_error("cannot use this thing as a buffer");
-    }
+    fprintf(stderr, "st_mode=%x\n", stat.st_mode);
+    if (S_ISREG(stat.st_mode) == 0) {
+        throw std::runtime_error("not a regular file, cannot use as buffer");
+    } 
 
-    readahead_thread = new ReadaheadThread(fd);
-
-    data = NULL;
-
-    tc_current = 0;
-    this->buffer_size = buffer_size;
-    this->frame_size = frame_size;
-    this->n_frames = buffer_size / frame_size;
     this->name = strdup(name);
-
     if (this->name == NULL) {
         throw std::runtime_error("allocation failure");
     }
 
-    this->locks = new int[this->n_frames];
-    memset(locks, 0, this->n_frames * sizeof(int));
+    this->path = strdup(path);
+    if (this->path == NULL) {
+        throw std::runtime_error("allocation failure");
+    }
+
+    index = new ReplayBufferIndex;
+    writer = NULL;
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
@@ -123,276 +72,65 @@ ReplayBuffer::~ReplayBuffer( ) {
         throw POSIXError("close");
     }
 
-    free(name);
+    /* 
+     * we deliberately do not delete writer here, that is the responsibility
+     * of the user of the writer. The pointer is only kept around in 
+     * ReplayBuffer for bookkeeping (so we only have one writer per buffer)
+     */
 
-    delete locks;
+    free(name);
+    free(path);
+    delete index;
 }
 
 ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
     ReplayShot *shot = new ReplayShot;
-    timecode_t start_offset;
 
     shot->source = this;
     switch (whence) {
         case ZERO:
+        case START:
             shot->start = offset;
             break;
-        case START:
-            if (tc_current < n_frames) {
-                start_offset = 0;
-            } else {
-                /* may break if optimizer is really dumb?? */
-                start_offset = (tc_current / n_frames) * n_frames;
-            }
-
-            shot->start = start_offset + offset;
-            break;
         case END:
-            shot->start = tc_current - 1 + offset;
+            shot->start = index->get_length( ) - 1 + offset;
             break;
     }
-    shot->length = 0;
 
+    shot->length = 0;
     return shot;
 }
 
-void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
-    unsigned int frame_index = tc_current % n_frames;
-
-    frame_data.source = this;
-    frame_data.pos = tc_current + 1;
-    frame_data.data_size = frame_size;
-    frame_data.data_ptr = mmap(
-        NULL, frame_size, PROT_WRITE, MAP_SHARED, 
-        fd, frame_index * frame_size
-    );
-
-    if (frame_data.data_ptr == MAP_FAILED) {
-        throw POSIXError("mmap failed in get_writable_frame");
-    }
-}
-
-void ReplayBuffer::finish_frame_write(ReplayFrameData &rfd) {
-    if (munmap(rfd.data_ptr, rfd.data_size) != 0) {
-        throw std::runtime_error("munmap failed in finish_frame_write");
-    }
-    
-    tc_current++;
-}
-
-void ReplayBuffer::get_readable_frame(timecode_t tc, 
-        ReplayFrameData &frame_data, bool readahead) {
-    if (tc >= tc_current) {
-        fprintf(stderr, "past the end: tc=%d tc_current=%d\n",
-                (int) tc, (int) tc_current);
-        throw ReplayFrameNotFoundException( );
-    } else if (tc < tc_current - n_frames || tc < 0) { 
-        fprintf(stderr, "past the beginning: tc=%d tc_current=%d\n", 
-                (int) tc, (int) tc_current);
-        throw ReplayFrameNotFoundException( );
-    }
-
-    unsigned int frame_index = tc % n_frames;
-    
-    frame_data.source = this;
-    frame_data.pos = tc;
-
-    void *dp = mmap(
-        NULL, frame_size, PROT_READ, MAP_SHARED, 
-        fd, frame_index * frame_size
-    );
-
-    if (dp == MAP_FAILED) {
-        throw POSIXError("mmap failed in get_readable_frame");
-    }
-
-    frame_data.data_ptr = dp;
-    frame_data.data_size = frame_size;
-
-    if (readahead) {
-        try_readahead(tc, 30);
-    }
-}
-
-void ReplayBuffer::finish_frame_read(ReplayFrameData &frame_data) {
-    if (munmap(frame_data.data_ptr, frame_data.data_size) != 0) {
-        throw POSIXError("munmap failed in finish_frame_read");
-    }
-}
 
 const char *ReplayBuffer::get_name( ) {
     return name;
 }
 
-void ReplayBuffer::lock_frame(timecode_t frame) {
-#ifdef ENABLE_MLOCK
-    bool flag;
-    unsigned int frame_offset = frame % n_frames;
-
-    if (frame_offset >= n_frames) {
-        return; 
+ReplayBufferWriter *ReplayBuffer::make_writer( ) {
+    if (writer != NULL) {
+        throw std::runtime_error("Someone is already writing to this ReplayBuffer!");
     }
 
-    { MutexLock l(m);
-        if (locks[frame_offset] == 0) {
-            flag = true;
-        } else {
-            flag = false;
-        }
-        locks[frame_offset]++;
-    }
-
-    if (flag) {
-        if (mlock(data + frame_offset * frame_size, frame_size) != 0) {
-            perror("mlock");
-        }
-    }
-#else
-    (void) frame;
-#endif
+    writer = new ReplayBufferWriter(this, index, fd);
+    return writer;
 }
 
-void ReplayBuffer::unlock_frame(timecode_t frame) {
-#ifdef ENABLE_MLOCK
-    bool flag;
-    unsigned int frame_offset = frame % n_frames;
-
-    if (frame_offset >= n_frames) {
-        return; 
-    }
-
-    { MutexLock l(m);
-        locks[frame_offset]--;
-        if (locks[frame_offset] == 0) {
-            flag = true;
-        } else {
-            flag = false;
-        }
-    }
-
-    if (flag) {
-        munlock(data + frame_offset * frame_size, frame_size);
-    }
-#else
-    (void) frame;
-#endif
-}
-
-ReplayBufferLocker::ReplayBufferLocker( ) {
-    buf = NULL;
-    start = end = 0;
-
-    start_thread( );
-}
-
-ReplayBufferLocker::~ReplayBufferLocker( ) {
-    
-}
-
-void ReplayBufferLocker::run_thread( ) {
-    timecode_t current_start = 0, current_end = 0;
-    ReplayBuffer *current_buf = NULL;
-    
-    timecode_t next_start = 0, next_end = 0;
-    ReplayBuffer *next_buf = NULL;
-
-    for (;;) {
-        { MutexLock l(m);
-            if (start == current_start && end == current_end 
-                    && buf == current_buf) {
-                c.wait(m);
-                continue;
-            } else {
-                next_start = start;
-                next_end = end;
-                next_buf = buf;
-            }
-        }
-
-        /* something has changed if we fall through here */
-        if (next_buf != NULL) {
-            if (next_buf != current_buf) {
-                /* we changed buffers so we have to unlock everything */
-                /* (but only if it's not NULL) */
-                if (current_buf != NULL) {
-                    unlock_all_frames(current_buf, current_start, current_end);
-                }
-                current_buf = next_buf;
-                current_start = next_start;
-                current_end = next_end;
-                lock_all_frames(current_buf, current_start, current_end);
-            } else {
-                /* check for overlap and move the range if possible */
-                move_range(current_buf, current_start, current_end, 
-                        next_start, next_end);
-                current_start = next_start;
-                current_end = next_end;
-            }
-        }
-    }
-
-}
-
-void ReplayBufferLocker::set_position(ReplayBuffer *buf, timecode_t tc) {
-    MutexLock l(m);
-
-    this->buf = buf;
-    start = tc - 10;
-    end = tc + 10;
-
-    c.signal( );
-}
-
-void ReplayBufferLocker::lock_all_frames(ReplayBuffer *buf, timecode_t start, 
-        timecode_t end) {
-    for (timecode_t i = start; i < end; i++) {
-        buf->lock_frame(i);
-    }
-}
-
-void ReplayBufferLocker::unlock_all_frames(ReplayBuffer *buf, 
-        timecode_t start, timecode_t end) {
-    for (timecode_t i = start; i < end; i++) {
-        buf->unlock_frame(i);
-    }
-}
-
-void ReplayBufferLocker::move_range(ReplayBuffer *buf,
-        timecode_t s1, timecode_t e1, 
-        timecode_t s2, timecode_t e2) {
-    if (s1 > e2 || s2 > e1) {
-        /* no overlap */
-        unlock_all_frames(buf, s1, e1);
-        lock_all_frames(buf, s2, e2);
+void ReplayBuffer::release_writer(ReplayBufferWriter *wr) {
+    if (wr == writer) {
+        writer = NULL;
     } else {
-        if (s1 < s2) {
-            /* unlock all frames from s1 up to s2 */
-            unlock_all_frames(buf, s1, s2);
-        } else {
-            /* lock all frames from s2 to s1 */
-            lock_all_frames(buf, s2, s1);
-        }
-
-        if (e1 < e2) {
-            /* lock all frames from e1 to e2 */
-            lock_all_frames(buf, e1, e2);
-        } else {
-            /* unlock all frames from e2 to e1 */
-            unlock_all_frames(buf, e2, e1);
-        }
-
+        fprintf(stderr, "release_writer called with wrong writer\n"
+            "this should never happen, check your code\n");
+        throw std::runtime_error("tried to release_writer the wrong writer?");
     }
 }
 
-void ReplayBuffer::try_readahead(timecode_t tc, unsigned int n) {
-    for (unsigned int i = 1; i < n; i++) {
-        try_readahead(tc + i);
-    }
-}
+ReplayBufferReader *ReplayBuffer::make_reader( ) {
+    int newfd = open(path, O_RDONLY);
 
-void ReplayBuffer::try_readahead(timecode_t tc) {
-    unsigned int frame_index = tc % n_frames;
-    if (readahead_thread != NULL) {
-        readahead_thread->request(frame_index * frame_size, frame_size);
+    if (newfd == -1) {
+        throw POSIXError("could not open buffer for reading");
     }
+
+    return new ReplayBufferReader(this, index, newfd);
 }

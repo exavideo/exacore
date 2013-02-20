@@ -21,94 +21,80 @@
 #define _REPLAY_BUFFER_H
 
 #include "replay_data.h"
+#include "replay_buffer_index.h"
 #include "mutex.h"
 #include "thread.h"
 #include "condition.h"
 
 #include <stdexcept>
 
-class ReplayFrameNotFoundException : public virtual std::exception {
-    const char *what() const throw() { return "Frame off ends of buffer"; }
-};
-
-class ReplayBuffer;
-
-class ReplayBufferLocker : public Thread {
+class ReplayBufferReader {
     public:
-        ReplayBufferLocker( );
-        ~ReplayBufferLocker( );
+        ReplayBufferReader(ReplayBuffer *buf_,
+            ReplayBufferIndex *index_, int fd_);
+        ~ReplayBufferReader( );
 
-        void set_position(ReplayBuffer *buf, timecode_t tc);
+        ReplayFrameData *read_frame(timecode_t tc);
+        ReplayFrameData *read_next_frame( );
+        ReplayBuffer *source( ) { return buf; }
 
     protected:
-        timecode_t start, end;
-        ReplayBuffer *buf;        
+        ReplayBuffer *buf;
+        ReplayBufferIndex *index;
+        int fd;
+        timecode_t timecode;
 
-        Mutex m;
-        Condition c;
+        void seek_to(off_t where, int whence = SEEK_SET);
+};
 
-        void run_thread( );
+class ReplayBufferWriter {
+    public:
+        ReplayBufferWriter(ReplayBuffer *buf_, 
+            ReplayBufferIndex *index_, int fd_);
+        ~ReplayBufferWriter( );
 
-        void lock_all_frames(ReplayBuffer *buf, timecode_t start, 
-                timecode_t end);
-        
-        void unlock_all_frames(ReplayBuffer *buf, timecode_t start, 
-                timecode_t end);
-
-        void move_range(ReplayBuffer *buf, timecode_t s1, timecode_t e1,
-                timecode_t s2, timecode_t e2);
+        timecode_t write_frame(const ReplayFrameData &data);
+    protected:
+        ReplayBuffer *buf;
+        ReplayBufferIndex *index;
+        int fd;
 };
 
 class ReplayBuffer {
     public:
         enum whence_t { ZERO, START, END };
 
-        ReplayBuffer(const char *path, size_t buffer_size, size_t frame_size,
-                const char *name="(unnamed)");
+        ReplayBuffer(const char *path, const char *name="(unnamed)");
         ~ReplayBuffer( );
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
 
-        void get_writable_frame(ReplayFrameData &frame_data);
-        void finish_frame_write(ReplayFrameData &frame_data);
-
-        void get_readable_frame(timecode_t tc, ReplayFrameData &frame_data, 
-            bool readahead = false);
-        void finish_frame_read(ReplayFrameData &frame_data);
+        ReplayBufferWriter *make_writer( );
+        ReplayBufferReader *make_reader( );
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
         void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }
 
         const char *get_name( );
 
-        void lock_frame(timecode_t frame);
-        void unlock_frame(timecode_t frame);
+        struct FrameHeader {
+            int version;
+            size_t video_size;
+            size_t thumbnail_size;
+            size_t audio_size;
+        };
 
+        /* do not call directly, called automatically when writer deleted */
+        void release_writer(ReplayBufferWriter *writer);
     private:
-        class ReadaheadThread;
-        ReadaheadThread *readahead_thread;
-
+        ReplayBufferIndex *index;
         RawFrame::FieldDominance _field_dominance;
 
         char *name;
+        char *path;
         int fd;
 
-        size_t buffer_size;
-        size_t frame_size;
-        timecode_t n_frames;
-
-        uint8_t *data;
-
-        volatile timecode_t tc_current;
-
-        int *locks;
-
-        ReplayBufferLocker write_lock;
-
-        Mutex m;
-
-        void try_readahead(timecode_t tc);
-        void try_readahead(timecode_t tc, unsigned int n);
+        ReplayBufferWriter *writer; /* so we know if one already exists */
 };
 
 #endif

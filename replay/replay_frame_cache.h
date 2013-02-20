@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -16,3 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef _REPLAY_FRAME_CACHE_H
+#define _REPLAY_FRAME_CACHE_H
+
+#include "raw_frame.h"
+#include "replay_buffer.h"
+#include "mjpeg_codec.h"
+
+/* Cache decoded frames for faster access. */
+class ReplayFrameCache {
+    public:
+        ReplayFrameCache( );
+        ~ReplayFrameCache( );
+        RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
+    protected:
+        ReplayBufferReader *reader;
+        ReplayFrameData *cached_compressed_frame;
+        RawFrame *cached_raw_frame;
+        Mjpeg422Decoder decoder;
+
+        void load_frame(timecode_t tc);
+};
+
+#endif

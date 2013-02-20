@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -16,3 +16,17 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef _REPLAY_PLAYOUT_SOURCE_H
+#define _REPLAY_PLAYOUT_SOURCE_H
+
+#include "replay_data.h"
+#include "rational.h"
+
+class ReplayPlayoutSource {
+    public:
+        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed) = 0;
+        virtual ~ReplayPlayoutSource( ) { }
+};
+
+#endif

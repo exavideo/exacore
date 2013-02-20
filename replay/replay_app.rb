@@ -18,8 +18,6 @@ end
 module Replay
     class ReplaySource
         def initialize(opts={})
-            buf_size = opts[:buf_size] || 60.gigabytes
-            frame_size = opts[:frame_size] || 768.kilobytes
             input = opts[:input]
             mjpeg_cmd = opts[:mjpeg_cmd]
             file = opts[:file] || fail("Cannot have a source with no file")
@@ -27,7 +25,7 @@ module Replay
             game_data = opts[:game_data] || \
                 fail("Cannot create source without game data");
 
-            @buffer = ReplayBuffer.new(file, buf_size, frame_size, name)
+            @buffer = ReplayBuffer.new(file, name)
 
             if input
                 @ingest = ReplayIngest.new(input, @buffer, game_data)

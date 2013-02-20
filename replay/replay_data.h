@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "raw_frame.h"
+#include "audio_packet.h"
 #include "rational.h"
 
 class ReplayBuffer;
@@ -39,92 +40,7 @@ struct ReplayShot {
     timecode_t length;
 };
 
-/*
- * Data representing a compressed M-JPEG frame in a buffer.
- */
-struct ReplayFrameData {
-    ReplayBuffer *source;
-    timecode_t pos;
-    bool use_first_field;
-
-    ReplayFrameData( ) {
-        data_ptr = NULL;
-        data_size = 0;
-    }
-
-    ReplayFrameData(const ReplayFrameData &from) {
-        data_ptr = from.data_ptr;
-        data_size = from.data_size;
-    }
-
-    const ReplayFrameData &operator=(const ReplayFrameData &from) {
-        data_ptr = from.data_ptr;
-        data_size = from.data_size;
-        return *this;
-    }
-
-    void *main_jpeg( ) {
-        return data_ptr;    
-    }
-
-    size_t main_jpeg_size( ) {
-        return data_size - sizeof(aux_data);
-    }
-
-    void *thumb_jpeg( ) {
-        return aux( )->thumbnail;
-    }
-
-    size_t thumb_jpeg_size( ) {
-        return sizeof(aux( )->thumbnail);
-    }
-
-    void *audio( ) {
-        return aux( )->audio;
-    }
-
-    size_t audio_size( ) {
-        return sizeof(aux( )->audio);
-    }
-
-    bool has_audio( ) {
-        return aux( )->has_audio;
-    }
-
-    void enable_audio( ) {
-        aux( )->has_audio = true;
-    }
-
-    void no_audio( ) {
-        aux( )->has_audio = false;
-    }
-
-    bool valid( ) {
-        return (data_ptr != NULL);
-    }
-
-    void clear( ) {
-        data_ptr = NULL;
-    }
-
-    friend class ReplayBuffer;
-protected:
-    struct aux_data {
-        bool has_audio;
-        uint8_t audio[8192];
-        uint8_t thumbnail[81920];
-        uint8_t game_data[4096];
-    };
-
-    struct aux_data *aux( ) {
-        /* FIXME: maybe nonportable due to alignment? */
-        return (aux_data *)
-                ((uint8_t *)data_ptr + data_size - sizeof(aux_data));
-    }
-
-    void *data_ptr;
-    size_t data_size;
-};
+#include "replay_frame_data.h"
 
 /*
  * Wrap a reference to a RawFrame object used in the monitor ports.
@@ -148,6 +64,15 @@ struct ReplayRawFrame {
     /* other stuff goes here */
     const char *source_name;
     const char *source_name2;
+    timecode_t tc;
+    Rational fractional_tc;
+};
+
+/* These are passed between playout and playout sources */
+struct ReplayPlayoutFrame {
+    RawFrame *video_data;
+    AudioPacket *audio_data;
+    const char *source_name;
     timecode_t tc;
     Rational fractional_tc;
 };

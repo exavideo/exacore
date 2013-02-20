@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -16,3 +16,26 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef _REPLAY_PLAYOUT_BARS_SOURCE_H
+#define _REPLAY_PLAYOUT_BARS_SOURCE_H
+
+#include "replay_playout_source.h"
+#include "avspipe_allocators.h"
+
+class ReplayPlayoutBarsSource : public ReplayPlayoutSource {
+    public:
+        ReplayPlayoutBarsSource( );
+        ~ReplayPlayoutBarsSource( );
+
+        void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+    protected:
+        RawFrame *bars;
+        AvspipeNTSCSyncAudioAllocator audio_allocator;
+
+        void oscillate(AudioPacket *pkt, float frequency);
+        /* phase accumulator for oscillator */
+        double phase;
+};
+
+#endif

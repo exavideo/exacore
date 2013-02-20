@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -16,3 +16,38 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef _REPLAY_FRAME_DATA_H
+#define _REPLAY_FRAME_DATA_H
+
+/*
+ * Data representing a compressed M-JPEG frame in a buffer.
+ */
+
+#include <stdlib.h>
+#include <stddef.h>
+#include "replay_data.h"
+
+class ReplayFrameData {
+    public:
+        ReplayFrameData( );
+        ~ReplayFrameData( );
+      
+        ReplayBuffer *source;
+        timecode_t pos;
+
+        void *video_data;
+        size_t video_size;
+
+        void *thumbnail_data;
+        size_t thumbnail_size;
+
+        void *audio_data;
+        size_t audio_size;
+
+        void free_data_on_destroy( );
+    protected:
+        bool should_free_data;
+};
+
+#endif

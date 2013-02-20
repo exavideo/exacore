@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -32,62 +32,53 @@ ReplayFrameExtractor::~ReplayFrameExtractor( ) {
 
 void ReplayFrameExtractor::extract_raw_jpeg(const ReplayShot &shot, 
         timecode_t offset, std::string &jpeg) {
-    ReplayFrameData rfd;
-
-    shot.source->get_readable_frame(shot.start + offset, rfd);
-    uint8_t *data = (uint8_t *) rfd.main_jpeg( );
-    size_t size = rfd.main_jpeg_size( );
-    for (size_t i = 0; i < size - 1; i++) {
-        if (data[i] == 0xff && data[i + 1] == 0xd9) {
-            jpeg.assign((char *)data, i + 2);
-            return;
-        }
-    }
-    shot.source->finish_frame_read(rfd);
-
-    throw std::runtime_error("no valid JPEG frame found");
+    /* FIXME: this ends up creating a lot of reader objects */
+    ReplayFrameData *rfd;
+    ReplayBufferReader *reader;
+    reader = shot.source->make_reader( );
+    rfd = reader->read_frame(shot.start + offset);
+    jpeg.assign((char *)rfd->video_data, rfd->video_size);
+    delete reader;
+    delete rfd;
 }
 
 void ReplayFrameExtractor::extract_thumbnail_jpeg(const ReplayShot &shot,
         timecode_t offset, std::string &jpeg) {
-    ReplayFrameData rfd;
-    shot.source->get_readable_frame(shot.start + offset, rfd);
-    uint8_t *data = (uint8_t *) rfd.thumb_jpeg( );
-    size_t size = rfd.thumb_jpeg_size( );
-    for (size_t i = 0; i < size - 1; i++) {
-        if (data[i] == 0xff && data[i + 1] == 0xd9) {
-            jpeg.assign((char *) data, i + 2);
-            return;
-        }
-    }
-    shot.source->finish_frame_read(rfd);
+    ReplayFrameData *rfd;
+    ReplayBufferReader *reader;
+    reader = shot.source->make_reader( );
+    rfd = reader->read_frame(shot.start + offset);
+    jpeg.assign((char *)rfd->thumbnail_data, rfd->thumbnail_size);
+    delete reader;
+    delete rfd;
 }
 
 void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
         timecode_t offset, std::string &jpeg, int scale_down) {
     
-    ReplayFrameData rfd;
-    shot.source->get_readable_frame(shot.start + offset, rfd);
+    ReplayFrameData *rfd;
+    ReplayBufferReader *reader;
+    reader = shot.source->make_reader( );
+    rfd = reader->read_frame(shot.start + offset);
 
-    RawFrame *rf = dec.decode(rfd.main_jpeg( ), 
-            rfd.main_jpeg_size( ), scale_down);
+    RawFrame *rf = dec.decode(rfd->video_data, rfd->video_size, scale_down);
     enc.encode(rf);
     delete rf;
+    delete reader;
+    delete rfd;
 
     jpeg.assign((char *)enc.get_data( ), enc.get_data_size( ));
-
-    shot.source->finish_frame_read(rfd);
 }
 
 void ReplayFrameExtractor::extract_raw_audio(const ReplayShot &shot,
         timecode_t offset, std::string &data) {
-    ReplayFrameData rfd;
-    shot.source->get_readable_frame(shot.start + offset, rfd);
+    ReplayFrameData *rfd;
+    ReplayBufferReader *reader;
+    reader = shot.source->make_reader( );
+    rfd = reader->read_frame(shot.start + offset);
 
-    if (rfd.has_audio( )) {
-        AudioPacket apkt(rfd.audio( ), rfd.audio_size( ));
+    if (rfd->audio_size > 0) {
+        AudioPacket apkt(rfd->audio_data, rfd->audio_size);
         data.assign((char *)apkt.data( ), apkt.size( ));
     }
-
-    shot.source->finish_frame_read(rfd);
 }

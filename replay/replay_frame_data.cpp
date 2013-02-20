@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -16,3 +16,39 @@
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include "replay_frame_data.h"
+
+ReplayFrameData::ReplayFrameData( ) {
+    source = NULL;
+    pos = 0;
+
+    video_data = NULL;
+    video_size = 0;
+
+    thumbnail_data = NULL;
+    thumbnail_size = 0;
+
+    audio_data = NULL;
+    audio_size = 0;
+
+    should_free_data = false;
+}
+
+ReplayFrameData::~ReplayFrameData( ) {
+    if (should_free_data) {
+        if (video_data) { 
+            free(video_data); 
+        }
+        if (audio_data) { 
+            free(audio_data); 
+        }
+        if (thumbnail_data) { 
+            free(thumbnail_data); 
+        }
+    }
+}
+
+void ReplayFrameData::free_data_on_destroy( ) {
+    should_free_data = true;
+}

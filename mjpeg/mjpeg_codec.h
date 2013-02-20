@@ -30,7 +30,7 @@
 class Mjpeg422Encoder {
     public:
         Mjpeg422Encoder(coord_t w_, coord_t h_, 
-                int qual = 70, size_t max_frame_size = 524288);
+                int qual = 70, size_t max_frame_size = 2*1024*1024);
         void encode(RawFrame *f);
         void encode_to(RawFrame *f, void *buf, size_t size);
         void *get_data(void) { return jpeg_data; }
