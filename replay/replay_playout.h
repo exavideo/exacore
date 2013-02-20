@@ -27,6 +27,7 @@
 #include "rational.h"
 #include "replay_data.h"
 #include "replay_playout_source.h"
+#include "replay_playout_filter.h"
 
 #include <list>
 #include <vector>
@@ -58,32 +59,25 @@ class ReplayPlayout : public Thread {
          */
         void roll_shot(const ReplayShot &replay);
 
+        /*
+         * Register filter.
+         * Filters can be used e.g. to add graphics to the video output.
+         */
+        void register_filter(ReplayPlayoutFilter *filt);
+
         /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
-
-
-        //unsigned int add_svg_dsk(const std::string &svg, 
-        //    coord_t xoffset = 0, coord_t yoffset = 0);
-
-        //unsigned int add_png_file_dsk(const std::string &path, 
-        //    coord_t xoffset = 0, coord_t yoffset = 0);
 
     protected:
         void run_thread( );
 
         OutputAdapter *oadp;
         ReplayPlayoutSource *idle_source;
-
-        struct dsk {
-            RawFrame *key;
-            coord_t x;
-            coord_t y;
-            bool enabled;
-        };
-
+        std::vector<ReplayPlayoutFilter *> filters;
         std::atomic<ReplayPlayoutSource *> playout_source;
         std::atomic<Rational *> new_speed;
+        Mutex filters_mutex;
 };
 
 #endif

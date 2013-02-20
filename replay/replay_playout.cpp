@@ -67,7 +67,12 @@ void ReplayPlayout::run_thread( ) {
          * switch to idle source and try again 
          */
         if (frame_data.video_data != NULL) {
-            /* add any keys that are enabled */
+            /* apply filters to frame */
+            { MutexLock l(filters_mutex);
+                for (unsigned i = 0; i < filters.size( ); i++) {
+                    filters[i]->process_frame(frame_data);
+                }
+            }
 
             /* create monitor frame */
             monitor_frame = new ReplayRawFrame(
@@ -112,4 +117,9 @@ void ReplayPlayout::set_speed(int num, int denom) {
     if (old != NULL) {
         delete old;
     }
+}
+
+void ReplayPlayout::register_filter(ReplayPlayoutFilter *filt) {
+    MutexLock l(filters_mutex);
+    filters.push_back(filt);
 }
