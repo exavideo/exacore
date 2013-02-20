@@ -98,7 +98,7 @@ void ReplayPlayoutBufferSource::weave_field(
     RawFrame *src, int src_field
 ) {
     coord_t src_scanline, dst_scanline, h, minpitch;
-    src_scanline = first_scanline(src->field_dominance( ), src_field);
+    src_scanline = first_scanline(source->field_dominance( ), src_field);
     dst_scanline = first_scanline(output_dominance, dst_field);
     h = src->h( );
     minpitch = std::min(src->pitch( ), dst->pitch( ));

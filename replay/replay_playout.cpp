@@ -25,7 +25,7 @@ ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
     idle_source = new ReplayPlayoutBarsSource;
     playout_source = NULL;
-    speed = Rational(1,1);
+    new_speed = NULL;
     start_thread( );
 }
 
@@ -38,6 +38,8 @@ void ReplayPlayout::run_thread( ) {
     ReplayPlayoutSource *next_source;
     ReplayPlayoutFrame frame_data;
     ReplayRawFrame *monitor_frame;
+    Rational current_speed(1,1);
+    Rational *next_speed;
 
     for (;;) {
         /* is there a next source available? if so, we take it */
@@ -50,8 +52,15 @@ void ReplayPlayout::run_thread( ) {
             active_source->set_output_dominance(oadp->output_dominance( ));
         }
 
+        /* atomically acquire speed commands */
+        next_speed = new_speed.exchange(NULL);
+        if (next_speed != NULL) {
+            current_speed = *next_speed;
+            delete next_speed;
+        }
+
         /* read data from currently active source */
-        active_source->read_frame(frame_data, speed);
+        active_source->read_frame(frame_data, current_speed);
 
         /* 
          * if we got video, output it. If not,
@@ -96,4 +105,11 @@ void ReplayPlayout::set_source(ReplayPlayoutSource *src) {
 /* compatibility wrapper */
 void ReplayPlayout::roll_shot(const ReplayShot &shot) {
     set_source(new ReplayPlayoutBufferSource(shot));
+}
+
+void ReplayPlayout::set_speed(int num, int denom) {
+    Rational *old = new_speed.exchange(new Rational(num, denom));
+    if (old != NULL) {
+        delete old;
+    }
 }

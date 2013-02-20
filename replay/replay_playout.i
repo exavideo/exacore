@@ -38,6 +38,7 @@ class ReplayPlayout : public Thread {
         //    coord_t, coord_t);
 
         void roll_shot(const ReplayShot &INPUT);
+        void set_speed(int, int);
         AsyncPort<ReplayRawFrame> *get_monitor( );
 };
 

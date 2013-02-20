@@ -45,11 +45,11 @@ class ReplayPlayout : public Thread {
         void set_source(ReplayPlayoutSource *src);
 
         /* 
-         * Change playout speed.
+         * Change playout speed to the given fraction of full speed.
          * Note: Not all possible sources support variable speed.
          * These sources always play out at full speed.
          */
-        //void set_speed(int num, int denom);
+        void set_speed(int num, int denom);
 
         /*
          * Roll shot.
@@ -58,8 +58,10 @@ class ReplayPlayout : public Thread {
          */
         void roll_shot(const ReplayShot &replay);
 
+        /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
+
 
         //unsigned int add_svg_dsk(const std::string &svg, 
         //    coord_t xoffset = 0, coord_t yoffset = 0);
@@ -81,7 +83,7 @@ class ReplayPlayout : public Thread {
         };
 
         std::atomic<ReplayPlayoutSource *> playout_source;
-        Rational speed;
+        std::atomic<Rational *> new_speed;
 };
 
 #endif
