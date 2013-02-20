@@ -20,53 +20,34 @@
 #include "replay_frame_cache.h"
 
 ReplayFrameCache::ReplayFrameCache( ) : decoder(1920, 1080) {
-    reader = NULL;
     cached_compressed_frame = NULL;
     cached_raw_frame = NULL;
 }
 
 ReplayFrameCache::~ReplayFrameCache( ) {
-    delete reader;
     delete cached_compressed_frame;
     delete cached_raw_frame;
 }
 
 RawFrame *ReplayFrameCache::get_frame(ReplayBuffer *source, timecode_t tc) {
-    if (reader == NULL || reader->source( ) != source) {
-        /* cache miss type 1: we don't have a reader */
-        delete reader;
-        reader = source->make_reader( );
-        delete cached_compressed_frame;
-        delete cached_raw_frame;
-        cached_compressed_frame = NULL;
-        cached_raw_frame = NULL;
-    }
-
     if (cached_compressed_frame == NULL 
+            || cached_compressed_frame->source != source 
             || cached_compressed_frame->pos != tc) {
-        /* 
-         * cache miss type 2: we have a reader (maybe just created) 
-         * but no frame or the wrong frame
-         */
+
+        /* cache miss */
         delete cached_compressed_frame;
         delete cached_raw_frame;
-        cached_compressed_frame = NULL;
-        cached_raw_frame = NULL;
-        load_frame(tc);
+
+        cached_compressed_frame = source->read_frame(
+            tc, ReplayBuffer::LOAD_VIDEO
+        );
+
+        cached_raw_frame = decoder.decode(
+            cached_compressed_frame->video_data,
+            cached_compressed_frame->video_size
+        );
     }
 
     return cached_raw_frame;
 }
 
-void ReplayFrameCache::load_frame(timecode_t tc) {
-    /* we must already have a reader to load a frame */
-    if (reader == NULL) {
-        throw std::runtime_error("tried to load frame before we knew source");
-    }
-
-    cached_compressed_frame = reader->read_frame(tc);
-    cached_raw_frame = decoder.decode(
-        cached_compressed_frame->video_data,
-        cached_compressed_frame->video_size
-    );
-}

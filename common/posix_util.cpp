@@ -26,7 +26,6 @@
 
 ssize_t read_all(int fd, void *data, size_t size) {
     ssize_t nread;
-    ssize_t total_read = 0;
     uint8_t *buf = (uint8_t *) data;
 
     while (size > 0) {
@@ -34,7 +33,6 @@ ssize_t read_all(int fd, void *data, size_t size) {
         if (nread > 0) {
             size -= nread;
             buf += nread;
-            total_read += nread;
         } else if (nread == 0) {
             /* EOF */
             return 0;
@@ -47,6 +45,28 @@ ssize_t read_all(int fd, void *data, size_t size) {
             }
         }
     }
+    return 1;
+}
+
+ssize_t pread_all(int fd, void *data, size_t size, off_t offset) {
+    ssize_t nread;
+    uint8_t *buf = (uint8_t *) data;
+
+    while (size > 0) {
+        nread = pread(fd, buf, size, offset);
+        if (nread > 0) {
+            size -= nread;
+            buf += nread;
+            offset += nread;
+        } else if (nread == 0) {
+            return 0;
+        } else {
+            if (errno != EAGAIN && errno != EINTR) {
+                return -1;
+            }
+        }
+    }
+
     return 1;
 }
 

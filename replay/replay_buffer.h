@@ -28,49 +28,18 @@
 
 #include <stdexcept>
 
-class ReplayBufferReader {
-    public:
-        ReplayBufferReader(ReplayBuffer *buf_,
-            ReplayBufferIndex *index_, int fd_);
-        ~ReplayBufferReader( );
-
-        ReplayFrameData *read_frame(timecode_t tc);
-        ReplayFrameData *read_next_frame( );
-        ReplayBuffer *source( ) { return buf; }
-
-    protected:
-        ReplayBuffer *buf;
-        ReplayBufferIndex *index;
-        int fd;
-        timecode_t timecode;
-
-        void seek_to(off_t where, int whence = SEEK_SET);
-};
-
-class ReplayBufferWriter {
-    public:
-        ReplayBufferWriter(ReplayBuffer *buf_, 
-            ReplayBufferIndex *index_, int fd_);
-        ~ReplayBufferWriter( );
-
-        timecode_t write_frame(const ReplayFrameData &data);
-    protected:
-        ReplayBuffer *buf;
-        ReplayBufferIndex *index;
-        int fd;
-};
-
 class ReplayBuffer {
     public:
         enum whence_t { ZERO, START, END };
+        enum LoadFlags { LOAD_VIDEO = 0x01, LOAD_THUMBNAIL = 0x02, LOAD_AUDIO = 0x04 };
 
         ReplayBuffer(const char *path, const char *name="(unnamed)");
         ~ReplayBuffer( );
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
-
-        ReplayBufferWriter *make_writer( );
-        ReplayBufferReader *make_reader( );
+        
+        ReplayFrameData *read_frame(timecode_t frame, LoadFlags flags);
+        timecode_t write_frame(const ReplayFrameData &frame);
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
         void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }
@@ -84,8 +53,6 @@ class ReplayBuffer {
             size_t audio_size;
         };
 
-        /* do not call directly, called automatically when writer deleted */
-        void release_writer(ReplayBufferWriter *writer);
     private:
         ReplayBufferIndex *index;
         RawFrame::FieldDominance _field_dominance;
@@ -93,8 +60,6 @@ class ReplayBuffer {
         char *name;
         char *path;
         int fd;
-
-        ReplayBufferWriter *writer; /* so we know if one already exists */
 };
 
 #endif

@@ -29,6 +29,7 @@
  * -1: An error was encountered. Check errno.
  */
 ssize_t read_all(int fd, void *data, size_t size);
+ssize_t pread_all(int fd, void *data, size_t size, off_t offset);
 ssize_t write_all(int fd, const void *data, size_t size);
 
 /*

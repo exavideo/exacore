@@ -44,14 +44,11 @@ void ReplayIngest::run_thread( ) {
     RawFrame *input, *thumb;
     AudioPacket *input_audio;
     ReplayRawFrame *monitor_frame;
-    ReplayBufferWriter *writer;
 
     ReplayFrameData data_to_write;
     Mjpeg422Encoder enc(1920, 1080, 70); /* FIXME: hard coded frame size */
     Mjpeg422Encoder thumb_enc(480, 272, 30);
     timecode_t pos;
-
-    writer = buf->make_writer( );
 
     iadp->start( );
 
@@ -87,7 +84,7 @@ void ReplayIngest::run_thread( ) {
             data_to_write.thumbnail_data = thumb_enc.get_data( );
             data_to_write.thumbnail_size = thumb_enc.get_data_size( );
 
-            pos = writer->write_frame(data_to_write);
+            pos = buf->write_frame(data_to_write);
 
             /* scale down frame to send to monitor */
             monitor_frame = new ReplayRawFrame(thumb);

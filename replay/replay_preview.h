@@ -56,7 +56,6 @@ class ReplayPreview : public Thread {
 
         ReplayShot current_shot;
         timecode_t current_pos;
-        ReplayBufferReader *reader;
 
         Mutex m;
         Condition updated;

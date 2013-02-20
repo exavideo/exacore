@@ -24,14 +24,11 @@
 
 ReplayPreview::ReplayPreview( ) {
     current_shot.source = NULL;
-    reader = NULL;
     start_thread( );
 }
 
 ReplayPreview::~ReplayPreview( ) {
-    if (reader) {
-        delete reader;
-    }
+
 }
 
 void ReplayPreview::change_shot(const ReplayShot &shot) {
@@ -121,12 +118,8 @@ ReplayFrameData *ReplayPreview::wait_update( ) {
 
     update_monitor = false;
 
-    /* change sources if needed */
-    if (reader == NULL || current_shot.source != reader->source( )) {
-        delete reader;
-        reader = current_shot.source->make_reader( );
-    }
-
     /* grab the frame from the buffer */
-    return reader->read_frame(current_pos);
+    return current_shot.source->read_frame(
+        current_pos, ReplayBuffer::LOAD_VIDEO
+    );
 }

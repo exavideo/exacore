@@ -31,12 +31,9 @@ class ReplayFrameCache {
         ~ReplayFrameCache( );
         RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
     protected:
-        ReplayBufferReader *reader;
         ReplayFrameData *cached_compressed_frame;
         RawFrame *cached_raw_frame;
         Mjpeg422Decoder decoder;
-
-        void load_frame(timecode_t tc);
 };
 
 #endif

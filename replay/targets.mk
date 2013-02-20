@@ -28,8 +28,6 @@ replay_replay_so_OBJECTS = \
         $(avspipe_OBJECTS) \
 	replay/replay_buffer.o \
         replay/replay_buffer_index.o \
-        replay/replay_buffer_reader.o \
-        replay/replay_buffer_writer.o \
 	replay/replay_ingest.o \
 	replay/replay_preview.o \
 	replay/replay_playout.o \

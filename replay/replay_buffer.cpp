@@ -39,7 +39,7 @@ ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     _field_dominance = RawFrame::UNKNOWN;
 
     /* open and allocate (if necessary) buffer file */
-    fd = open(path, O_CREAT | O_WRONLY, 0644);
+    fd = open(path, O_CREAT | O_RDWR, 0644);
     if (fd < 0) {
         throw POSIXError("open");
     }
@@ -64,7 +64,6 @@ ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     }
 
     index = new ReplayBufferIndex;
-    writer = NULL;
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
@@ -106,31 +105,92 @@ const char *ReplayBuffer::get_name( ) {
     return name;
 }
 
-ReplayBufferWriter *ReplayBuffer::make_writer( ) {
-    if (writer != NULL) {
-        throw std::runtime_error("Someone is already writing to this ReplayBuffer!");
+/* FIXME: these should be refactored into something cleaner */
+ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, LoadFlags flags) {
+    FrameHeader header; 
+    off_t base_offset, video_offset, thumbnail_offset, audio_offset;
+    ReplayFrameData *ret = new ReplayFrameData;
+    ret->free_data_on_destroy( );
+    ret->source = this;
+    ret->pos = frame;
+
+    /* determine frame offset */
+    base_offset = index->get_frame_location(frame);
+
+    /* read frame header */
+    if (pread_all(fd, &header, sizeof(header), base_offset) <= 0) {
+        throw POSIXError("pread_all");
     }
 
-    writer = new ReplayBufferWriter(this, index, fd);
-    return writer;
-}
-
-void ReplayBuffer::release_writer(ReplayBufferWriter *wr) {
-    if (wr == writer) {
-        writer = NULL;
-    } else {
-        fprintf(stderr, "release_writer called with wrong writer\n"
-            "this should never happen, check your code\n");
-        throw std::runtime_error("tried to release_writer the wrong writer?");
-    }
-}
-
-ReplayBufferReader *ReplayBuffer::make_reader( ) {
-    int newfd = open(path, O_RDONLY);
-
-    if (newfd == -1) {
-        throw POSIXError("could not open buffer for reading");
+    if ((flags & LOAD_VIDEO) && header.video_size > 0) {
+        video_offset = base_offset + sizeof(header);
+        ret->video_size = header.video_size;
+        ret->video_data = malloc(ret->video_size);
+        if (pread_all(fd, ret->video_data, ret->video_size, 
+                video_offset) <= 0) {
+            throw POSIXError("pread_all");
+        }
     }
 
-    return new ReplayBufferReader(this, index, newfd);
+    if ((flags & LOAD_THUMBNAIL) && header.thumbnail_size > 0) {
+        thumbnail_offset = base_offset + sizeof(header) + header.video_size;
+        ret->thumbnail_size = header.thumbnail_size;
+        ret->thumbnail_data = malloc(ret->thumbnail_size);
+        if (pread_all(fd, ret->thumbnail_data, ret->thumbnail_size,
+                thumbnail_offset) <= 0) {
+            throw POSIXError("pread_all");
+        }
+    }
+
+    if ((flags & LOAD_AUDIO) && header.audio_size > 0) {
+        audio_offset = base_offset + sizeof(header) 
+                + header.video_size + header.thumbnail_size;
+        ret->audio_size = header.audio_size;
+        ret->audio_data = malloc(ret->audio_size);
+        if (pread_all(fd, ret->audio_data, ret->audio_size,
+                audio_offset) <= 0) {
+            throw POSIXError("pread_all");
+        }
+    }
+
+    return ret;
 }
+
+timecode_t ReplayBuffer::write_frame(const ReplayFrameData &data) {
+    FrameHeader header;
+    size_t total_size;
+
+    if (data.video_size == 0) {
+        throw std::runtime_error("Tried to write empty frame");
+    }
+
+    header.version = 1;
+    header.video_size = data.video_size;
+    header.thumbnail_size = data.thumbnail_size;
+    header.audio_size = data.audio_size;
+    total_size = data.video_size + data.thumbnail_size + data.audio_size
+        + sizeof(header);
+
+    if (write_all(fd, &header, sizeof(header)) <= 0) {
+        throw POSIXError("failed to write frame header");
+    }
+
+    if (write_all(fd, data.video_data, data.video_size) <= 0) {
+        throw POSIXError("failed to write video data");
+    }
+
+    if (data.thumbnail_size > 0) {
+        if (write_all(fd, data.thumbnail_data, data.thumbnail_size) <= 0) {
+            throw POSIXError("failed to write thumbnail data");
+        }
+    }
+
+    if (data.audio_size > 0) {
+        if (write_all(fd, data.audio_data, data.audio_size) <= 0) {
+            throw POSIXError("failed to write audio data");
+        }
+    }
+
+    return index->mark_frame(total_size);
+}
+
