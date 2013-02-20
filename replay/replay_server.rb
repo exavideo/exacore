@@ -147,20 +147,13 @@ class ReplayLocalControl < ShuttleProInput
             @shifted = 2
 
         when 265
-            store_shot
-            #save_preview_shot 'rpi_goal'
+            @app.toggle_filter(0)
         when 266
-            store_shot
-            #save_preview_shot 'rpi_penalty'
-        #    capture_event
+            @app.toggle_filter(1)
         when 267
-            store_shot
-            #save_preview_shot 'away_goal'
-        #    capture_event
+            @app.toggle_filter(2)
         when 268
-            store_shot
-            #save_preview_shot 'away_penalty'
-        #    capture_event
+            @app.toggle_filter(3)
         when 269
             capture_event
         when 270

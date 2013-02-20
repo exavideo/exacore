@@ -22,6 +22,7 @@
 %}
 
 %include "typemaps.i"
+%include "replay_playout_filter.i"
 
 %rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
 %rename("monitor") ReplayPlayout::get_monitor( );
@@ -40,6 +41,7 @@ class ReplayPlayout : public Thread {
         void roll_shot(const ReplayShot &INPUT);
         void set_speed(int, int);
         AsyncPort<ReplayRawFrame> *get_monitor( );
+        void register_filter(ReplayPlayoutFilter *INPUT);
 };
 
 

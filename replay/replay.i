@@ -19,4 +19,6 @@
 %include "replay_ingest.i"
 %include "replay_mjpeg_ingest.i"
 %include "replay_gamedata.i"
+%include "replay_playout_filter.i"
+%include "replay_playout_image_filter.i"
 

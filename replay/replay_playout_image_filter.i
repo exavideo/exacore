@@ -17,18 +17,25 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PLAYOUT_FILTER_H
-#define _REPLAY_PLAYOUT_FILTER_H
+%{
+    #include "replay_playout_image_filter.h"
+%}
 
-#include "replay_data.h"
+%include "typemaps.i"
+%include "replay_playout_filter.i"
 
-class ReplayPlayoutFilter {
+class ReplayPlayoutImageFilter : public ReplayPlayoutFilter {
     public:
-        virtual void enable( ) = 0;
-        virtual void disable( ) = 0;
-        virtual bool is_enabled( ) = 0;
-        virtual void process_frame(ReplayPlayoutFrame &frame) = 0;
-        virtual ~ReplayPlayoutFilter( ) { }
+        ReplayPlayoutImageFilter(RawFrame *, coord_t, coord_t);
+        static ReplayPlayoutImageFilter *from_png(
+            const char *INPUT, coord_t, coord_t
+        );
+        static ReplayPlayoutImageFilter *from_svg(
+            const char *INPUT, coord_t, coord_t
+        );
+        virtual void enable( );
+        virtual void disable( );
+        virtual bool is_enabled( );
 };
 
-#endif
+

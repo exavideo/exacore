@@ -168,10 +168,29 @@ module Replay
             @mvw = 1920
             @mvx = 0
             @mvy = 540
+            @filters = []
+        end
+
+        def toggle_filter(fid)
+            if fid < @filters.length
+                filter = @filters[fid]
+                if filter.is_enabled
+                    filter.disable
+                else
+                    filter.enable
+                end
+            end
         end
 
         def mv_mode
             @multiviewer.change_mode
+        end
+
+        def add_png_file_dsk(png, x, y)
+            filter = ReplayPlayoutImageFilter.from_png(png, x, y)
+            @program.register_filter(filter)
+            @filters << filter
+            return @filters.length - 1
         end
 
         def add_source(opts={})
