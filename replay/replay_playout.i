@@ -23,7 +23,7 @@
 
 %include "typemaps.i"
 
-//%rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
+%rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
 %rename("monitor") ReplayPlayout::get_monitor( );
 
 class ReplayPlayout : public Thread {
@@ -37,7 +37,7 @@ class ReplayPlayout : public Thread {
         //unsigned int add_png_file_dsk(const std::string &INPUT,
         //    coord_t, coord_t);
 
-        //void set_speed(int,int);
+        void roll_shot(const ReplayShot &INPUT);
         AsyncPort<ReplayRawFrame> *get_monitor( );
 };
 

@@ -19,10 +19,13 @@
 
 #include "replay_playout.h"
 #include "replay_playout_bars_source.h"
+#include "replay_playout_buffer_source.h"
 
-ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : next_source_pipe(2) {
+ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
     idle_source = new ReplayPlayoutBarsSource;
+    playout_source = NULL;
+    speed = Rational(1,1);
     start_thread( );
 }
 
@@ -38,38 +41,59 @@ void ReplayPlayout::run_thread( ) {
 
     for (;;) {
         /* is there a next source available? if so, we take it */
-        if (next_source_pipe.data_ready( )) {
-            next_source = next_source_pipe.get( );
+        next_source = playout_source.exchange(NULL);
+        if (next_source != NULL) {
             if (active_source != idle_source) {
                 delete active_source;
             }
-
             active_source = next_source;
+            active_source->set_output_dominance(oadp->output_dominance( ));
         }
-
 
         /* read data from currently active source */
         active_source->read_frame(frame_data, speed);
-        
-        /* add any keys that are enabled */
 
-        /* create monitor frame */
-        monitor_frame = new ReplayRawFrame(
-            frame_data.video_data->convert->BGRAn8_scale_1_2( )
-        );
-        monitor_frame->source_name = "Program";
-        monitor_frame->source_name2 = frame_data.source_name;
-        monitor_frame->tc = frame_data.tc;
-        monitor_frame->fractional_tc = frame_data.fractional_tc;
-        monitor.put(monitor_frame);
+        /* 
+         * if we got video, output it. If not,
+         * switch to idle source and try again 
+         */
+        if (frame_data.video_data != NULL) {
+            /* add any keys that are enabled */
 
-        /* write data to output */
-        oadp->input_pipe( ).put(frame_data.video_data);
-        if (oadp->audio_input_pipe( )) {
-            oadp->audio_input_pipe( )->put(frame_data.audio_data);
-        } else {
-            delete frame_data.audio_data;
+            /* create monitor frame */
+            monitor_frame = new ReplayRawFrame(
+                frame_data.video_data->convert->BGRAn8_scale_1_2( )
+            );
+            monitor_frame->source_name = "Program";
+            monitor_frame->source_name2 = frame_data.source_name;
+            monitor_frame->tc = frame_data.tc;
+            monitor_frame->fractional_tc = frame_data.fractional_tc;
+            monitor.put(monitor_frame);
+
+            /* write data to output */
+            oadp->input_pipe( ).put(frame_data.video_data);
+            if (oadp->audio_input_pipe( )) {
+                oadp->audio_input_pipe( )->put(frame_data.audio_data);
+            } else {
+                delete frame_data.audio_data;
+            }
+        } else {        
+            if (active_source != idle_source) {
+                delete active_source;
+            }
+            active_source = idle_source;
         }
     }
+}
 
+void ReplayPlayout::set_source(ReplayPlayoutSource *src) {
+    ReplayPlayoutSource *old_src = playout_source.exchange(src);
+    if (old_src != NULL) {
+        delete old_src;
+    }
+}
+
+/* compatibility wrapper */
+void ReplayPlayout::roll_shot(const ReplayShot &shot) {
+    set_source(new ReplayPlayoutBufferSource(shot));
 }

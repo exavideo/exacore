@@ -17,22 +17,32 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PLAYOUT_SOURCE_H
-#define _REPLAY_PLAYOUT_SOURCE_H
+#ifndef _REPLAY_PLAYOUT_BUFFER_SOURCE_H
+#define _REPLAY_PLAYOUT_BUFFER_SOURCE_H
 
 #include "replay_data.h"
-#include "rational.h"
+#include "replay_buffer.h"
+#include "replay_frame_cache.h"
+#include "replay_playout_source.h"
+#include "avspipe_allocators.h"
 
-class ReplayPlayoutSource {
+class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
     public:
-        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed) = 0;
-        void set_output_dominance(RawFrame::FieldDominance dom) { 
-            output_dominance = dom; 
-        }
-        virtual ~ReplayPlayoutSource( ) { }
+        ReplayPlayoutBufferSource(const ReplayShot &shot);
+        ~ReplayPlayoutBufferSource( );
+        void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
 
     protected:
-        RawFrame::FieldDominance output_dominance;
+        ReplayFrameCache cache;
+        ReplayBuffer *source;
+        Rational pos;
+        AvspipeNTSCSyncAudioAllocator audio_allocator;
+
+        coord_t first_scanline(RawFrame::FieldDominance dom, int field);
+        void weave_field(
+            RawFrame *dst, int dst_field, 
+            RawFrame *src, int src_field
+        );
 };
 
 #endif

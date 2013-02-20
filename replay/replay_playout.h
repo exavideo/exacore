@@ -30,6 +30,7 @@
 
 #include <list>
 #include <vector>
+#include <atomic>
 
 class ReplayPlayout : public Thread {
     public:
@@ -41,9 +42,21 @@ class ReplayPlayout : public Thread {
          * We will read frames from this source until it runs out.
          * Any playout source that is currently in use will be deleted.
          */
-        //void set_source(ReplayPlayoutSource *src);
+        void set_source(ReplayPlayoutSource *src);
 
+        /* 
+         * Change playout speed.
+         * Note: Not all possible sources support variable speed.
+         * These sources always play out at full speed.
+         */
         //void set_speed(int num, int denom);
+
+        /*
+         * Roll shot.
+         * This is a wrapper around ReplayBufferPlayoutSource
+         * and set_source, provided for convenience and compatibility.
+         */
+        void roll_shot(const ReplayShot &replay);
 
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
@@ -58,6 +71,7 @@ class ReplayPlayout : public Thread {
         void run_thread( );
 
         OutputAdapter *oadp;
+        ReplayPlayoutSource *idle_source;
 
         struct dsk {
             RawFrame *key;
@@ -66,10 +80,7 @@ class ReplayPlayout : public Thread {
             bool enabled;
         };
 
-        Pipe<ReplayPlayoutSource *> next_source_pipe;
-        std::vector<dsk> dsks;
-
-        ReplayPlayoutSource *idle_source;
+        std::atomic<ReplayPlayoutSource *> playout_source;
         Rational speed;
 };
 
