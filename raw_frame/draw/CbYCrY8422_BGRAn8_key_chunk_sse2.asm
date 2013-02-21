@@ -46,6 +46,14 @@ CbYCrY8422_BGRAn8_key_chunk_sse2:
     psrld       xmm0, 24
     pand        xmm0, [lsb32_mask wrt rip]
 
+    ; test if we actually need to key here
+    movdqa      xmm9, xmm0
+    packssdw    xmm9, xmm7      ; now lower 64 bits of xmm9 has all alpha values
+    movq        rax,  xmm9
+    test        rax,  rax
+    jz          .next
+
+
     ; red in XMM1
     psrld       xmm1, 16
     pand        xmm1, [lsb32_mask wrt rip]
