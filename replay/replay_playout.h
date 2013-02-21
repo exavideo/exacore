@@ -65,6 +65,11 @@ class ReplayPlayout : public Thread {
          */
         void register_filter(ReplayPlayoutFilter *filt);
 
+        /*
+         * Stop, or more precisely, return to idle source.
+         */
+        void stop( );
+
         /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }

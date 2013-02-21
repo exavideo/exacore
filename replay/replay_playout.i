@@ -32,16 +32,11 @@ class ReplayPlayout : public Thread {
         ReplayPlayout(OutputAdapter *INPUT);
         ~ReplayPlayout( );
 
-        //unsigned int add_svg_dsk(const std::string &INPUT,
-        //    coord_t, coord_t);
-
-        //unsigned int add_png_file_dsk(const std::string &INPUT,
-        //    coord_t, coord_t);
-
         void roll_shot(const ReplayShot &INPUT);
         void set_speed(int, int);
         AsyncPort<ReplayRawFrame> *get_monitor( );
         void register_filter(ReplayPlayoutFilter *INPUT);
+        void stop( );
 };
 
 

@@ -121,6 +121,10 @@ void ReplayPlayout::set_speed(int num, int denom) {
     }
 }
 
+void ReplayPlayout::stop( ) {
+    set_source(idle_source);
+}
+
 void ReplayPlayout::register_filter(ReplayPlayoutFilter *filt) {
     MutexLock l(filters_mutex);
     filters.push_back(filt);
