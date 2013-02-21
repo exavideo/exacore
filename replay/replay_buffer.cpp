@@ -153,6 +153,19 @@ ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, LoadFlags flags) {
         }
     }
 
+    /* determine offset and length of next frames and read ahead */
+    try {
+        off_t readahead_start_offset = index->get_frame_location(frame + 1);
+        off_t readahead_end_offset = index->get_frame_location(frame + 9);
+        off_t readahead_length = readahead_end_offset - readahead_start_offset;
+        if (posix_fadvise(fd, readahead_start_offset, 
+                readahead_length, POSIX_FADV_WILLNEED) != 0) {
+            perror("posix_fadvise");
+        }
+    } catch (const ReplayFrameNotFoundException &) {
+        /* pass */
+    }
+
     return ret;
 }
 

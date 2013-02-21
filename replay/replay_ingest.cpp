@@ -50,6 +50,8 @@ void ReplayIngest::run_thread( ) {
     Mjpeg422Encoder thumb_enc(480, 272, 30);
     timecode_t pos;
 
+    priority(SCHED_RR, 20);
+
     iadp->start( );
 
     for (;;) {

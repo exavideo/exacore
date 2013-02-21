@@ -41,6 +41,8 @@ void ReplayPlayout::run_thread( ) {
     Rational current_speed(1,1);
     Rational *next_speed;
 
+    priority(SCHED_RR, 40);
+
     for (;;) {
         /* is there a next source available? if so, we take it */
         next_source = playout_source.exchange(NULL);

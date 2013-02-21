@@ -35,8 +35,11 @@ RawFrame *ReplayFrameCache::get_frame(ReplayBuffer *source, timecode_t tc) {
             || cached_compressed_frame->pos != tc) {
 
         /* cache miss */
-        delete cached_compressed_frame;
+        delete cached_compressed_frame; 
+        cached_compressed_frame = NULL;
+        
         delete cached_raw_frame;
+        cached_raw_frame = NULL;
 
         cached_compressed_frame = source->read_frame(
             tc, ReplayBuffer::LOAD_VIDEO
