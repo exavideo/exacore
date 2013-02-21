@@ -38,6 +38,7 @@ replay_replay_so_OBJECTS = \
         replay/replay_frame_cache.o \
         replay/replay_playout_bars_source.o \
         replay/replay_playout_buffer_source.o \
+        replay/replay_playout_avspipe_source.o \
         replay/replay_playout_image_filter.o \
 	replay/replay_global.rbo 
 

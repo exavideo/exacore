@@ -20,6 +20,7 @@
 #include "replay_playout.h"
 #include "replay_playout_bars_source.h"
 #include "replay_playout_buffer_source.h"
+#include "replay_playout_avspipe_source.h"
 
 ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
@@ -128,4 +129,8 @@ void ReplayPlayout::stop( ) {
 void ReplayPlayout::register_filter(ReplayPlayoutFilter *filt) {
     MutexLock l(filters_mutex);
     filters.push_back(filt);
+}
+
+void ReplayPlayout::avspipe_playout(const char *cmd) {
+    set_source(new ReplayPlayoutAvspipeSource(cmd));
 }

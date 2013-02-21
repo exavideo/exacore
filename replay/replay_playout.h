@@ -70,6 +70,11 @@ class ReplayPlayout : public Thread {
          */
         void stop( );
 
+        /*
+         * Roll out file via AvspipeInputAdapter using e.g. ffmpeg
+         */
+        void avspipe_playout(const char *cmd);
+
         /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }

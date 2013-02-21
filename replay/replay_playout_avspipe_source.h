@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,27 +17,22 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-%{
-    #include "replay_playout.h"
-%}
+#ifndef _REPLAY_PLAYOUT_AVSPIPE_SOURCE_H
+#define _REPLAY_PLAYOUT_AVSPIPE_SOURCE_H
 
-%include "typemaps.i"
-%include "replay_playout_filter.i"
+#include "replay_data.h"
+#include "replay_playout_source.h"
+#include "avspipe_input_adapter.h"
 
-%rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
-%rename("monitor") ReplayPlayout::get_monitor( );
-
-class ReplayPlayout : public Thread {
+class ReplayPlayoutAvspipeSource : public ReplayPlayoutSource {
     public:
-        ReplayPlayout(OutputAdapter *INPUT);
-        ~ReplayPlayout( );
+        ReplayPlayoutAvspipeSource(const char *cmd);
+        ~ReplayPlayoutAvspipeSource( );
+        void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
 
-        void roll_shot(const ReplayShot &INPUT);
-        void set_speed(int, int);
-        AsyncPort<ReplayRawFrame> *get_monitor( );
-        void register_filter(ReplayPlayoutFilter *INPUT);
-        void stop( );
-        void avspipe_playout(const char *INPUT);
+    protected:
+        AvspipeInputAdapter *iadp;
+        timecode_t n_frames;
 };
 
-
+#endif
