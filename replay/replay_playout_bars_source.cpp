@@ -49,6 +49,9 @@ void ReplayPlayoutBarsSource::read_frame(ReplayPlayoutFrame &frame_data,
 
     frame_data.video_data = bars->copy( );
     frame_data.audio_data = audio_allocator.allocate( );
+    frame_data.tc = 0;
+    frame_data.fractional_tc = 0;
+    frame_data.source_name = "No Source";
     oscillate(frame_data.audio_data, 440);
 }
 
