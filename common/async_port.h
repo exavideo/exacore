@@ -21,61 +21,45 @@
 #define _OPENREPLAY_ASYNC_PORT_H
 
 #include "mutex.h"
-
-/* 
- * Important Note!
- * This frame synchronizer has a non-zero probability of failure.
- * The probability of a major failure is related to the amount of time
- * for which a reference to a contained object is held onto. So don't hold
- * onto them for long! The probability of failure can be reduced by increasing
- * the argument "n" to the constructor to a suitably large value.
- */
-
-/* FIXME: re-implement using a proper reference counting scheme */
+#include <atomic>
 
 template <class T>
 class AsyncPort {
     public:
-        AsyncPort(int n = 8) {
-            buf = new T*[n];
-            for (int i = 0; i < n; i++) { 
-                buf[i] = NULL;
-            }
-            j = 0;
-            sz = n;
+        AsyncPort( ) {
+            buf = NULL;
+            readbuf = NULL;
         }
 
         /* 
-         * Put a new object into the buffer. 
-         * delete anything we overwrite.
+         * Put new value into buf. If something is already in buf,
+         * it has not yet been picked up by the receiving side of
+         * the port. Thus, we delete it.
          */
         void put(T* ptr) {
-            MutexLock l(m);
-            if (buf[j] != NULL) {
-                delete buf[j];
-            }
-
-            buf[j] = ptr;
-            j++;
-
-            if (j >= sz) {
-                j = 0;
+            T* old_value = buf.exchange(ptr);
+            if (old_value != NULL) {
+                delete old_value;
             }
         }
 
-        /* 
-         * Return the last object written to the buffer.
-         * Return NULL if nothing has been written yet.
+        /*
+         * Read value from buf/readbuf.
+         * We atomically read buf and set it to null. Thus, a pointer in
+         * the read side of the port cannot be deleted except by another read.
          */
         T* get( ) {
-            MutexLock l(m);
-            return buf[(j == 0) ? (sz - 1) : (j - 1)];
+            T* new_value = buf.exchange(NULL);
+            if (new_value != NULL) {
+                delete readbuf;
+                readbuf = new_value;
+            }
+
+            return readbuf;
         }
     protected:
-        T **buf;
-        Mutex m;
-        int j;
-        int sz;
+        T* readbuf;
+        std::atomic<T*> buf;
 };
 
 #endif
