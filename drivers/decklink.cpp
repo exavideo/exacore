@@ -215,6 +215,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 last_frame(NULL), in_pipe(OUT_PIPE_SIZE), audio_in_pipe(NULL) {
 
             frames_written = 0;
+            audio_adjust = 0;
             norm = norm_;
             assert(norm < sizeof(norms) / sizeof(struct decklink_norm));
             time_base = norms[norm].time_base;
@@ -314,7 +315,16 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             if (!preroll) {
                 /* read from audio input pipe */
                 while (audio_end < audio_size / 4 && audio_in_pipe->data_ready( )) {
-                    audio = audio_in_pipe->get( );
+                    if (audio_adjust > 0) {
+                        /* 
+                         * insert dummy audio as needed to compensate for 
+                         * dropped video frames
+                         */
+                        audio = new AudioPacket(48000, 2, 2, 1601);
+                        audio_adjust--;
+                    } else {
+                        audio = audio_in_pipe->get( );
+                    }
                     memcpy(audio_data + audio_end, audio->data( ), audio->size( ));
                     audio_end += audio->size( );
                     delete audio;
@@ -350,6 +360,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         unsigned int frame_counter;
 
         unsigned int norm;
+        unsigned int audio_adjust;
 
         RawFrame *last_frame;
 
@@ -556,6 +567,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 /* use the stale frame */
                 fprintf(stderr, "DeckLink: stale frame\n");
                 input = last_frame;
+                audio_adjust += 1; /* ugly hack */
             } else {
                 /* this should likewise be a black frame */
                 input = NULL;
@@ -588,71 +600,6 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
         }
-
-        /* 
-         * Try sending some audio data to the Decklink.
-         * Call only with current_audio_pkt != NULL.
-         * Will set current_audio_pkt to NULL and delete the packet
-         * if it is fully consumed.
-         * Return number of samples consumed.
-         */
-#if 1
-        int try_finish_current_audio_packet( ) {
-            uint32_t n_consumed;
-            uint32_t n_left;
-            
-            uint32_t buffer;
-            deckLinkOutput->GetBufferedAudioSampleFrameCount(&buffer);
-            fprintf(stderr, "audio buffer = %u ", buffer);
-
-            assert(current_audio_pkt != NULL);
-
-            n_left = current_audio_pkt->n_frames( ) 
-                    - samples_written_from_current_audio_pkt;
-
-            if (n_left == 0) {
-                fprintf(stderr, "Audio warning: This should not happen!\n");
-                return 1;
-            }
-
-            if (deckLinkOutput->ScheduleAudioSamples(
-                    current_audio_pkt->sample(
-                        samples_written_from_current_audio_pkt
-                    ), n_left, 0, 0, &n_consumed) != S_OK) {
-                throw std::runtime_error(
-                    "Failed to schedule audio samples"
-                );
-            }
-
-            if (n_consumed == n_left) {
-                delete current_audio_pkt;
-                current_audio_pkt = NULL;
-            } else if (n_consumed < n_left) {
-                samples_written_from_current_audio_pkt += n_consumed;
-            } else {
-                throw std::runtime_error("This should not happen");
-            }
-
-            deckLinkOutput->GetBufferedAudioSampleFrameCount(&buffer);
-            fprintf(stderr, "-> %u\n", buffer);
-
-            return n_consumed;
-        }
-#else
-
-        int try_finish_current_audio_packet( ) {
-            uint32_t n_consumed;
-
-            if (current_audio_pkt != NULL) {
-                delete current_audio_pkt;
-                current_audio_pkt = NULL;
-            }
-
-            deckLinkOutput->ScheduleAudioSamples(waveform, 1000, 0, 0, &n_consumed);
-
-            return (int) (n_consumed / 4);
-        }
-#endif
 
 };
 
