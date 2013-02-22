@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Exavideo LLC.
+ * Copyright 2011, 2012, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,28 +17,32 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_FRAME_CACHE_H
-#define _REPLAY_FRAME_CACHE_H
+#ifndef _PHASE_VOCODER_SYNTH_H
+#define _PHASE_VOCODER_SYNTH_H
 
-#include "raw_frame.h"
-#include "replay_buffer.h"
-#include "mjpeg_codec.h"
 #include "phase_data_packet.h"
+#include <stddef.h>
 
-/* Cache decoded frames for faster access. */
-class ReplayFrameCache {
+class PhaseVocoderSynth {
     public:
-        ReplayFrameCache( );
-        ~ReplayFrameCache( );
-        RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
-        PhaseDataPacket *get_phase_data(ReplayBuffer *source, timecode_t tc);
+        PhaseVocoderSynth(size_t n_points, size_t n_channels);
+        void set_phase_data(const PhaseDataPacket &phase_data);
+        AudioPacket *render_samples(size_t n_samples);
+        void render_samples(AudioPacket *pkt);
+
     protected:
-        ReplayFrameData *cached_compressed_frame;
-        RawFrame *cached_raw_frame;
-        AudioPacket *cached_audio_packet;
-        PhaseDataPacket *cached_phase_data;
-        Mjpeg422Decoder decoder;
-        void check_cache(ReplayBuffer *source, timecode_t tc);
+        float *phase_data;
+        float *phase_accumulator;
+        float *realimag;
+
+        float *float_samples;
+        float *fft_result;
+        size_t n_samples_ready;
+        size_t n_samples;
+        size_t n_points;
+        size_t n_channels;
+
+        void render_more_samples( );
 };
 
 #endif

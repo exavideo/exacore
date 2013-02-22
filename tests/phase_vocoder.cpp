@@ -17,28 +17,21 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_FRAME_CACHE_H
-#define _REPLAY_FRAME_CACHE_H
-
-#include "raw_frame.h"
-#include "replay_buffer.h"
-#include "mjpeg_codec.h"
+#include "audio_packet.h"
 #include "phase_data_packet.h"
+#include "phase_vocoder_synth.h"
+#include "posix_util.h"
+#include <unistd.h>
 
-/* Cache decoded frames for faster access. */
-class ReplayFrameCache {
-    public:
-        ReplayFrameCache( );
-        ~ReplayFrameCache( );
-        RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
-        PhaseDataPacket *get_phase_data(ReplayBuffer *source, timecode_t tc);
-    protected:
-        ReplayFrameData *cached_compressed_frame;
-        RawFrame *cached_raw_frame;
-        AudioPacket *cached_audio_packet;
-        PhaseDataPacket *cached_phase_data;
-        Mjpeg422Decoder decoder;
-        void check_cache(ReplayBuffer *source, timecode_t tc);
-};
+int main( ) {
+    AudioPacket *src = new AudioPacket(48000, 2, 2, 1600);
+    AudioPacket *out = new AudioPacket(48000, 2, 2, 1600);
+    PhaseVocoderSynth pv(512, 2);
 
-#endif
+    while (read_all(STDIN_FILENO, src->data( ), src->size( )) > 0) {
+        PhaseDataPacket phase_data(src, 512);
+        pv.set_phase_data(phase_data);
+        pv.render_samples(out);
+        write_all(STDOUT_FILENO, out->data( ), out->size( ));
+    }
+}

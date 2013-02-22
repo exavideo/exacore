@@ -274,3 +274,14 @@ tests/clock_monotonic: $(test_clock_monotonic_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ -pthread -lrt
 
 all_TARGETS += tests/clock_monotonic    
+
+test_phase_vocoder_OBJECTS= \
+        $(common_OBJECTS) \
+	$(phase_vocoder_OBJECTS) \
+        $(raw_frame_OBJECTS) \
+	tests/phase_vocoder.o
+
+tests/phase_vocoder: $(test_phase_vocoder_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ -pthread -lrt -lpng $(phase_vocoder_LIBS)
+
+all_TARGETS += tests/phase_vocoder    

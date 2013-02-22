@@ -21,6 +21,7 @@
 #include "mjpeg_codec.h"
 #include <assert.h>
 #include <string.h>
+#include "xmalloc.h"
 
 ReplayIngest::ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_,
         ReplayGameData *gds) {
@@ -51,6 +52,11 @@ void ReplayIngest::run_thread( ) {
     timecode_t pos;
 
     priority(SCHED_RR, 20);
+
+    const size_t audio_max_size = 16384;
+    size_t audio_actual_size;
+    void *audio_serialize_buf = xmalloc(audio_max_size, 
+        "ReplayIngest", "audio_serialize_buf");
 
     iadp->start( );
 
@@ -85,6 +91,17 @@ void ReplayIngest::run_thread( ) {
             thumb_enc.encode(thumb);
             data_to_write.thumbnail_data = thumb_enc.get_data( );
             data_to_write.thumbnail_size = thumb_enc.get_data_size( );
+
+            /* serialize audio data if we have it */
+            if (input_audio) {
+                audio_actual_size = input_audio->serialize(
+                    audio_serialize_buf,
+                    audio_max_size
+                );
+
+                data_to_write.audio_data = audio_serialize_buf;
+                data_to_write.audio_size = audio_actual_size;
+            }
 
             pos = buf->write_frame(data_to_write);
 
