@@ -319,7 +319,7 @@ function rolloutFile( ) {
 }
 
 function resumeEncode( ) {
-    putJson('/resume_encode.json', { });
+    putJson({ }, '/resume_encode.json');
 }
 
 $(function() {
