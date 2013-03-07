@@ -22,6 +22,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 ReplayPlayoutBarsSource::ReplayPlayoutBarsSource( ) {
     int barsfd;
@@ -52,7 +53,7 @@ void ReplayPlayoutBarsSource::read_frame(ReplayPlayoutFrame &frame_data,
     frame_data.tc = 0;
     frame_data.fractional_tc = 0;
     frame_data.source_name = "No Source";
-    oscillate(frame_data.audio_data, 440);
+    memset(frame_data.audio_data->data( ), 0, frame_data.audio_data->size( ));
 }
 
 void ReplayPlayoutBarsSource::oscillate(AudioPacket *pkt, float frequency) {
