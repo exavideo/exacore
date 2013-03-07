@@ -38,7 +38,7 @@ class ReplayBuffer {
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
         
-        ReplayFrameData *read_frame(timecode_t frame, int flags);
+        ReplayFrameData *read_frame(timecode_t frame, LoadFlags flags);
         timecode_t write_frame(const ReplayFrameData &frame);
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }

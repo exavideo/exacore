@@ -106,7 +106,7 @@ const char *ReplayBuffer::get_name( ) {
 }
 
 /* FIXME: these should be refactored into something cleaner */
-ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, int flags) {
+ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, LoadFlags flags) {
     FrameHeader header; 
     off_t base_offset, video_offset, thumbnail_offset, audio_offset;
     ReplayFrameData *ret = new ReplayFrameData;

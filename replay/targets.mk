@@ -26,7 +26,6 @@ replay_replay_so_OBJECTS = \
         $(drivers_v4l2_OBJECTS) \
 	$(graphics_OBJECTS) \
         $(avspipe_OBJECTS) \
-        $(phase_vocoder_OBJECTS) \
 	replay/replay_buffer.o \
         replay/replay_buffer_index.o \
 	replay/replay_ingest.o \
@@ -45,6 +44,6 @@ replay_replay_so_OBJECTS = \
 
 replay/replay.so: $(replay_replay_so_OBJECTS)
 	# maybe???
-	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS) $(phase_vocoder_LIBS)
+	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS)
 
 all_TARGETS += replay/replay.so

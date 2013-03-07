@@ -92,7 +92,7 @@ AudioPacket *AudioPacket::copy( ) {
     return ret;
 }
 
-size_t AudioPacket::serialize(void *dest, size_t size) {
+void AudioPacket::serialize(void *dest, size_t size) {
     if (size < sizeof(struct sdata) + _size) {
         throw std::runtime_error("cannot serialize audio, not enough space");
     }
@@ -103,8 +103,6 @@ size_t AudioPacket::serialize(void *dest, size_t size) {
     sd->_channels = _channels;
     sd->_sample_size = _sample_size;
     memcpy(sd->_data, _data, _size);
-
-    return sizeof(struct sdata) + _size;
 }
 
 #ifdef RAWFRAME_POSIX_IO

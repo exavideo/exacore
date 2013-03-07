@@ -25,7 +25,6 @@
 #include "replay_frame_cache.h"
 #include "replay_playout_source.h"
 #include "avspipe_allocators.h"
-#include "phase_vocoder_synth.h"
 
 class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
     public:
@@ -44,8 +43,6 @@ class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
             RawFrame *dst, int dst_field, 
             RawFrame *src, int src_field
         );
-
-        PhaseVocoderSynth audio_synth;
 };
 
 #endif

@@ -21,8 +21,7 @@
 #include <algorithm> // min
 #include <string.h>
 
-ReplayPlayoutBufferSource::ReplayPlayoutBufferSource(const ReplayShot &shot) 
-        : audio_synth(512, 2) {
+ReplayPlayoutBufferSource::ReplayPlayoutBufferSource(const ReplayShot &shot) {
     source = shot.source;
     pos = shot.start;
 }
@@ -36,20 +35,12 @@ void ReplayPlayoutBufferSource::read_frame(
         Rational speed
 ) {
     RawFrame *src;
-    PhaseDataPacket *phase_data;
-
     /* for speed of 1/1 we should advance pos by 1/2 between fields */
     speed = speed / 2; 
     
     try {
         frame_data.tc = pos.integer_part( );
         frame_data.fractional_tc = pos.fractional_part( );
-
-        /* render audio using the phase vocoder */
-        phase_data = cache.get_phase_data(source, pos.integer_part( ));
-        audio_synth.set_phase_data(*phase_data);
-        frame_data.audio_data = audio_allocator.allocate( );
-        audio_synth.render_samples(frame_data.audio_data);
 
         /* retrieve the first field and weave it in */
         src = cache.get_frame(source, pos.integer_part( ));
@@ -80,6 +71,7 @@ void ReplayPlayoutBufferSource::read_frame(
 
         pos += speed;
 
+        frame_data.audio_data = audio_allocator.allocate( );
         frame_data.source_name = source->get_name( );
     } catch (const ReplayFrameNotFoundException &) {
         frame_data.video_data = NULL;

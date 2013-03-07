@@ -38,12 +38,11 @@ class AudioPacket {
         AudioPacket *copy( );
 
         /* save audio packet to a block of memory */
-        size_t serialize(void *dest, size_t size);
+        void serialize(void *dest, size_t size);
 
         uint8_t *data( ) { return _data; }
         size_t size( ) { return _size; }
         size_t n_frames( ) { return _size / (_sample_size * _channels); }
-        unsigned int channels( ) { return _channels; }
         /* return pointer to tne n'th sample frame */
         int16_t *sample(unsigned int n) { 
             assert(n < n_frames( ));

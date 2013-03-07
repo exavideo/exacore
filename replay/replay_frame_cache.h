@@ -23,7 +23,6 @@
 #include "raw_frame.h"
 #include "replay_buffer.h"
 #include "mjpeg_codec.h"
-#include "phase_data_packet.h"
 
 /* Cache decoded frames for faster access. */
 class ReplayFrameCache {
@@ -31,14 +30,10 @@ class ReplayFrameCache {
         ReplayFrameCache( );
         ~ReplayFrameCache( );
         RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
-        PhaseDataPacket *get_phase_data(ReplayBuffer *source, timecode_t tc);
     protected:
         ReplayFrameData *cached_compressed_frame;
         RawFrame *cached_raw_frame;
-        AudioPacket *cached_audio_packet;
-        PhaseDataPacket *cached_phase_data;
         Mjpeg422Decoder decoder;
-        void check_cache(ReplayBuffer *source, timecode_t tc);
 };
 
 #endif
