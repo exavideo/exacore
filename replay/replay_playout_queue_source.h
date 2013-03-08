@@ -17,25 +17,27 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PLAYOUT_SOURCE_H
-#define _REPLAY_PLAYOUT_SOURCE_H
+#ifndef _REPLAY_PLAYOUT_QUEUE_SOURCE_H
+#define _REPLAY_PLAYOUT_QUEUE_SOURCE_H
 
-#include "replay_data.h"
-#include "rational.h"
+#include "replay_playout_source.h"
+#include <list>
 
-class ReplayPlayoutSource {
+class ReplayPlayoutQueueSource : public ReplayPlayoutSource {
     public:
-        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed) = 0;
-        void set_output_dominance(RawFrame::FieldDominance dom) { 
-            output_dominance = dom; 
-        }
-        virtual ~ReplayPlayoutSource( ) { }
+        typedef std::list<ReplayPlayoutSource *> SourceQueue;
+        ReplayPlayoutQueueSource(SourceQueue &src);
+        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+        virtual ~ReplayPlayoutQueueSource( );
 
-        virtual timecode_t position( ) = 0;
-        virtual timecode_t duration( ) = 0;
+        virtual timecode_t position( );
+        virtual timecode_t duration( );
 
     protected:
-        RawFrame::FieldDominance output_dominance;
+        SourceQueue sources;
+        timecode_t frames_rolled;
+        timecode_t total_duration;
+        bool duration_known;
 };
 
 #endif

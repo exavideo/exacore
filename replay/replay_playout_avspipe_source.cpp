@@ -45,3 +45,12 @@ void ReplayPlayoutAvspipeSource::read_frame(
         frame.video_data = NULL;
     }
 }
+
+timecode_t ReplayPlayoutAvspipeSource::position( ) {
+    return n_frames;
+}
+
+timecode_t ReplayPlayoutAvspipeSource::duration( ) {
+    return -1;
+}
+

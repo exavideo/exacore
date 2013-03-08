@@ -121,11 +121,22 @@ class RawFramePacker {
     public:
         RawFramePacker(RawFrame *f_) : f(f_) {
             do_YCbCr8P422 = NULL;
+            do_YCbCr8P422A = NULL;
         }
 
         void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
             CHECK(do_YCbCr8P422);
             do_YCbCr8P422(f->size( ), f->data( ), Y, Cb, Cr);
+        }
+
+        void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr,
+            size_t Ysrcpitch, size_t Cbsrcpitch, size_t Crsrcpitch) {
+            CHECK(do_YCbCr8P422A);
+            do_YCbCr8P422A(
+                f->w( ), f->h( ), 
+                Ysrcpitch, Cbsrcpitch, Crsrcpitch,
+                Y, Cb, Cr, f->data( )
+            );
         }
 
     protected:
@@ -139,6 +150,9 @@ class RawFramePacker {
 
         void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
                 uint8_t *, uint8_t *);
+
+        void (*do_YCbCr8P422A)(size_t, size_t, size_t, size_t, size_t,
+            uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
 
 class RawFrameUnpacker {

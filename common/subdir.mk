@@ -1,4 +1,5 @@
 common_OBJECTS = \
+        common/audio_fifo.o \
         common/clocks.o \
         common/xmalloc.o \
         common/posix_util.o \

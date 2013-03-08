@@ -114,3 +114,11 @@ void ReplayPlayoutBufferSource::weave_field(
         dst_scanline += 2;
     }
 }
+
+timecode_t ReplayPlayoutBufferSource::position( ) {
+    return pos.integer_part( );
+}
+
+timecode_t ReplayPlayoutBufferSource::duration( ) {
+    return -1;
+}

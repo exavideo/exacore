@@ -31,6 +31,8 @@ class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
         ReplayPlayoutBufferSource(const ReplayShot &shot);
         ~ReplayPlayoutBufferSource( );
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+        timecode_t position( );
+        timecode_t duration( );
 
     protected:
         ReplayFrameCache cache;

@@ -29,7 +29,8 @@ class ReplayPlayoutAvspipeSource : public ReplayPlayoutSource {
         ReplayPlayoutAvspipeSource(const char *cmd);
         ~ReplayPlayoutAvspipeSource( );
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
-
+        timecode_t position( );
+        timecode_t duration( );
     protected:
         AvspipeInputAdapter *iadp;
         timecode_t n_frames;

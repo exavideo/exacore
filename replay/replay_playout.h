@@ -33,6 +33,8 @@
 #include <vector>
 #include <atomic>
 
+typedef std::list<const char *> StringList;
+
 class ReplayPlayout : public Thread {
     public:
         ReplayPlayout(OutputAdapter *oadp_);
@@ -74,6 +76,20 @@ class ReplayPlayout : public Thread {
          * Roll out file via AvspipeInputAdapter using e.g. ffmpeg
          */
         void avspipe_playout(const char *cmd);
+        /*
+         * Roll out file using libavformat.
+         */
+        void lavf_playout(const char *cmd);
+        /*
+         * Roll out list of files.
+         */
+        void lavf_playout_list(const StringList &files);
+
+        /*
+         * Get information about the current playout source state
+         */
+        timecode_t source_position( );
+        timecode_t source_duration( );
 
         /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
@@ -82,11 +98,18 @@ class ReplayPlayout : public Thread {
     protected:
         void run_thread( );
 
+        struct SourceState {
+            timecode_t position;
+            timecode_t duration;
+        };
+
         OutputAdapter *oadp;
         ReplayPlayoutSource *idle_source;
         std::vector<ReplayPlayoutFilter *> filters;
         std::atomic<ReplayPlayoutSource *> playout_source;
         std::atomic<Rational *> new_speed;
+        std::atomic<timecode_t> _source_position;
+        std::atomic<timecode_t> _source_duration;
         Mutex filters_mutex;
 };
 

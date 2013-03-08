@@ -77,3 +77,11 @@ void ReplayPlayoutBarsSource::oscillate(AudioPacket *pkt, float frequency) {
         }
     }
 }
+
+timecode_t ReplayPlayoutBarsSource::position( ) {
+    return 0;
+}
+
+timecode_t ReplayPlayoutBarsSource::duration( ) {
+    return -1;
+}

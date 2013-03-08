@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Exavideo LLC.
+ * Copyright 2011, 2012, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,25 +17,27 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PLAYOUT_SOURCE_H
-#define _REPLAY_PLAYOUT_SOURCE_H
+#ifndef _AUDIO_FIFO_H
+#define _AUDIO_FIFO_H
 
-#include "replay_data.h"
-#include "rational.h"
+#include "audio_packet.h"
 
-class ReplayPlayoutSource {
+/* buffer for (16-bit, stereo) audio data */
+class AudioFIFO {
     public:
-        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed) = 0;
-        void set_output_dominance(RawFrame::FieldDominance dom) { 
-            output_dominance = dom; 
-        }
-        virtual ~ReplayPlayoutSource( ) { }
+        AudioFIFO( );
+        ~AudioFIFO( );
 
-        virtual timecode_t position( ) = 0;
-        virtual timecode_t duration( ) = 0;
-
+        void fill_packet(AudioPacket *apkt);
+        void add_samples(size_t n_samples, uint8_t *data);
+        size_t samples( ) { return fill_level / sample_size; }
     protected:
-        RawFrame::FieldDominance output_dominance;
+        uint8_t *data;
+        size_t size;
+        size_t fill_level;
+        size_t sample_size;
+
+        void reallocate(size_t new_size);
 };
 
 #endif

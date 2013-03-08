@@ -17,25 +17,17 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PLAYOUT_SOURCE_H
-#define _REPLAY_PLAYOUT_SOURCE_H
 
-#include "replay_data.h"
-#include "rational.h"
+%{
+    #include "replay_playout_lavf_source.h"
+%}
 
-class ReplayPlayoutSource {
+%include "typemaps.i"
+
+
+class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
     public:
-        virtual void read_frame(ReplayPlayoutFrame &frame_data, Rational speed) = 0;
-        void set_output_dominance(RawFrame::FieldDominance dom) { 
-            output_dominance = dom; 
-        }
-        virtual ~ReplayPlayoutSource( ) { }
-
-        virtual timecode_t position( ) = 0;
-        virtual timecode_t duration( ) = 0;
-
-    protected:
-        RawFrame::FieldDominance output_dominance;
+        ReplayPlayoutLavfSource(const char *INPUT);
+        static timecode_t get_file_duration(const char *INPUT);
 };
 
-#endif
