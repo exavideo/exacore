@@ -42,7 +42,7 @@ void ReplayIngest::debug( ) {
 
 void ReplayIngest::run_thread( ) {
     RawFrame *input, *thumb;
-    AudioPacket *input_audio;
+    IOAudioPacket *input_audio;
     ReplayRawFrame *monitor_frame;
 
     ReplayFrameData data_to_write;
@@ -96,6 +96,10 @@ void ReplayIngest::run_thread( ) {
             monitor_frame->tc = pos;
 
             monitor.put(monitor_frame);
+
+            if (input_audio) {
+                pv_analyzer.analyze(input_audio);
+            }
         }
 
         if (input_audio) {

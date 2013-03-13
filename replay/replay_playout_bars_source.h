@@ -36,7 +36,7 @@ class ReplayPlayoutBarsSource : public ReplayPlayoutSource {
         RawFrame *bars;
         AvspipeNTSCSyncAudioAllocator audio_allocator;
 
-        void oscillate(AudioPacket *pkt, float frequency);
+        void oscillate(IOAudioPacket *pkt, float frequency);
         /* phase accumulator for oscillator */
         double phase;
 };

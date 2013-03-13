@@ -1,6 +1,5 @@
 raw_frame_OBJECTS = \
     raw_frame/raw_frame.o \
-    raw_frame/audio_packet.o \
     raw_frame/convert/CbYCrY8422_YCbCr8P422_default.o \
     raw_frame/convert/CbYCrY8422_CbYCrY8422_scan_double.o \
     raw_frame/convert/CbYCrY8422_CbYCrY8422_scan_triple.o \
@@ -31,3 +30,5 @@ raw_frame_OBJECTS += \
     raw_frame/draw/CbYCrY8422_alpha_key_sse2.o \
 
 endif
+
+raw_frame_LIBS = -lpng

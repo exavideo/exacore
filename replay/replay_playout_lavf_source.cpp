@@ -141,12 +141,12 @@ void ReplayPlayoutLavfSource::read_frame(
     frame_data.video_data = NULL;
     frame_data.audio_data = NULL;
 
-    AudioPacket *audio = audio_allocator.allocate( );
+    IOAudioPacket *audio = audio_allocator.allocate( );
 
     (void) speed;
 
     while (pending_video_frames.size( ) == 0 
-            || pending_audio.samples( ) < audio->n_frames( )) {
+            || pending_audio.samples( ) < audio->size_samples( )) {
         if (run_lavc( ) == 0) {
             delete audio;
             return;
@@ -227,8 +227,10 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
             throw std::runtime_error("need 2-channel");
         }
 
-        pending_audio.add_samples(audio_frame.nb_samples, 
-                audio_frame.data[0]);
+        pending_audio.add_packed_samples(
+            (int16_t *)audio_frame.data[0],
+            audio_frame.nb_samples
+        );
 
         return 1;
     } else {

@@ -69,7 +69,7 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
         static int registered;
 
         std::list<RawFrame *> pending_video_frames;
-        AudioFIFO pending_audio;
+        AudioFIFO<int16_t> pending_audio;
 };
 
 #endif

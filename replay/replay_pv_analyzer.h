@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2012, 2013 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,27 +17,28 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _AUDIO_FIFO_H
-#define _AUDIO_FIFO_H
+#ifndef _REPLAY_PV_ANALYZER_H
+#define _REPLAY_PV_ANALYZER_H
 
-#include "audio_packet.h"
+#include "audio_fifo.h"
 
-/* buffer for (16-bit, stereo) audio data */
-class AudioFIFO {
+class ReplayPvFrameSet;
+
+class ReplayPvAnalyzer {
     public:
-        AudioFIFO( );
-        ~AudioFIFO( );
+        ReplayPvAnalyzer( );
+        ReplayPvAnalyzer(ReplayBuffer *buf);
+        ~ReplayPvAnalyzer( );
 
-        void fill_packet(AudioPacket *apkt);
-        void add_samples(size_t n_samples, uint8_t *data);
-        size_t samples( ) { return fill_level / sample_size; }
+        void analyze(IOAudioPacket *apkt);
     protected:
-        uint8_t *data;
-        size_t size;
-        size_t fill_level;
-        size_t sample_size;
+        AudioFIFO<float> *channel_fifos;
+        ReplayBuffer *buffer;
+        ReplayPvFrameSet *output_frames;
+        size_t fft_size;
+        size_t hop_size;
 
-        void reallocate(size_t new_size);
+        void emit_frame( );
 };
 
 #endif

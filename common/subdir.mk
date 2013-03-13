@@ -1,5 +1,4 @@
 common_OBJECTS = \
-        common/audio_fifo.o \
         common/clocks.o \
         common/xmalloc.o \
         common/posix_util.o \
@@ -9,3 +8,5 @@ common_OBJECTS = \
         common/new_delete_malloc.o \
         common/hex_dump.o \
         common/instrument.o \
+
+common_LIBS = -lrt

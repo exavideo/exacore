@@ -21,6 +21,7 @@ EXTERNAL_INCLUDES += \
 	-I$(DECKLINK_SDK_PATH) \
 
 SUBDIR_INCLUDES = \
+	-Iaudio/ \
 	-Imjpeg/ \
 	-Icommon/ \
 	-Iraw_frame/ \
@@ -52,18 +53,18 @@ endif
 
 # Generic rule for compiling C++ object files.
 %.o : %.cpp
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d $^
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $^ 
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d -MT $@ $<
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $< 
 
 %.rbo: %.rbcpp
-	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $^
+	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $<
 
 %.rbcpp : %.i
-	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $^
+	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $<
 
 # And one for assembly files
 %.o : %.asm
-	$(ASM) -o $@ $^
+	$(ASM) -o $@ $<
 
 do_all_targets: $(all_TARGETS)
 
@@ -71,6 +72,7 @@ clean:
 	-find . -iname '*.o' | xargs rm
 	-find . -iname '*.rbo' | xargs rm
 	-find . -iname '*.rbcpp' | xargs rm
+	-find . -iname '*.d' | xargs rm
 	-rm -f $(all_TARGETS)
 
 .PHONY: all do_all_targets clean

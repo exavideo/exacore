@@ -19,7 +19,7 @@
 
 #include "decklink.h"
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 #include "pipe.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,7 @@
 int main( ) {
     RawFrame *frame;
     OutputAdapter *oadp;
-    AudioPacket *apkt;
+    IOAudioPacket *apkt;
     uint8_t x;
     int n = 0;
 
@@ -43,9 +43,9 @@ int main( ) {
             frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 
             if (n == 1 || n == 3) {
-                apkt = new AudioPacket(48000, 2, 2, 1601);
+                apkt = new IOAudioPacket(1601, 2);
             } else {
-                apkt = new AudioPacket(48000, 2, 2, 1602);
+                apkt = new IOAudioPacket(1602, 2);
             }
 
             n++;

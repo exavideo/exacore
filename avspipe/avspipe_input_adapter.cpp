@@ -52,8 +52,8 @@ AvspipeInputAdapter::AvspipeInputAdapter(const char *cmd,
         aread = NULL;
         apfd = -1;
     } else {
-        apipe = new Pipe<AudioPacket *>(64);
-        aread = new AvspipeReaderThread<AudioPacket, 
+        apipe = new Pipe<IOAudioPacket *>(64);
+        aread = new AvspipeReaderThread<IOAudioPacket, 
                 AvspipeNTSCSyncAudioAllocator>(apipe, apfd);
     }
 }

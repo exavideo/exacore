@@ -53,10 +53,11 @@ void ReplayPlayoutBarsSource::read_frame(ReplayPlayoutFrame &frame_data,
     frame_data.tc = 0;
     frame_data.fractional_tc = 0;
     frame_data.source_name = "No Source";
-    memset(frame_data.audio_data->data( ), 0, frame_data.audio_data->size( ));
+    memset(frame_data.audio_data->data( ), 0, 
+        frame_data.audio_data->size_bytes( ));
 }
 
-void ReplayPlayoutBarsSource::oscillate(AudioPacket *pkt, float frequency) {
+void ReplayPlayoutBarsSource::oscillate(IOAudioPacket *pkt, float frequency) {
     /* 
      * convert frequency to delta phase per sample 
      * frequency = Hz, multiply by 2*pi to get rad/sec, then divide by sample
@@ -64,13 +65,18 @@ void ReplayPlayoutBarsSource::oscillate(AudioPacket *pkt, float frequency) {
      */
     const double pi = 4*atan(1); /* atan(1) == pi/4 */
     double phase_rate = frequency * 2 * pi / 48000.0;
-    int16_t *sample, value;
-    for (unsigned int i = 0; i < pkt->n_frames( ); i++) {
+    int16_t value;
+    size_t channels, samples;
+    channels = pkt->channels( );
+    samples = pkt->size_samples( );
+
+    for (unsigned int i = 0; i < samples; i++) {
         /* FIXME: this blindly assumes stereo samples */
         value = 30000 * sin(phase);
-        sample = pkt->sample(i);
-        sample[0] = value;
-        sample[1] = value;
+        for (size_t j = 0; j < channels; j++) {
+            pkt->data()[j+i*channels] = value;
+        }
+
         phase += phase_rate;
         if (phase > 2 * pi) {
             phase -= 2 * pi;

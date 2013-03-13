@@ -21,7 +21,7 @@
 #define _AVSPIPE_INPUT_ADAPTER_H
 
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 #include "avspipe_reader_thread.h"
 #include "avspipe_allocators.h"
 
@@ -30,17 +30,17 @@ class AvspipeInputAdapter {
         AvspipeInputAdapter(const char *cmd, bool use_builtin_audio = false);
         ~AvspipeInputAdapter( );
         Pipe<RawFrame *> &output_pipe( ) { return vpipe; }
-        Pipe<AudioPacket *> *audio_output_pipe( ) { return apipe; }
+        Pipe<IOAudioPacket *> *audio_output_pipe( ) { return apipe; }
     protected:
         char *parse_command(const char *cmd, int vpfd, int apfd);
         pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd);
         pid_t start_aplay(int apfd);
 
         Pipe<RawFrame *> vpipe;
-        Pipe<AudioPacket *> *apipe;
+        Pipe<IOAudioPacket *> *apipe;
 
         AvspipeReaderThread<RawFrame, AvspipeRawFrame1080Allocator> *vread;
-        AvspipeReaderThread<AudioPacket, AvspipeNTSCSyncAudioAllocator> 
+        AvspipeReaderThread<IOAudioPacket, AvspipeNTSCSyncAudioAllocator> 
             *aread;
 
         int vpfd, apfd;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2012, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,25 +17,17 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _AVSPIPE_ALLOCATORS_H
-#define _AVSPIPE_ALLOCATORS_H
+#ifndef _NUMARRAY_COPY_H
+#define _NUMARRAY_COPY_H
 
-#include "raw_frame.h"
-#include "packed_audio_packet.h"
+#include <stddef.h>
 
-class AvspipeRawFrame1080Allocator {
-    public:
-        AvspipeRawFrame1080Allocator( );
-        virtual RawFrame *allocate( ); 
-};
-
-class AvspipeNTSCSyncAudioAllocator {
-    public:
-        AvspipeNTSCSyncAudioAllocator( );
-        virtual IOAudioPacket *allocate( );
-
-    protected:
-        int frame;
-};
+template <class T, class U>
+void numarray_copy(T *dst, const U *src, size_t n) {
+    while (n != 0) {
+        n--;
+        dst[n] = src[n];
+    }
+}
 
 #endif

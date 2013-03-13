@@ -27,16 +27,12 @@ RawFrame * AvspipeRawFrame1080Allocator::allocate( ) {
     return new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
 }
 
-
-
-
-
 AvspipeNTSCSyncAudioAllocator::AvspipeNTSCSyncAudioAllocator( ) {
     frame = 0;
 }
 
-AudioPacket *AvspipeNTSCSyncAudioAllocator::allocate( ) {
-    AudioPacket *ret;
+IOAudioPacket *AvspipeNTSCSyncAudioAllocator::allocate( ) {
+    IOAudioPacket *ret;
     
     /*
      * the goal is to generate a sequence like this:
@@ -50,9 +46,9 @@ AudioPacket *AvspipeNTSCSyncAudioAllocator::allocate( ) {
      */
 
     if (frame == 1 || frame == 3) {
-        ret = new AudioPacket(48000, 2, 2, 1601);
+        ret = new IOAudioPacket(1601, 2);
     } else {
-        ret = new AudioPacket(48000, 2, 2, 1602);
+        ret = new IOAudioPacket(1602, 2);
     }
 
     frame++;
