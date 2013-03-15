@@ -57,8 +57,6 @@ class ReplayIngest : public Thread {
 
         Mutex m;
 
-        ReplayPvAnalyzer pv_analyzer;
-
         bool encode_suspended;
 };
 

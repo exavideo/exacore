@@ -17,7 +17,7 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "numarray_copy.h"
+#include "numarray.h"
 #include <algorithm>
 #include <stdexcept>
 #include <string.h>

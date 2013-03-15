@@ -19,8 +19,9 @@
 
 #include "packed_audio_packet.h"
 #include "planar_audio_packet.h"
-#include "numarray_copy.h"
+#include "numarray.h"
 #include "posix_util.h"
+#include <typeinfo>
 
 template <class T>
 PackedAudioPacket<T>::PackedAudioPacket(size_t n_samples, size_t n_channels) {
@@ -30,9 +31,34 @@ PackedAudioPacket<T>::PackedAudioPacket(size_t n_samples, size_t n_channels) {
 }
 
 template <class T>
+PackedAudioPacket<T>::PackedAudioPacket(DeserializeStream &str) {
+    _data = NULL;
+    deserialize(str);
+}
+
+template <class T>
+void PackedAudioPacket<T>::deserialize(DeserializeStream &str) {
+    std::string theirname;
+    delete [] _data;
+
+    /* first check that we are deserializing our own data */
+    str >> theirname;    
+    if (theirname != typeid(*this).name()) {
+        throw std::runtime_error("deserialization of invalid data");
+    }
+
+    /* now deserialize it */
+    str >> _samples;
+    str >> _channels;
+    _data = new T[_samples * _channels];
+    str.read_array(_data, _samples * _channels);
+}
+
+template <class T>
 PackedAudioPacket<T>::~PackedAudioPacket( ) {
     delete [] _data;
 }
+
 
 template <class T> template <class U>
 PackedAudioPacket<U> *PackedAudioPacket<T>::copy( ) const {
@@ -55,6 +81,11 @@ PlanarAudioPacket<U> *PackedAudioPacket<T>::make_planar( ) const {
 }
 
 template <class T>
+void PackedAudioPacket<T>::zero( ) {
+    numarray_set(_data, 0, _samples * _channels);
+}
+
+template <class T>
 ssize_t PackedAudioPacket<T>::write_to_fd(int fd) {
     return write_all(fd, _data, size_bytes( ));
 }
@@ -62,4 +93,12 @@ ssize_t PackedAudioPacket<T>::write_to_fd(int fd) {
 template <class T>
 ssize_t PackedAudioPacket<T>::read_from_fd(int fd) {
     return read_all(fd, _data, size_bytes( ));
+}
+
+template <class T>
+void PackedAudioPacket<T>::serialize(SerializeStream &str) const {
+    str << std::string(typeid(*this).name());
+    str << _samples;
+    str << _channels;
+    str.write_array_byref(_data, _samples * _channels);
 }

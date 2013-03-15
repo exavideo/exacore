@@ -324,6 +324,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                          * dropped video frames
                          */
                         audio = new IOAudioPacket(1601, 2);
+                        audio->zero( );
                         audio_adjust--;
                     } else {
                         audio = audio_in_pipe->get( );
@@ -422,6 +423,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             /* FIXME hard coded default */
             n_channels = 2; 
             IOAudioPacket preroll_audio(4*1601, 2);
+            preroll_audio.zero( );
 
             audio_in_pipe = new Pipe<IOAudioPacket *>(OUT_PIPE_SIZE);
             audio_fifo = new AudioFIFO<int16_t>(n_channels);

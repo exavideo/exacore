@@ -25,6 +25,7 @@
 #include "mutex.h"
 #include "thread.h"
 #include "condition.h"
+#include "block_set.h"
 
 #include <stdexcept>
 
@@ -38,8 +39,12 @@ class ReplayBuffer {
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
         
-        ReplayFrameData *read_frame(timecode_t frame, LoadFlags flags);
+        /* these are now convenience wrappers around {read,write}_blockset */
+        ReplayFrameData *read_frame(timecode_t frame, int flags);
         timecode_t write_frame(const ReplayFrameData &frame);
+
+        void read_blockset(timecode_t frame, BlockSet &blkset);
+        timecode_t write_blockset(const BlockSet &blkset);
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
         void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }

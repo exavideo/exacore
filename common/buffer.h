@@ -17,17 +17,44 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NUMARRAY_COPY_H
-#define _NUMARRAY_COPY_H
+#ifndef _BUFFER_H
+#define _BUFFER_H
 
 #include <stddef.h>
 
-template <class T, class U>
-void numarray_copy(T *dst, const U *src, size_t n) {
-    while (n != 0) {
-        n--;
-        dst[n] = src[n];
-    }
-}
+class Buffer {
+    public:
+        virtual ~Buffer( );
+        const void *data( ) const;
+        size_t size( ) const;
+    protected:
+        Buffer( );
+
+        const void *_data;
+        size_t _size;
+};
+
+class OwnedBuffer : public Buffer {
+    public:
+        OwnedBuffer(size_t sz);
+        ~OwnedBuffer( );
+    protected:
+        void *nc_data;
+};
+
+class AppendableBuffer : public OwnedBuffer {
+    public:
+        AppendableBuffer( );
+        void append(const void *data, size_t sz);
+    protected:
+        size_t realsize;
+        
+};
+
+class UnownedBuffer : public Buffer {
+    public:
+        UnownedBuffer(const void *d, size_t sz);
+        ~UnownedBuffer( );
+};
 
 #endif

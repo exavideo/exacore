@@ -32,6 +32,9 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+#define REPLAY_VIDEO_BLOCK "ReplJpeg"
+#define REPLAY_THUMBNAIL_BLOCK "ReplThum"
+#define REPLAY_AUDIO_BLOCK "ReplAuds"
 
 ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     struct stat stat;
@@ -105,52 +108,45 @@ const char *ReplayBuffer::get_name( ) {
     return name;
 }
 
+void ReplayBuffer::read_blockset(timecode_t frame, BlockSet &blkset) {
+    off_t base_offset;
+    base_offset = index->get_frame_location(frame);
+    blkset.begin_read(fd, base_offset);
+}
+
+timecode_t ReplayBuffer::write_blockset(const BlockSet &blkset) {
+    size_t total_size;
+    total_size = blkset.write_all(fd);
+    return index->mark_frame(total_size);
+}
+
 /* FIXME: these should be refactored into something cleaner */
-ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, LoadFlags flags) {
-    FrameHeader header; 
-    off_t base_offset, video_offset, thumbnail_offset, audio_offset;
+ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, int flags) {
+    BlockSet blkset;
+    read_blockset(frame, blkset);
+
     ReplayFrameData *ret = new ReplayFrameData;
     ret->free_data_on_destroy( );
     ret->source = this;
     ret->pos = frame;
 
-    /* determine frame offset */
-    base_offset = index->get_frame_location(frame);
-
-    /* read frame header */
-    if (pread_all(fd, &header, sizeof(header), base_offset) <= 0) {
-        throw POSIXError("pread_all");
+    if (flags & LOAD_VIDEO) {
+        ret->video_data = blkset.load_alloc_block<uint8_t>(
+            REPLAY_VIDEO_BLOCK, 
+            ret->video_size
+        );
     }
 
-    if ((flags & LOAD_VIDEO) && header.video_size > 0) {
-        video_offset = base_offset + sizeof(header);
-        ret->video_size = header.video_size;
-        ret->video_data = malloc(ret->video_size);
-        if (pread_all(fd, ret->video_data, ret->video_size, 
-                video_offset) <= 0) {
-            throw POSIXError("pread_all");
-        }
+    if (flags & LOAD_THUMBNAIL) {
+        ret->thumbnail_data = blkset.load_alloc_block<uint8_t>(
+            REPLAY_THUMBNAIL_BLOCK, 
+            ret->thumbnail_size
+        );
     }
 
-    if ((flags & LOAD_THUMBNAIL) && header.thumbnail_size > 0) {
-        thumbnail_offset = base_offset + sizeof(header) + header.video_size;
-        ret->thumbnail_size = header.thumbnail_size;
-        ret->thumbnail_data = malloc(ret->thumbnail_size);
-        if (pread_all(fd, ret->thumbnail_data, ret->thumbnail_size,
-                thumbnail_offset) <= 0) {
-            throw POSIXError("pread_all");
-        }
-    }
-
-    if ((flags & LOAD_AUDIO) && header.audio_size > 0) {
-        audio_offset = base_offset + sizeof(header) 
-                + header.video_size + header.thumbnail_size;
-        ret->audio_size = header.audio_size;
-        ret->audio_data = malloc(ret->audio_size);
-        if (pread_all(fd, ret->audio_data, ret->audio_size,
-                audio_offset) <= 0) {
-            throw POSIXError("pread_all");
-        }
+    if (flags & LOAD_AUDIO) {
+        ret->audio = 
+            blkset.load_alloc_object<IOAudioPacket>(REPLAY_AUDIO_BLOCK);
     }
 
     /* determine offset and length of next frames and read ahead */
@@ -170,40 +166,30 @@ ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, LoadFlags flags) {
 }
 
 timecode_t ReplayBuffer::write_frame(const ReplayFrameData &data) {
-    FrameHeader header;
-    size_t total_size;
+    BlockSet blkset;
 
     if (data.video_size == 0) {
         throw std::runtime_error("Tried to write empty frame");
     }
 
-    header.version = 1;
-    header.video_size = data.video_size;
-    header.thumbnail_size = data.thumbnail_size;
-    header.audio_size = data.audio_size;
-    total_size = data.video_size + data.thumbnail_size + data.audio_size
-        + sizeof(header);
-
-    if (write_all(fd, &header, sizeof(header)) <= 0) {
-        throw POSIXError("failed to write frame header");
+    if (data.video_size > 0) {
+        blkset.add_block(
+            REPLAY_VIDEO_BLOCK, 
+            data.video_data, 
+            data.video_size
+        );
     }
-
-    if (write_all(fd, data.video_data, data.video_size) <= 0) {
-        throw POSIXError("failed to write video data");
-    }
-
     if (data.thumbnail_size > 0) {
-        if (write_all(fd, data.thumbnail_data, data.thumbnail_size) <= 0) {
-            throw POSIXError("failed to write thumbnail data");
-        }
+        blkset.add_block(
+            REPLAY_THUMBNAIL_BLOCK, 
+            data.thumbnail_data, 
+            data.thumbnail_size
+        );
+    }
+    if (data.audio != NULL) {
+        blkset.add_object(REPLAY_AUDIO_BLOCK, *(data.audio));
     }
 
-    if (data.audio_size > 0) {
-        if (write_all(fd, data.audio_data, data.audio_size) <= 0) {
-            throw POSIXError("failed to write audio data");
-        }
-    }
-
-    return index->mark_frame(total_size);
+    return write_blockset(blkset);
 }
 

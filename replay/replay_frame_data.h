@@ -36,14 +36,13 @@ class ReplayFrameData {
         ReplayBuffer *source;
         timecode_t pos;
 
-        void *video_data;
+        uint8_t *video_data;
         size_t video_size;
 
-        void *thumbnail_data;
+        uint8_t *thumbnail_data;
         size_t thumbnail_size;
 
-        void *audio_data;
-        size_t audio_size;
+        IOAudioPacket *audio;
 
         void free_data_on_destroy( );
     protected:

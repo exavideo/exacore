@@ -21,18 +21,23 @@
 #define _PACKED_AUDIO_PACKET_H
 
 #include <stddef.h>
+#include "serialize.h"
 
 template <class T>
 class PlanarAudioPacket;
 
 template <class T>
-class PackedAudioPacket {
+class PackedAudioPacket : public Serializable {
     public:
         PackedAudioPacket(size_t n_samples, size_t n_channels);
+        PackedAudioPacket(void *data, size_t n_bytes);
+        PackedAudioPacket(DeserializeStream &str);
         ~PackedAudioPacket( );
 
         template <class U> PackedAudioPacket<U> *copy( ) const;
         template <class U> PlanarAudioPacket<U> *make_planar( ) const;
+        PackedAudioPacket<T> *clone( ) { return copy<T>( ); }
+        void zero( );
 
         T *data( ) { return _data; }
         const T *data( ) const { return _data; }
@@ -43,6 +48,9 @@ class PackedAudioPacket {
         size_t size_bytes( ) const { return _samples * _channels * sizeof(T); }
         ssize_t read_from_fd(int fd);
         ssize_t write_to_fd(int fd);
+
+        void serialize(SerializeStream &str) const;
+        void deserialize(DeserializeStream &str);
 
     private:
         size_t _samples;

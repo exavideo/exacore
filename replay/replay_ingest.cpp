@@ -77,15 +77,18 @@ void ReplayIngest::run_thread( ) {
 
             /* encode to M-JPEG */
             enc.encode(input);
-            data_to_write.video_data = enc.get_data( );
+            data_to_write.video_data = (uint8_t *)enc.get_data( );
             data_to_write.video_size = enc.get_data_size( );
 
             /* scale input and make JPEG thumbnail */
             thumb = input->convert->CbYCrY8422_scaled(480, 270);
             thumb_enc.encode(thumb);
-            data_to_write.thumbnail_data = thumb_enc.get_data( );
+            data_to_write.thumbnail_data = (uint8_t *)thumb_enc.get_data( );
             data_to_write.thumbnail_size = thumb_enc.get_data_size( );
 
+            if (input_audio) {
+                data_to_write.audio = input_audio;
+            }
             pos = buf->write_frame(data_to_write);
 
             /* scale down frame to send to monitor */
@@ -97,9 +100,6 @@ void ReplayIngest::run_thread( ) {
 
             monitor.put(monitor_frame);
 
-            if (input_audio) {
-                pv_analyzer.analyze(input_audio);
-            }
         }
 
         if (input_audio) {

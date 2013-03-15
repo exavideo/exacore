@@ -29,7 +29,26 @@ ReplayFrameCache::~ReplayFrameCache( ) {
     delete cached_raw_frame;
 }
 
-RawFrame *ReplayFrameCache::get_frame(ReplayBuffer *source, timecode_t tc) {
+RawFrame *ReplayFrameCache::get_frame(
+    ReplayBuffer *source, 
+    timecode_t tc
+) {
+    check_cache(source, tc);
+    return cached_raw_frame;
+}
+
+IOAudioPacket *ReplayFrameCache::get_audio(
+    ReplayBuffer *source, 
+    timecode_t tc
+) {
+    check_cache(source, tc);
+    return cached_compressed_frame->audio;
+}
+
+void ReplayFrameCache::check_cache(
+    ReplayBuffer *source, 
+    timecode_t tc
+) {
     if (cached_compressed_frame == NULL 
             || cached_compressed_frame->source != source 
             || cached_compressed_frame->pos != tc) {
@@ -42,7 +61,7 @@ RawFrame *ReplayFrameCache::get_frame(ReplayBuffer *source, timecode_t tc) {
         cached_raw_frame = NULL;
 
         cached_compressed_frame = source->read_frame(
-            tc, ReplayBuffer::LOAD_VIDEO
+            tc, ReplayBuffer::LOAD_VIDEO | ReplayBuffer::LOAD_AUDIO
         );
 
         cached_raw_frame = decoder.decode(
@@ -50,7 +69,4 @@ RawFrame *ReplayFrameCache::get_frame(ReplayBuffer *source, timecode_t tc) {
             cached_compressed_frame->video_size
         );
     }
-
-    return cached_raw_frame;
 }
-

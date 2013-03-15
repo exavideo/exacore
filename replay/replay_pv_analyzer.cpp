@@ -18,9 +18,19 @@
  */
 
 ReplayPvAnalyzer::ReplayPvAnalyzer( ) {
+    fifo = NULL;
+    buffer = NULL;
+    set_fft_defaults( );
+}
+
+ReplayPvAnalyzer::ReplayPvAnalyzer(ReplayBuffer *buf) {
     channel_fifos = NULL;
     output_frames = NULL;
     buffer = buf;
+    set_fft_defaults( );
+}
+
+void ReplayPvAnalyzer::set_fft_defaults( ) {
     fft_size = 512;
     hop_size = 128;
 }
@@ -46,15 +56,22 @@ timecode_t ReplayPvAnalyzer::emit_frame( ) {
     PlanarAudioPacket<float> pkt(fft_size, fifo->channels( ));
     fifo->peek_packet(&pkt);
 
-    if (output_frames == NULL) {
-        output_frames = new ReplayPvFrameSet(n_channels, fft_size);
+    if (coded_frames.size( ) == 0) {
+        coded_frames.resize(fifo->channels( ));
     }
 
-    for (size_t i = 0; i < n_channels; i++) {
-        output_frames->frame(i).set_fft(pkt.planes(i), fft_size);
+    for (size_t i = 0; i < pkt->channels( ); i++) {
+        coded_frames[i].set_fft(pkt.planes(i), fft_size);
     }
 
-    fifo->pop(hop_size);
+    fifo->pop_samples(hop_size);
 
     /* write output_frames to buffer... */
+    return write_coded_frames( );
+}
+
+timecode_t ReplayPvAnalyzer::write_coded_frames( ) {
+    BlockSet blkset;
+    blkset.add_object(REPLAY_PV_CODED_BLOCK, coded_frames);
+    return buffer->write_blockset(blkset);
 }

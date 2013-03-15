@@ -41,6 +41,7 @@ void ReplayPlayoutBufferSource::read_frame(
     try {
         frame_data.tc = pos.integer_part( );
         frame_data.fractional_tc = pos.fractional_part( );
+        frame_data.audio_data = NULL;
 
         /* retrieve the first field and weave it in */
         src = cache.get_frame(source, pos.integer_part( ));
@@ -71,7 +72,18 @@ void ReplayPlayoutBufferSource::read_frame(
 
         pos += speed;
 
-        frame_data.audio_data = audio_allocator.allocate( );
+        if (speed == Rational(1,2)) {
+            IOAudioPacket *ap = cache.get_audio(source, pos.integer_part( ));
+            if (ap) {
+                frame_data.audio_data = ap->clone( );
+            }
+        } 
+
+        if (frame_data.audio_data == NULL) {
+            frame_data.audio_data = audio_allocator.allocate( );
+            frame_data.audio_data->zero( );
+        }
+
         frame_data.source_name = source->get_name( );
     } catch (const ReplayFrameNotFoundException &) {
         frame_data.video_data = NULL;

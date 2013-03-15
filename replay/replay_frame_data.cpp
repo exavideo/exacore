@@ -29,23 +29,16 @@ ReplayFrameData::ReplayFrameData( ) {
     thumbnail_data = NULL;
     thumbnail_size = 0;
 
-    audio_data = NULL;
-    audio_size = 0;
+    audio = NULL;
 
     should_free_data = false;
 }
 
 ReplayFrameData::~ReplayFrameData( ) {
     if (should_free_data) {
-        if (video_data) { 
-            free(video_data); 
-        }
-        if (audio_data) { 
-            free(audio_data); 
-        }
-        if (thumbnail_data) { 
-            free(thumbnail_data); 
-        }
+        delete [] video_data; 
+        delete audio; 
+        delete [] thumbnail_data;
     }
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Exavideo LLC.
+ * Copyright 2011, 2012, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,23 +17,25 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PV_ANALYZER_H
-#define _REPLAY_PV_ANALYZER_H
+#ifndef _NUMARRAY_COPY_H
+#define _NUMARRAY_COPY_H
 
-#include "audio_fifo.h"
-#include "replay_pv_frame.h"
+#include <stddef.h>
 
-class ReplayPvAnalyzer {
-    public:
-        ReplayPvAnalyzer( );
-        ReplayPvAnalyzer(ReplayBuffer *buf);
-        ~ReplayPvAnalyzer( );
+template <class T, class U>
+void numarray_copy(T *dst, const U *src, size_t n) {
+    while (n != 0) {
+        n--;
+        dst[n] = src[n];
+    }
+}
 
-        void analyze(IOAudioPacket *apkt);
-    protected:
-        AudioFIFO<float> *afifo;
-        std::vector<ReplayPvFrame> coded_frames;
-        void emit_frame( );
-};
+template <class T, class U>
+void numarray_set(T *dst, U src, size_t n) {
+    while (n != 0) {
+        n--;
+        dst[n] = src;
+    }
+}
 
 #endif

@@ -19,7 +19,7 @@
 
 #include "packed_audio_packet.h"
 #include "planar_audio_packet.h"
-#include "numarray_copy.h"
+#include "numarray.h"
 
 template <class T>
 PlanarAudioPacket<T>::PlanarAudioPacket(size_t n_samples, size_t n_channels) {
