@@ -43,8 +43,10 @@ class AudioFIFO {
         template <class U> void fill_packet(PlanarAudioPacket<U> *apkt);
         template <class U> void peek_packet(PackedAudioPacket<U> *apkt) const;
         template <class U> void peek_packet(PlanarAudioPacket<U> *apkt) const;
-        size_t samples( ) const { return fill_level; }
-        void pop(size_t n_samples);
+        size_t fill_samples( ) const { return fill_level / n_channels; }
+        size_t fill_words( ) const { return fill_level; }
+        void pop_samples(size_t n_samples) { pop_words(n_samples * n_channels); }
+        void pop_words(size_t n_words);
         const T *data( ) const { return _data; }
         /* decklink's ScheduleAudioSamples() takes non-const void* */
         T *data( ) { return _data; }

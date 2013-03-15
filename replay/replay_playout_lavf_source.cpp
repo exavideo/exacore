@@ -56,7 +56,8 @@ ReplayPlayoutLavfSource::ReplayPlayoutLavfSource(const char *filename) :
     lavc_frame(NULL),
     audio_codecctx(NULL),
     audio_codec(NULL),
-    n_frames(0)
+    n_frames(0),
+    pending_audio(2 /* stereo */)
 {
 	ensure_registered( );
 	
@@ -146,7 +147,7 @@ void ReplayPlayoutLavfSource::read_frame(
     (void) speed;
 
     while (pending_video_frames.size( ) == 0 
-            || pending_audio.samples( ) < audio->size_samples( )) {
+            || pending_audio.fill_samples( ) < audio->size_samples( )) {
         if (run_lavc( ) == 0) {
             delete audio;
             return;

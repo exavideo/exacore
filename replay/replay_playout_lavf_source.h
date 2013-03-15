@@ -63,13 +63,13 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
         AVFrame audio_frame;
 
         timecode_t n_frames;
+        AudioFIFO<int16_t> pending_audio;
 
         /* uninitialized / static data */
         AvspipeNTSCSyncAudioAllocator audio_allocator;
         static int registered;
 
         std::list<RawFrame *> pending_video_frames;
-        AudioFIFO<int16_t> pending_audio;
 };
 
 #endif

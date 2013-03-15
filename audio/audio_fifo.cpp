@@ -39,11 +39,14 @@ AudioFIFO<T>::~AudioFIFO( ) {
 
 template <class T> template <class U>
 void AudioFIFO<T>::add_packed_samples(const U *idata, size_t n) {
-    if (fill_level + n * n_channels > size) {
-        reallocate(std::max(2*size, fill_level + n * n_channels));
+    size_t new_fill_level = fill_level + n * n_channels;
+
+    if (new_fill_level > size) {
+        reallocate(std::max(2*size, new_fill_level));
     }
 
     numarray_copy(&_data[fill_level], idata, n * n_channels);
+    fill_level = new_fill_level;
 }
 
 template <class T> template <class U>
@@ -69,7 +72,11 @@ void AudioFIFO<T>::add_packet(const PlanarAudioPacket<U> *apkt) {
 }
 
 template <class T>
-void AudioFIFO<T>::pop(size_t n) {
+void AudioFIFO<T>::pop_words(size_t n) {
+    if (n > fill_level) {
+        throw std::runtime_error("cannot pop that many words");
+    }
+
     numarray_copy(_data, _data + n, fill_level - n);
     fill_level -= n;
 }
@@ -77,12 +84,12 @@ void AudioFIFO<T>::pop(size_t n) {
 /* Extract some audio data from the front of the buffer. */
 template <class T> template <class U>
 void AudioFIFO<T>::peek_packet(PackedAudioPacket<U> *apkt) const {
-    if (fill_level < apkt->size_words( )) {
-        throw std::runtime_error("not enough data in AudioFIFO");
-    }
-
     if (apkt->channels( ) != n_channels) {
         throw std::runtime_error("peek_packet: apkt has wrong n_channels");
+    }
+
+    if (fill_level < apkt->size_words( )) {
+        throw std::runtime_error("not enough data in AudioFIFO");
     }
 
     /* copy out first data from buffer */
@@ -95,7 +102,7 @@ void AudioFIFO<T>::fill_packet(PackedAudioPacket<U> *apkt) {
     peek_packet(apkt);
 
     /* move data down and adjust fill level */
-    pop(apkt->size_words( ));
+    pop_words(apkt->size_words( ));
 }
 
 
@@ -115,12 +122,7 @@ void AudioFIFO<T>::peek_packet(PlanarAudioPacket<U> *apkt) const {
 template <class T> template <class U>
 void AudioFIFO<T>::fill_packet(PlanarAudioPacket<U> *apkt) {
     peek_packet(apkt);
-
-    /* move data down and adjust fill level */
-    numarray_copy(_data, _data + apkt->size_words( ),
-        fill_level - apkt->size_words( ));
-
-    fill_level -= apkt->size_words( );
+    pop_words(apkt->size_words( ));
 }
 
 /* Reallocate internal buffer and copy data. */

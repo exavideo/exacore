@@ -333,10 +333,10 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 }
             }
 
-            if (audio_fifo->samples( ) > 0) {
+            if (audio_fifo->fill_samples( ) > 0) {
                 deckLinkOutput->ScheduleAudioSamples(audio_fifo->data( ), 
-                        audio_fifo->samples( ), 0, 0, &n_consumed);
-                audio_fifo->pop(n_consumed);
+                        audio_fifo->fill_samples( ), 0, 0, &n_consumed);
+                audio_fifo->pop_samples(n_consumed);
             } else if (preroll) {
                 audio_preroll_done = 1;
             }
