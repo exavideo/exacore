@@ -19,7 +19,7 @@
 
 #include "replay_frame_extractor.h"
 #include "replay_buffer.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 
 ReplayFrameExtractor::ReplayFrameExtractor( ) 
         : dec(1920, 1080), enc(1920, 1080) {
@@ -66,13 +66,8 @@ void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
 
 void ReplayFrameExtractor::extract_raw_audio(const ReplayShot &shot,
         timecode_t offset, std::string &data) {
-    ReplayFrameData *rfd;
-    
-    rfd = shot.source->read_frame(shot.start + offset, 
-            ReplayBuffer::LOAD_AUDIO);
-
-    if (rfd->audio_size > 0) {
-        AudioPacket apkt(rfd->audio_data, rfd->audio_size);
-        data.assign((char *)apkt.data( ), apkt.size( ));
-    }
+    /* FIXME stub */
+    (void) shot;
+    (void) offset;
+    (void) data;
 }

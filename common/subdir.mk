@@ -8,3 +8,8 @@ common_OBJECTS = \
         common/new_delete_malloc.o \
         common/hex_dump.o \
         common/instrument.o \
+        common/block_set.o \
+        common/buffer.o \
+        common/serialize.o
+
+common_LIBS = -lrt

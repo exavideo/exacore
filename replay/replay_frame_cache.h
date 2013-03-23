@@ -30,9 +30,12 @@ class ReplayFrameCache {
         ReplayFrameCache( );
         ~ReplayFrameCache( );
         RawFrame *get_frame(ReplayBuffer *source, timecode_t tc);
+        IOAudioPacket *get_audio(ReplayBuffer *source, timecode_t tc);
     protected:
+        void check_cache(ReplayBuffer *source, timecode_t tc);
         ReplayFrameData *cached_compressed_frame;
         RawFrame *cached_raw_frame;
+        IOAudioPacket *cached_audio;
         Mjpeg422Decoder decoder;
 };
 

@@ -29,11 +29,14 @@ class ReplayPlayoutBarsSource : public ReplayPlayoutSource {
         ~ReplayPlayoutBarsSource( );
 
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+        timecode_t duration( );
+        timecode_t position( );
+
     protected:
         RawFrame *bars;
         AvspipeNTSCSyncAudioAllocator audio_allocator;
 
-        void oscillate(AudioPacket *pkt, float frequency);
+        void oscillate(IOAudioPacket *pkt, float frequency);
         /* phase accumulator for oscillator */
         double phase;
 };

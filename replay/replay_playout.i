@@ -23,25 +23,28 @@
 
 %include "typemaps.i"
 %include "replay_playout_filter.i"
+%include "string_list.i"
 
 %rename("shot=") ReplayPlayout::roll_shot(const ReplayShot &);
 %rename("monitor") ReplayPlayout::get_monitor( );
+
+typedef std::list<std::string> StringList;
 
 class ReplayPlayout : public Thread {
     public:
         ReplayPlayout(OutputAdapter *INPUT);
         ~ReplayPlayout( );
 
-        //unsigned int add_svg_dsk(const std::string &INPUT,
-        //    coord_t, coord_t);
-
-        //unsigned int add_png_file_dsk(const std::string &INPUT,
-        //    coord_t, coord_t);
-
         void roll_shot(const ReplayShot &INPUT);
         void set_speed(int, int);
         AsyncPort<ReplayRawFrame> *get_monitor( );
         void register_filter(ReplayPlayoutFilter *INPUT);
+        void stop( );
+        void avspipe_playout(const char *INPUT);
+        void lavf_playout(const char *INPUT);
+        void lavf_playout_list(const StringList &INPUT);
+        timecode_t source_position( );
+        timecode_t source_duration( );
 };
 
 

@@ -78,7 +78,7 @@ protected:
         uint64_t start_usec, end_usec;
 
         RawFrame *fr;
-        AudioPacket *ap;
+        IOAudioPacket *ap;
 
         int frameno = 0;
         fprintf(stderr, "[%p] thread starting\n", this);
@@ -138,7 +138,7 @@ protected:
     InputAdapter *iadp;
     void run_thread( ) {
         RawFrame *fr;
-        AudioPacket *ap;
+        IOAudioPacket *ap;
         for (;;) {
             fr = iadp->output_pipe( ).get( );            
             //fprintf(stderr, "deleting %p\n", fr);
@@ -167,7 +167,7 @@ class CopyCaptureThread : public Thread {
 
         void run_thread( ) {
             RawFrame *fr;
-            AudioPacket *ap;
+            IOAudioPacket *ap;
 
             while (flag == 0) {
                 fr = iadp->output_pipe( ).get( );

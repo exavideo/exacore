@@ -20,12 +20,19 @@
 #include "replay_playout.h"
 #include "replay_playout_bars_source.h"
 #include "replay_playout_buffer_source.h"
+#include "replay_playout_avspipe_source.h"
+#include "replay_playout_lavf_source.h"
+#include "replay_playout_queue_source.h"
 
 ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
     idle_source = new ReplayPlayoutBarsSource;
     playout_source = NULL;
     new_speed = NULL;
+    
+    _source_position = 0;
+    _source_duration = -1;
+
     start_thread( );
 }
 
@@ -99,6 +106,10 @@ void ReplayPlayout::run_thread( ) {
             }
             active_source = idle_source;
         }
+
+        /* Update source state */
+        _source_position = active_source->position( );
+        _source_duration = active_source->duration( );
     }
 }
 
@@ -121,7 +132,37 @@ void ReplayPlayout::set_speed(int num, int denom) {
     }
 }
 
+void ReplayPlayout::stop( ) {
+    set_source(idle_source);
+}
+
 void ReplayPlayout::register_filter(ReplayPlayoutFilter *filt) {
     MutexLock l(filters_mutex);
     filters.push_back(filt);
 }
+
+void ReplayPlayout::avspipe_playout(const char *cmd) {
+    set_source(new ReplayPlayoutAvspipeSource(cmd));
+}
+
+void ReplayPlayout::lavf_playout(const char *file) {
+    set_source(new ReplayPlayoutLavfSource(file));
+}
+
+void ReplayPlayout::lavf_playout_list(const StringList &files) {
+    ReplayPlayoutQueueSource::SourceQueue sources;
+    for (auto i = files.begin(); i != files.end(); i++) {
+        sources.push_back(new ReplayPlayoutLavfSource(*i));
+    }
+
+    set_source(new ReplayPlayoutQueueSource(sources));
+}
+
+timecode_t ReplayPlayout::source_position( ) {
+    return _source_position;
+}
+
+timecode_t ReplayPlayout::source_duration( ) {
+    return _source_duration;
+}
+

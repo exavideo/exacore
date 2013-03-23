@@ -32,3 +32,31 @@ void YCbCr8P422_CbYCrY8422_default(size_t n, uint8_t *dst, uint8_t *Y,
     }
 
 }
+
+void YCbCr8P422_CbYCrY8422_A_default(
+    size_t w, size_t h, 
+    size_t Ypitch, size_t Cbpitch, size_t Crpitch,
+    uint8_t *Y, uint8_t *Cb, uint8_t *Cr,
+    uint8_t *dst
+) {
+
+    Ypitch -= w;
+    Cbpitch -= w/2;
+    Crpitch -= w/2;
+
+    while (h > 0) {
+        for (size_t i = 0; i < w; i += 2) {
+            *(dst++) = *(Cb++);
+            *(dst++) = *(Y++);
+            *(dst++) = *(Cr++);
+            *(dst++) = *(Y++);
+        }
+
+        /* skip extra bytes on source */
+        Y += Ypitch;
+        Cb += Cbpitch;
+        Cr += Crpitch;
+
+        h--;
+    }
+}

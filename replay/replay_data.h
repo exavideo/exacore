@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 #include "rational.h"
 
 class ReplayBuffer;
@@ -71,7 +71,7 @@ struct ReplayRawFrame {
 /* These are passed between playout and playout sources */
 struct ReplayPlayoutFrame {
     RawFrame *video_data;
-    AudioPacket *audio_data;
+    IOAudioPacket *audio_data;
     const char *source_name;
     timecode_t tc;
     Rational fractional_tc;

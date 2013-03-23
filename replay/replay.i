@@ -21,4 +21,5 @@
 %include "replay_gamedata.i"
 %include "replay_playout_filter.i"
 %include "replay_playout_image_filter.i"
+%include "replay_playout_lavf_source.i"
 

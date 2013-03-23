@@ -26,6 +26,7 @@
 #include "replay_data.h"
 #include "replay_buffer.h"
 #include "replay_gamedata.h"
+#include "replay_pv_analyzer.h"
 #include "mutex.h"
 
 class ReplayIngest : public Thread {
@@ -55,6 +56,7 @@ class ReplayIngest : public Thread {
         ReplayIngest() { };
 
         Mutex m;
+
         bool encode_suspended;
 };
 

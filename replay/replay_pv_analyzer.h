@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,24 +17,23 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "svg_subprocess_character_generator.h"
-#include "raw_frame.h"
+#ifndef _REPLAY_PV_ANALYZER_H
+#define _REPLAY_PV_ANALYZER_H
 
-int main(int argc, char **argv) {
-    int i;
-    RawFrame *out = NULL;
-    SvgSubprocessCharacterGenerator cg("scoreboard/scoreboard_cg.rb");
+#include "audio_fifo.h"
+#include "replay_pv_frame.h"
 
-    UNUSED(argc);
-    UNUSED(argv);
+class ReplayPvAnalyzer {
+    public:
+        ReplayPvAnalyzer( );
+        ReplayPvAnalyzer(ReplayBuffer *buf);
+        ~ReplayPvAnalyzer( );
 
-    for (i = 0; i < 30; i++) {
-        out = cg.output_pipe( ).get( );
-        if (out == NULL) {
-            fprintf(stderr, "no frame??\n");
-        } else {
-            fprintf(stderr, "w=%d h=%d\n", out->w( ), out->h( ));
-            out->write_to_fd(STDOUT_FILENO);
-        }
-    }
-}
+        void analyze(IOAudioPacket *apkt);
+    protected:
+        AudioFIFO<float> *afifo;
+        std::vector<ReplayPvFrame> coded_frames;
+        void emit_frame( );
+};
+
+#endif

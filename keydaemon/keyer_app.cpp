@@ -55,7 +55,7 @@ void KeyerApp::cg(CharacterGenerator *cg) {
 void KeyerApp::run( ) {
     RawFrame *frame = NULL;
     RawFrame *cgout = NULL;
-    AudioPacket *audio = NULL;
+    IOAudioPacket *audio = NULL;
 
     if (iadp == NULL) {
         throw std::runtime_error("cannot run with no input adapter");
@@ -147,7 +147,7 @@ void KeyerApp::run( ) {
                 oadps[j]->input_pipe( ).put(frame->convert->CbYCrY8422( ));
 
                 if (oadps[j]->audio_input_pipe( ) != NULL && audio != NULL) {
-                    oadps[j]->audio_input_pipe( )->put(audio->copy( ));
+                    oadps[j]->audio_input_pipe( )->put(audio->copy<int16_t>( ));
                 }
             }
 

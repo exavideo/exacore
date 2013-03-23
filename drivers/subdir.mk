@@ -8,3 +8,5 @@ drivers_v4l2_OBJECTS = \
 
 drivers_pipe_output_OBJECTS = \
     drivers/pipe_output.o
+
+drivers_decklink_LIBS = -ldl

@@ -31,6 +31,9 @@ class ReplayPlayoutSource {
         }
         virtual ~ReplayPlayoutSource( ) { }
 
+        virtual timecode_t position( ) = 0;
+        virtual timecode_t duration( ) = 0;
+
     protected:
         RawFrame::FieldDominance output_dominance;
 };

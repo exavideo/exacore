@@ -21,7 +21,7 @@
 #define _AVSPIPE_ALLOCATORS_H
 
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 
 class AvspipeRawFrame1080Allocator {
     public:
@@ -32,7 +32,7 @@ class AvspipeRawFrame1080Allocator {
 class AvspipeNTSCSyncAudioAllocator {
     public:
         AvspipeNTSCSyncAudioAllocator( );
-        virtual AudioPacket *allocate( );
+        virtual IOAudioPacket *allocate( );
 
     protected:
         int frame;
