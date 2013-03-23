@@ -27,6 +27,10 @@ PngSubprocessCharacterGenerator::PngSubprocessCharacterGenerator(
 }
 
 RawFrame *PngSubprocessCharacterGenerator::do_render(void *data, size_t size) {
-    return RawFrame::from_png_data(data, size);
+    try {
+        return RawFrame::from_png_data(data, size);
+    } catch(...) {
+        return NULL;
+    }
 }
 
