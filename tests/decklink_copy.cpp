@@ -28,8 +28,8 @@ int main( ) {
     InputAdapter *iadp;
     OutputAdapter *oadp;
 
-    iadp = create_decklink_input_adapter(1, 0, 0, RawFrame::CbYCrY8422);
-    oadp = create_decklink_output_adapter(0, 0, RawFrame::CbYCrY8422);
+    iadp = create_decklink_input_adapter(0, 0, 0, RawFrame::CbYCrY8422);
+    oadp = create_decklink_output_adapter(1, 0, RawFrame::CbYCrY8422);
 
     for (;;) {
         oadp->input_pipe( ).put(iadp->output_pipe( ).get( ));

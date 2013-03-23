@@ -485,6 +485,12 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
+            if (config->SetInt(bmdDeckLinkConfigVideoOutputConversionMode,
+                    bmdVideoOutputHardwareLetterboxDownconversion) != S_OK) {
+                fprintf(stderr, "DeckLink output: warning: "
+                        "cannot enable hardware letterboxing\n");
+            }
+
             if (config->SetInt(bmdDeckLinkConfigBypass, -1) != S_OK) {
                 fprintf(stderr, "DeckLink output: warning: "
                         "cannot deactivate card bypass relay\n"
