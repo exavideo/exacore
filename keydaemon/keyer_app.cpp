@@ -130,12 +130,12 @@ void KeyerApp::run( ) {
                      * If no overlay is being rendered by this CG right now, the CG
                      * will output a NULL frame. We can safely ignore those.
                      */
-                    if (cgout != NULL) {
+                    if (cgout != NULL && cgout->global_alpha( ) != 0) {
                         frame->draw->alpha_key(cg->x( ), cg->y( ), 
                                 cgout, cgout->global_alpha( ));
 
-                        delete cgout;
                     }
+                    delete cgout;
                     /* 
                      * mark this CG as "done" so we don't waste
                      * time later on subsequent passes 
