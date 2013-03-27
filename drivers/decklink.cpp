@@ -616,6 +616,7 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             audio_pipe = NULL;
             started = false;
+            signal_lost = false;
 
             n_frames = 0;
             start_time = 0;
@@ -697,19 +698,26 @@ class DeckLinkInputAdapter : public InputAdapter,
             /* Process video frame if available. */
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
-                    fprintf(stderr, "DeckLink input: no signal\n");
-                } else {
-                    //out = new DecklinkInputRawFrame(in, pf);
-                    out = create_raw_frame_from_decklink(in, pf);
-                    out->set_field_dominance(dominance);
-                    
-                    if (out_pipe.can_put( ) && started) {
-                        out_pipe.put(out);
-                        avsync++;
-                    } else {
-                        fprintf(stderr, "DeckLink: dropping input frame on floor\n");
-                        delete out;
+                    if (!signal_lost) {
+                        fprintf(stderr, "DeckLink input: signal lost\n");
+                        signal_lost = true;
                     }
+                } else {
+                    if (signal_lost) {
+                        fprintf(stderr, "DeckLink input: signal re-acquired\n");
+                        signal_lost = false;
+                    }
+                }
+
+                out = create_raw_frame_from_decklink(in, pf);
+                out->set_field_dominance(dominance);
+                
+                if (out_pipe.can_put( ) && started) {
+                    out_pipe.put(out);
+                    avsync++;
+                } else {
+                    fprintf(stderr, "DeckLink: dropping input frame on floor\n");
+                    delete out;
                 }
 
             } 
@@ -758,6 +766,7 @@ class DeckLinkInputAdapter : public InputAdapter,
         Pipe<RawFrame *> out_pipe;
 
         bool started;
+        bool signal_lost;
 
         RawFrame::PixelFormat pf;
         RawFrame::FieldDominance dominance;
