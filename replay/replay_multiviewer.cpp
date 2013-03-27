@@ -19,7 +19,9 @@
 
 #include "replay_multiviewer.h"
 #include "freetype_font.h"
+#include "rsvg_frame.h"
 #include <stdio.h>
+#include <unistd.h>
 
 ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     dpy = dpy_;
@@ -27,11 +29,18 @@ ReplayMultiviewer::ReplayMultiviewer(DisplaySurface *dpy_) {
     large_font->set_size(30);
     small_font = new FreetypeFont("../fonts/Inconsolata.otf");
     small_font->set_size(20);
+
+    waveform_graticule = RsvgFrame::render_svg_file("../assets/waveform.svg");
+    vector_graticule = RsvgFrame::render_svg_file("../assets/vectorscope.svg");
+
+    overlay_mode = NONE;
 }
 
 ReplayMultiviewer::~ReplayMultiviewer( ) {
     delete large_font;
     delete small_font;
+    delete waveform_graticule;
+    delete vector_graticule;
 }
 
 void ReplayMultiviewer::add_source(
@@ -43,23 +52,114 @@ void ReplayMultiviewer::start( ) {
     start_thread( ); 
 }
 
+void ReplayMultiviewer::change_mode( ) {
+    MutexLock l(m);
+
+    switch (overlay_mode) {
+        case NONE:
+            overlay_mode = WAVEFORM;
+            break;
+
+        case WAVEFORM:
+            overlay_mode = VECTORSCOPE;
+            break;
+
+        case VECTORSCOPE:
+        default:
+            overlay_mode = NONE;
+            break;
+    }
+}
+
 void ReplayMultiviewer::run_thread( ) {
+    overlay_mode_t overlay;
+
     for (;;) {
+        { MutexLock l(m);
+            overlay = overlay_mode;
+        }
         for (unsigned int i = 0; i < sources.size( ); i++) {
             const ReplayMultiviewerSourceParams &src = sources[i];
             ReplayRawFrame *f = src.source->get( );
+
             if (f != NULL) {
+                f->bgra_data = f->frame_data->convert->BGRAn8( );
+
+                if (f->frame_data->pixel_format( ) == RawFrame::CbYCrY8422) {
+                    if (overlay == VECTORSCOPE) {
+                        render_vector(f);
+                    } else if (overlay == WAVEFORM) {
+                        render_waveform(f);
+                    }
+                }
+
                 render_text(f);
-                dpy->draw->blit(src.x, src.y, f->frame_data);
+                
+                dpy->draw->blit(src.x, src.y, f->bgra_data);
+
+                delete f->bgra_data;
             }
         }
         dpy->flip( );
     }
+    usleep(20000);
+}
+
+void ReplayMultiviewer::render_vector(ReplayRawFrame *f) {
+    /* make a copy of the graticule */
+    RawFrame *vector = vector_graticule->convert->BGRAn8( );
+    RawFrame *src = f->frame_data;
+
+    /* plot each Cb/Cr vector */
+    uint8_t cb, cr;
+    size_t s = src->size( );
+    uint8_t *d = src->data( );
+    for (size_t i = 0; i < s; i += 4) {
+        cb = d[i];
+        cr = d[i+2];
+
+        vector->scanline(255 - cb)[4*cr] = 0xff;
+        vector->scanline(255 - cb)[4*cr+1] = 0xff;
+        vector->scanline(255 - cb)[4*cr+2] = 0xff;
+    }
+
+    f->bgra_data->draw->alpha_key(112, 7, vector, 255);
+    delete vector;
+}
+
+void ReplayMultiviewer::render_waveform(ReplayRawFrame *f) {
+    RawFrame *wfm = waveform_graticule->convert->BGRAn8( );
+    RawFrame *src = f->frame_data;
+
+    coord_t h = src->h( );      /* height */
+    coord_t w = src->w( );      /* source width */
+    coord_t st = w / 240;       /* stride */
+    uint8_t *s = src->data( );
+    uint8_t y, yw;              /* luma */
+    uint8_t *d;
+    const coord_t xofs = 20;
+
+    for (coord_t line = 0; line < h; line++) {
+        s = src->scanline(line);
+
+        for (coord_t x = 0, xw = 0; x < w && xw < 240; x += st, xw++) {
+            y = s[2*x+1];
+            yw = 127 - (y >> 1);
+
+            d = wfm->pixel(xofs + xw, yw);
+            d[0] = 0xff;
+            d[1] = 0xff;
+            d[2] = 0xff;            
+        }
+    }
+
+    f->bgra_data->draw->alpha_key(112, 72, wfm, 255);
+    delete wfm;
 }
 
 void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
-    int w = f->frame_data->w( );
-    int h = f->frame_data->h( );
+    int w = f->bgra_data->w( );
+    int h = f->bgra_data->h( );
 
     int xt, yt;
 
@@ -81,7 +181,7 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
         }
         xt = w / 2 - text->w( ) / 2;
         yt = h - text->h( );
-        f->frame_data->draw->alpha_key(xt, yt, text, 255);
+        f->bgra_data->draw->alpha_key(xt, yt, text, 255);
         delete text;
 
         if (f->source_name2 != NULL) {
@@ -91,7 +191,7 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
             text = small_font->render_string(f->source_name2);
             xt = w / 2 - text->w( ) / 2;
             yt = yt - text->h( );
-            f->frame_data->draw->alpha_key(xt, yt, text, 255);
+            f->bgra_data->draw->alpha_key(xt, yt, text, 255);
             delete text;
         }
     }
@@ -132,6 +232,6 @@ void ReplayMultiviewer::render_text(ReplayRawFrame *f) {
 
     RawFrame *text = small_font->render_string(timecode_buf);
     /* draw timecode at top left corner */
-    f->frame_data->draw->alpha_key(0, 0, text, 255);
+    f->bgra_data->draw->alpha_key(0, 0, text, 255);
     delete text;
 }

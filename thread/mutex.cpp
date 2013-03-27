@@ -23,6 +23,11 @@
 
 #include "posix_util.h"
 
+#include <sys/time.h>
+#include <stdio.h>
+#include "clocks.h"
+#include "backtrace.h"
+
 static void throw_on_error(int ret, const char *msg) {
     if (ret != 0) {
         throw POSIXError(msg, ret);
@@ -55,11 +60,27 @@ Mutex::~Mutex( ) {
 
 void Mutex::lock( ) {
     throw_on_error(pthread_mutex_lock(&mut), "Failed to lock mutex");
+    thread_acquired( );
 }
 
 void Mutex::unlock( ) {
+    thread_released( );
     if (pthread_mutex_unlock(&mut) != 0) {
         throw std::runtime_error("Failed to unlock mutex");
+    }
+}
+
+void Mutex::thread_acquired( ) {
+    msec_locked = clock_monotonic_msec( );
+}
+
+void Mutex::thread_released( ) {
+    msec_locked = clock_monotonic_msec( ) - msec_locked;
+
+    if (msec_locked > 500) {
+        fprintf(stderr, "mutex locked for %lu msec, backtrace follows\n", 
+            msec_locked);
+        print_backtrace( );
     }
 }
 

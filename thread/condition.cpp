@@ -33,9 +33,11 @@ Condition::~Condition( ) {
 }
 
 void Condition::wait(Mutex &mut) {
+    mut.thread_released( );
     if (pthread_cond_wait(&cond, &mut.mut) != 0) {
         throw std::runtime_error("Failed to wait on condition variable");
     }
+    mut.thread_acquired( );
 }
 
 void Condition::signal( ) {

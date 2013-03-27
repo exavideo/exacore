@@ -3,3 +3,4 @@ mjpeg_OBJECTS = \
 	mjpeg/mjpeg_encode.o \
     mjpeg/mjpeg_decode.o \
 
+mjpeg_LIBS = -ljpeg

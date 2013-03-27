@@ -19,12 +19,19 @@
 
 #include "raw_frame.h"
 #include <assert.h>
+#include "cpu_dispatch.h"
 
 static void CbYCrY8422_RGBAn8_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha); 
 
 static void CbYCrY8422_BGRAn8_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha);
+
+static void CbYCrY8422_BGRAn8_key_vector(RawFrame *bkgd, RawFrame *key,
+        coord_t x, coord_t y, uint8_t galpha);
+
+extern "C" void CbYCrY8422_BGRAn8_key_chunk_sse2(void *bkgd, void *key,
+        unsigned int source_length, unsigned int galpha);
 
 void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
@@ -37,13 +44,35 @@ void CbYCrY8422_alpha_key_default(RawFrame *bkgd, RawFrame *key,
             break;
 
         case RawFrame::BGRAn8:
-            CbYCrY8422_BGRAn8_key_default(bkgd, key, x, y, galpha);
+            if (cpu_sse2_available( )) {
+                CbYCrY8422_BGRAn8_key_vector(bkgd, key, x, y, galpha);
+            } else {
+                CbYCrY8422_BGRAn8_key_default(bkgd, key, x, y, galpha);
+            }
+
             break;
 
         default:
             throw std::runtime_error("Unsupported key requested");
     }
 
+}
+
+void CbYCrY8422_BGRAn8_key_vector(RawFrame *bkgd, RawFrame *key, 
+        coord_t x, coord_t y, uint8_t galpha) {
+    coord_t h;
+
+    if (galpha == 0) {
+        return;
+    }
+
+    for (h = 0; h < key->h( ); h++) {
+        CbYCrY8422_BGRAn8_key_chunk_sse2(
+            bkgd->scanline(y + h) + 2*x,
+            key->scanline(h), key->pitch (),
+            galpha
+        );
+    }
 }
 
 void CbYCrY8422_RGBAn8_key_default(RawFrame *bkgd, RawFrame *key, 
@@ -178,22 +207,24 @@ void CbYCrY8422_BGRAn8_key_default(RawFrame *bkgd, RawFrame *key,
             fbp = fb1;
             kap = ka1;
 
-            fy0 = (4096  +  66*fr0 + 129*fg0 +  25*fb0) / 256;
-            fy1 = (4096  +  66*fr1 + 129*fg1 +  25*fb1) / 256;
-            fcb = (32768 -  38*fra -  74*fga + 112*fba) / 256;
-            fcr = (32768 + 112*fra -  94*fga -  18*fba) / 256;
+            if (ka0 != 0 || ka1 != 0) {
+                fy0 = (4096  +  66*fr0 + 129*fg0 +  25*fb0) / 256;
+                fy1 = (4096  +  66*fr1 + 129*fg1 +  25*fb1) / 256;
+                fcb = (32768 -  38*fra -  74*fga + 112*fba) / 256;
+                fcr = (32768 + 112*fra -  94*fga -  18*fba) / 256;
 
 
-            y0 = (y0 * ka01 + fy0 * ka0 + 256) / 256;
-            y1 = (y1 * ka11 + fy1 * ka1 + 256) / 256;
+                y0 = (y0 * ka01 + fy0 * ka0 + 256) / 256;
+                y1 = (y1 * ka11 + fy1 * ka1 + 256) / 256;
 
-            cr = (cr * kaa1 + fcr * kaa + 256) / 256;
-            cb = (cb * kaa1 + fcb * kaa + 256) / 256;
+                cr = (cr * kaa1 + fcr * kaa + 256) / 256;
+                cb = (cb * kaa1 + fcb * kaa + 256) / 256;
 
-            bp[2*x0]   = cb;
-            bp[2*x0+1] = y0;
-            bp[2*x0+2] = cr;
-            bp[2*x0+3] = y1;
+                bp[2*x0]   = cb;
+                bp[2*x0+1] = y0;
+                bp[2*x0+2] = cr;
+                bp[2*x0+3] = y1;
+            }
         }
     }
 }

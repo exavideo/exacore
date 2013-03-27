@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <assert.h>
+#include <sched.h>
 
 #include "posix_util.h"
 #include "mutex.h"
@@ -59,10 +60,13 @@ class BrokenPipe : public virtual std::exception {
  * void close_write(void):
  *  Close writer end of the pipe.
  */
+
+#define PipeLocked Pipe
+
 template <class T>
-class Pipe {
+class PipeLocked {
     public:
-        Pipe(unsigned int buf_len_) { 
+        PipeLocked(unsigned int buf_len_) { 
             buf_len = buf_len_;
             read_ptr = 0;
             write_ptr = 0;
@@ -167,13 +171,38 @@ class Pipe {
             }
         }
 
-        ~Pipe( ) { 
+        void debug(void) {
+            MutexLock lock(mut);
+            if (read_ptr <= write_ptr) {
+                fprintf(stderr, "pipe: %u used\n", (write_ptr - read_ptr));
+            } else {
+                fprintf(stderr, "pipe: %u used\n", 
+                        (buf_len - read_ptr) + (write_ptr - 1));
+            }
+        }
+
+        ~PipeLocked( ) { 
             for (unsigned int i = 0; i < buf_len; i++) {
                 if (buf[i] != NULL) {
                     delete buf[i];
                 }
             }
             delete [] buf;
+        }
+
+        unsigned int fill( ) {
+            MutexLock lock(mut);
+
+            if (read_ptr == write_ptr) {
+                return 0;
+            } else if (read_ptr < write_ptr) {
+                /* [read_ptr .. write_ptr - 1] is full */
+                return write_ptr - read_ptr;
+            } else { /* if (write_ptr < read_ptr)  */
+                /* [0..write_ptr - 1] slots full at the beginning */
+                /* [read_ptr..buf_len - 1] slots full at the end */
+                return (buf_len - read_ptr) + (write_ptr);
+            }
         }
 
     protected:
@@ -221,5 +250,98 @@ class Pipe {
 
         bool read_done, write_done;
 };
+
+#undef PipeLocked
+
+
+/* Not fully lock/wait-free but maybe faster than pthreads under load? */
+
+template <class T>
+class PipeLF {
+    public:
+        PipeLF(unsigned int size_) {
+            read_ptr = write_ptr = 0;
+            array = new T[size_];
+            size = size_;
+            read_done = false;
+            write_done = false;
+        }
+
+        ~PipeLF( ) {
+            delete [] array;
+        }
+
+        T get( ) {
+            T ret;
+            for (;;) {
+                if (read_ptr == write_ptr) {
+                    if (write_done) {
+                        throw BrokenPipe( );
+                    }
+                    sched_yield( );
+                    continue;
+                } else {
+                    ret = array[read_ptr];
+                    read_ptr = next(read_ptr);
+                    return ret;
+                }
+            }
+        }
+
+        void put(const T& input) {
+            for (;;) {
+                int next_write_ptr = next(write_ptr);
+                if (next_write_ptr == read_ptr) {
+                    if (read_done) {
+                        throw BrokenPipe( );
+                    }
+                    sched_yield( );
+                    continue;
+                } else {
+                    array[write_ptr] = input;
+                    write_ptr = next_write_ptr;
+                    return;
+                }
+            }
+        }
+
+        void done_reading(void) {
+            read_done = true;
+        }
+
+        void done_writing(void) {
+            write_done = true;
+        }
+
+        bool can_put( ) {
+            return (next(write_ptr) != read_ptr);
+        }
+
+        bool data_ready( ) {
+            return (read_ptr != write_ptr);
+        }
+
+        void debug(void) {
+            if (read_ptr <= write_ptr) {
+                fprintf(stderr, "pipe: %u used\n", (write_ptr - read_ptr));
+            } else {
+                fprintf(stderr, "pipe: %u used\n", 
+                        (size - read_ptr) + (write_ptr - 1));
+            }
+        }
+
+
+    protected:
+        int next(int i) {
+            return (i + 1) % size;
+        }
+        volatile int read_ptr, write_ptr;
+        T *array;
+        unsigned int size;
+
+        volatile bool read_done, write_done;
+};
+
+//#undef PipeLF
 
 #endif

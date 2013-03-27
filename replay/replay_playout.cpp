@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -18,191 +18,151 @@
  */
 
 #include "replay_playout.h"
-#include "raw_frame.h"
-#include "mjpeg_codec.h"
-#include <string.h>
+#include "replay_playout_bars_source.h"
+#include "replay_playout_buffer_source.h"
+#include "replay_playout_avspipe_source.h"
+#include "replay_playout_lavf_source.h"
+#include "replay_playout_queue_source.h"
 
-/* FIXME hardcoded 1920x1080 decoding */
-ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) : 
-        current_pos(0), field_rate(0), dec(1920, 1080) {
+ReplayPlayout::ReplayPlayout(OutputAdapter *oadp_) {
     oadp = oadp_;
-    current_source = NULL;
-    running = false;
+    idle_source = new ReplayPlayoutBarsSource;
+    playout_source = NULL;
+    new_speed = NULL;
+    
+    _source_position = 0;
+    _source_duration = -1;
+
     start_thread( );
 }
 
 ReplayPlayout::~ReplayPlayout( ) {
-    
-}
-
-void ReplayPlayout::roll_shot(const ReplayShot &shot) {
-    MutexLock l(m);
-    current_source = shot.source;
-    /* 1/2 frame of timecode between output fields */
-    field_rate = Rational(3, 8);
-    current_pos = Rational((int) shot.start);
-    shot_end = shot.start + shot.length;
-
-    /* clear out queued shots */
-    next_shots.clear( );
-}
-
-void ReplayPlayout::roll_next_shot( ) {
-    /* no mutex lock, so only call this when mutex is already locked */
-    if (!next_shots.empty( )) {
-        const ReplayShot &shot = next_shots.front( );
-        current_source = shot.source;
-        current_pos = Rational((int) shot.start);
-        shot_end = shot.start + shot.length;
-        next_shots.pop_front( );
-    } else {
-        shot_end = 0;
-    }
-}
-
-void ReplayPlayout::queue_shot(const ReplayShot &shot) {
-    MutexLock l(m);
-    next_shots.push_back(shot);
-}
-
-void ReplayPlayout::stop( ) {
-    MutexLock l(m);
-    field_rate = Rational(0);
-}
-
-void ReplayPlayout::set_speed(int num, int denom) {
-    MutexLock l(m);
-    // divide by two; this is the timecode increment from one *field* to the next
-    field_rate = Rational(num, denom) * Rational(1, 2);
+    delete idle_source;
 }
 
 void ReplayPlayout::run_thread( ) {
+    ReplayPlayoutSource *active_source = idle_source; 
+    ReplayPlayoutSource *next_source;
+    ReplayPlayoutFrame frame_data;
     ReplayRawFrame *monitor_frame;
+    Rational current_speed(1,1);
+    Rational *next_speed;
 
-    Rational pos(0);
-    ReplayFrameData rfd1, rfd2;
-    ReplayFrameData rfd_cache;
-    RawFrame *f_cache = NULL;
-    RawFrame *out = NULL;
-    rfd_cache.data_ptr = NULL;
+    priority(SCHED_RR, 40);
 
     for (;;) {
-        get_and_advance_current_fields(rfd1, rfd2, pos);
-        
-        out = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-
-        if (rfd1.data_ptr == NULL) {
-            /* out = something... */
-        } else {
-            decode_field(out, rfd1, rfd_cache, f_cache, true);
-            decode_field(out, rfd2, rfd_cache, f_cache, false);
+        /* is there a next source available? if so, we take it */
+        next_source = playout_source.exchange(NULL);
+        if (next_source != NULL) {
+            if (active_source != idle_source) {
+                delete active_source;
+            }
+            active_source = next_source;
+            active_source->set_output_dominance(oadp->output_dominance( ));
         }
 
-        /* scale down to BGRAn8 and send to monitor port */
-        monitor_frame = new ReplayRawFrame(
-            out->convert->BGRAn8_scale_1_2( )
-        );
-
-        /* fill in timecode and other goodies for monitor */
-        monitor_frame->source_name = "Program";
-        if (rfd1.data_ptr != NULL) {
-            monitor_frame->source_name2 = rfd1.source->get_name( );
-            monitor_frame->tc = pos.integer_part( );
-            monitor_frame->fractional_tc = pos.fractional_part( );
-        } else {
-            monitor_frame->source_name2 = "No Clip";
+        /* atomically acquire speed commands */
+        next_speed = new_speed.exchange(NULL);
+        if (next_speed != NULL) {
+            current_speed = *next_speed;
+            delete next_speed;
         }
 
-        monitor.put(monitor_frame);
+        /* read data from currently active source */
+        active_source->read_frame(frame_data, current_speed);
 
-        /* send the full CbYCrY frame to output */
-        oadp->input_pipe( ).put(out);
+        /* 
+         * if we got video, output it. If not,
+         * switch to idle source and try again 
+         */
+        if (frame_data.video_data != NULL) {
+            /* apply filters to frame */
+            { MutexLock l(filters_mutex);
+                for (unsigned i = 0; i < filters.size( ); i++) {
+                    filters[i]->process_frame(frame_data);
+                }
+            }
+
+            /* create monitor frame */
+            monitor_frame = new ReplayRawFrame(
+                frame_data.video_data->convert->BGRAn8_scale_1_2( )
+            );
+            monitor_frame->source_name = "Program";
+            monitor_frame->source_name2 = frame_data.source_name;
+            monitor_frame->tc = frame_data.tc;
+            monitor_frame->fractional_tc = frame_data.fractional_tc;
+            monitor.put(monitor_frame);
+
+            /* write data to output */
+            oadp->input_pipe( ).put(frame_data.video_data);
+            if (oadp->audio_input_pipe( )) {
+                oadp->audio_input_pipe( )->put(frame_data.audio_data);
+            } else {
+                delete frame_data.audio_data;
+            }
+        } else {        
+            if (active_source != idle_source) {
+                delete active_source;
+            }
+            active_source = idle_source;
+        }
+
+        /* Update source state */
+        _source_position = active_source->position( );
+        _source_duration = active_source->duration( );
     }
 }
 
-void ReplayPlayout::get_and_advance_current_fields(ReplayFrameData &f1,
-        ReplayFrameData &f2, Rational &pos) {
-    MutexLock l(m);
-    timecode_t tc;
-
-    if (current_source != NULL) {
-        pos = current_pos;
-        tc = current_pos.integer_part( );
-        current_source->get_readable_frame(tc, f1);
-
-        if (current_pos.fractional_part( ).less_than_one_half( )) {
-            f1.use_first_field = true;
-        } else {
-            f1.use_first_field = false;  
-        }
-
-        current_pos += field_rate;
-        
-        tc = current_pos.integer_part( );
-        current_source->get_readable_frame(tc, f2);
-        
-        if (current_pos.fractional_part( ).less_than_one_half( )) {
-            f2.use_first_field = true;
-        } else {
-            f2.use_first_field = false;
-        }
-
-        current_pos += field_rate;
-
-        if (current_pos.integer_part( ) > shot_end && !next_shots.empty( ) 
-                && shot_end > 0) {
-            roll_next_shot( );
-        }
-    } else {
-        f1.data_ptr = NULL;
-        f2.data_ptr = NULL;
-        tc = 0;
+void ReplayPlayout::set_source(ReplayPlayoutSource *src) {
+    ReplayPlayoutSource *old_src = playout_source.exchange(src);
+    if (old_src != NULL) {
+        delete old_src;
     }
 }
 
-static coord_t field_start_scan(bool want_first, RawFrame::FieldDominance dom) {
-    if (want_first && dom == RawFrame::BOTTOM_FIELD_FIRST) {
-        return 1;
-    } else if (!want_first && dom == RawFrame::BOTTOM_FIELD_FIRST) {
-        return 0;
-    } else if (want_first) {
-        return 0;    
-    } else {
-        return 1;
+/* compatibility wrapper */
+void ReplayPlayout::roll_shot(const ReplayShot &shot) {
+    set_source(new ReplayPlayoutBufferSource(shot));
+}
+
+void ReplayPlayout::set_speed(int num, int denom) {
+    Rational *old = new_speed.exchange(new Rational(num, denom));
+    if (old != NULL) {
+        delete old;
     }
 }
 
-void ReplayPlayout::decode_field(RawFrame *out, ReplayFrameData &field,
-        ReplayFrameData &cache_data, RawFrame *&cache_frame,
-        bool is_first_field) {
+void ReplayPlayout::stop( ) {
+    set_source(idle_source);
+}
 
-    coord_t srcline, dstline;
-    RawFrame *tmp;
+void ReplayPlayout::register_filter(ReplayPlayoutFilter *filt) {
+    MutexLock l(filters_mutex);
+    filters.push_back(filt);
+}
 
-    /* decode the field data if we don't have it cached */
-    if (field.data_ptr != cache_data.data_ptr) {
-        delete cache_frame;
-        cache_frame = dec.decode(field.data_ptr, field.data_size);
-        /* Scale up video to 1920x1080 */
-        /* FIXME this assumes we always want 1920x1080 output */
-        if (cache_frame->w( ) < 1920) {
-            tmp = cache_frame->convert->CbYCrY8422_1080( ); 
-            delete cache_frame;
-            cache_frame = tmp;
-        }
-        cache_data = field;
+void ReplayPlayout::avspipe_playout(const char *cmd) {
+    set_source(new ReplayPlayoutAvspipeSource(cmd));
+}
+
+void ReplayPlayout::lavf_playout(const char *file) {
+    set_source(new ReplayPlayoutLavfSource(file));
+}
+
+void ReplayPlayout::lavf_playout_list(const StringList &files) {
+    ReplayPlayoutQueueSource::SourceQueue sources;
+    for (auto i = files.begin(); i != files.end(); i++) {
+        sources.push_back(new ReplayPlayoutLavfSource(*i));
     }
 
-    /* figure which lines we're taking and where they're going */
-    srcline = field_start_scan(field.use_first_field, 
-            field.source->field_dominance( ));
-    dstline = field_start_scan(is_first_field, oadp->output_dominance( ));
+    set_source(new ReplayPlayoutQueueSource(sources));
+}
 
-    /* copy the scanlines to the destination frame */
-    while (srcline < cache_frame->h( ) && dstline < out->h( )) {
-        memcpy(out->scanline(dstline), cache_frame->scanline(srcline),
-                cache_frame->pitch( ));
-        dstline += 2;
-        srcline += 2;
-    }
-}       
+timecode_t ReplayPlayout::source_position( ) {
+    return _source_position;
+}
+
+timecode_t ReplayPlayout::source_duration( ) {
+    return _source_duration;
+}
+

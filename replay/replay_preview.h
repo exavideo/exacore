@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -21,6 +21,7 @@
 #define _REPLAY_PREVIEW_H
 
 #include "replay_data.h"
+#include "replay_buffer.h"
 #include "thread.h"
 #include "mutex.h"
 #include "condition.h"
@@ -50,7 +51,7 @@ class ReplayPreview : public Thread {
         };
     protected:
         void run_thread( );
-        void wait_update(ReplayFrameData &rfd);
+        ReplayFrameData *wait_update( );
         void find_closest_valid_frame( );
 
         ReplayShot current_shot;

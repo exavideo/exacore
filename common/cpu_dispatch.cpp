@@ -22,11 +22,11 @@
 
 #ifdef X86_64
 #define cpuid(f,c,d) \
-    __asm__ __volatile__("push %%rbx; push %%rax; mov %2, %%eax; cpuid; pop %%rax; pop %%rbx":\
+    __asm__ __volatile__("push %%rbx; push %%rax; mov %2, %%eax; cpuid; mov %%ecx, %0; mov %%edx, %1; pop %%rax; pop %%rbx":\
         "=r" (c), "=r" (d) : "r" (f) : "%eax","%ecx","%edx");
 #else
 #define cpuid(f,c,d) \
-    __asm__ __volatile__("pushl %%ebx; pushl %%eax; mov %2, %%eax; cpuid; popl %%eax; popl %%ebx":\
+    __asm__ __volatile__("pushl %%ebx; pushl %%eax; mov %2, %%eax; cpuid; mov %%ecx, %0; mov %%edx, %1; popl %%eax; popl %%ebx":\
         "=r" (c), "=r" (d) : "r" (f) : "%eax","%ecx","%edx");
 #endif
 
@@ -41,6 +41,9 @@ void cpu_force_no_simd( ) {
 static void print_cpu_info( ) {
     fprintf(stderr, "CPU dispatch initialized\n");
     fprintf(stderr, "cx=0x%x dx=0x%x ", cpuid_ecx, cpuid_edx);
+    if (cpu_sse2_available( )) {
+        fprintf(stderr, "SSE2 ");
+    }
     if (cpu_sse3_available( )) {
         fprintf(stderr, "SSE3 ");
     }
@@ -59,6 +62,18 @@ static void cpuid_init( ) {
         cpuid_done = true;
 
         print_cpu_info( );
+    }
+}
+
+bool cpu_sse2_available( ) {
+    cpuid_init( );
+
+    if (force_no_simd) {
+        return false;
+    } else if (cpuid_edx & 0x04000000) {
+        return true;
+    } else {
+        return false;
     }
 }
 

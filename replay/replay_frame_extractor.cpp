@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -19,6 +19,7 @@
 
 #include "replay_frame_extractor.h"
 #include "replay_buffer.h"
+#include "packed_audio_packet.h"
 
 ReplayFrameExtractor::ReplayFrameExtractor( ) 
         : dec(1920, 1080), enc(1920, 1080) {
@@ -31,29 +32,42 @@ ReplayFrameExtractor::~ReplayFrameExtractor( ) {
 
 void ReplayFrameExtractor::extract_raw_jpeg(const ReplayShot &shot, 
         timecode_t offset, std::string &jpeg) {
-    ReplayFrameData rfd;
+    ReplayFrameData *rfd;
 
-    shot.source->get_readable_frame(shot.start + offset, rfd);
-    uint8_t *data = (uint8_t *) rfd.data_ptr;
-    for (size_t i = 0; i < rfd.data_size - 1; i++) {
-        if (data[i] == 0xff && data[i + 1] == 0xd9) {
-            jpeg.assign((char *)data, i + 2);
-            return;
-        }
-    }
+    rfd = shot.source->read_frame(shot.start + offset,  
+            ReplayBuffer::LOAD_VIDEO);
+    jpeg.assign((char *)rfd->video_data, rfd->video_size);
+    delete rfd;
+}
 
-    throw std::runtime_error("no valid JPEG frame found");
+void ReplayFrameExtractor::extract_thumbnail_jpeg(const ReplayShot &shot,
+        timecode_t offset, std::string &jpeg) {
+    ReplayFrameData *rfd;
+    
+    rfd = shot.source->read_frame(shot.start + offset,
+            ReplayBuffer::LOAD_THUMBNAIL);
+    jpeg.assign((char *)rfd->thumbnail_data, rfd->thumbnail_size);
+    delete rfd;
 }
 
 void ReplayFrameExtractor::extract_scaled_jpeg(const ReplayShot &shot,
         timecode_t offset, std::string &jpeg, int scale_down) {
-    
-    ReplayFrameData rfd;
-    shot.source->get_readable_frame(shot.start + offset, rfd);
+    ReplayFrameData *rfd;
 
-    RawFrame *rf = dec.decode(rfd.data_ptr, rfd.data_size, scale_down);
+    rfd = shot.source->read_frame(shot.start + offset, 
+            ReplayBuffer::LOAD_VIDEO);
+    RawFrame *rf = dec.decode(rfd->video_data, rfd->video_size, scale_down);
     enc.encode(rf);
     delete rf;
+    delete rfd;
 
     jpeg.assign((char *)enc.get_data( ), enc.get_data_size( ));
+}
+
+void ReplayFrameExtractor::extract_raw_audio(const ReplayShot &shot,
+        timecode_t offset, std::string &data) {
+    /* FIXME stub */
+    (void) shot;
+    (void) offset;
+    (void) data;
 }

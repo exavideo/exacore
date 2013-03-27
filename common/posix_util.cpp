@@ -48,6 +48,28 @@ ssize_t read_all(int fd, void *data, size_t size) {
     return 1;
 }
 
+ssize_t pread_all(int fd, void *data, size_t size, off_t offset) {
+    ssize_t nread;
+    uint8_t *buf = (uint8_t *) data;
+
+    while (size > 0) {
+        nread = pread(fd, buf, size, offset);
+        if (nread > 0) {
+            size -= nread;
+            buf += nread;
+            offset += nread;
+        } else if (nread == 0) {
+            return 0;
+        } else {
+            if (errno != EAGAIN && errno != EINTR) {
+                return -1;
+            }
+        }
+    }
+
+    return 1;
+}
+
 ssize_t write_all(int fd, const void *data, size_t size) {
     ssize_t written;
     uint8_t *buf = (uint8_t *) data;
@@ -72,19 +94,21 @@ ssize_t write_all(int fd, const void *data, size_t size) {
     return 1;
 }
 
-POSIXError::POSIXError( ) throw() {
+POSIXError::POSIXError( ) noexcept(true) : std::runtime_error("POSIXError") {
     format_message("unknown source", errno);
 }
 
-POSIXError::POSIXError(const char *msg) throw() {
+POSIXError::POSIXError(const char *msg) noexcept(true) 
+        : std::runtime_error("POSIXError") {
     format_message(msg, errno);
 }
 
-POSIXError::POSIXError(const char *msg, int en) throw() {
+POSIXError::POSIXError(const char *msg, int en) noexcept(true) 
+        : std::runtime_error("POSIXError") {
     format_message(msg, en);
 }
 
-void POSIXError::format_message(const char *msg, int en) throw() {
+void POSIXError::format_message(const char *msg, int en) noexcept(true) {
     const char *error_str;
 
     if (en < 0 || en >= sys_nerr) {
@@ -96,7 +120,6 @@ void POSIXError::format_message(const char *msg, int en) throw() {
     memset(what_, 0, sizeof(what_));
     snprintf(what_, sizeof(what_) - 1, "%s: OS error: %s", msg, error_str);
 }
-
 void xioctl(int fd, int req, void *param) {
     if (ioctl(fd, req, param) == -1) {
         throw POSIXError("ioctl");

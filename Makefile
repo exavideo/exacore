@@ -2,17 +2,18 @@
 # Defaults should work well for a 64-bit build on AMD hardware. 
 # 32-bit is not supported for the time being!
 
+-include local.mk
+
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g -O3 -march=k8 -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC 
+CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC -std=c++11
 
 # don't use -Werror for swig-generated code
-SWIG_CXXFLAGS=-g -O3 -march=k8 -W -Wall -DRAWFRAME_POSIX_IO -fPIC
-LDFLAGS=-g -O3 -march=k8 
+SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -fPIC -std=c++11
+LDFLAGS=-g -rdynamic $(LOCAL_LDFLAGS)
 RUBY_INCLUDES=`ruby ruby_cflags.rb`
 ASM=yasm -f elf64 -g dwarf2
 
--include local.mk
 
 all: do_all_targets
 
@@ -20,6 +21,7 @@ EXTERNAL_INCLUDES += \
 	-I$(DECKLINK_SDK_PATH) \
 
 SUBDIR_INCLUDES = \
+	-Iaudio/ \
 	-Imjpeg/ \
 	-Icommon/ \
 	-Iraw_frame/ \
@@ -27,6 +29,7 @@ SUBDIR_INCLUDES = \
 	-Idrivers/ \
 	-Igraphics/ \
 	-Ireplay/ \
+	-Iavspipe/ \
 	-Idisplay_surface \
 
 include $(shell find . -iname 'subdir.mk')
@@ -50,18 +53,18 @@ endif
 
 # Generic rule for compiling C++ object files.
 %.o : %.cpp
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d $^
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $^ 
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d -MT $@ $<
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $< 
 
 %.rbo: %.rbcpp
-	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $^
+	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $<
 
 %.rbcpp : %.i
-	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $^
+	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $<
 
 # And one for assembly files
 %.o : %.asm
-	$(ASM) -o $@ $^
+	$(ASM) -o $@ $<
 
 do_all_targets: $(all_TARGETS)
 
@@ -69,6 +72,7 @@ clean:
 	-find . -iname '*.o' | xargs rm
 	-find . -iname '*.rbo' | xargs rm
 	-find . -iname '*.rbcpp' | xargs rm
+	-find . -iname '*.d' | xargs rm
 	-rm -f $(all_TARGETS)
 
 .PHONY: all do_all_targets clean

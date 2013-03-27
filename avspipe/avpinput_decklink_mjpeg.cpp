@@ -19,7 +19,7 @@
 
 #include "decklink.h"
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 #include "pipe.h"
 #include "thread.h"
 #include "xmalloc.h"
@@ -237,7 +237,7 @@ int main(int argc, char * const *argv) {
     int vpfd, apfd, opt;
     pid_t child;
 
-    Pipe<AudioPacket *> *apipe;
+    Pipe<IOAudioPacket *> *apipe;
 
     static struct option options[] = {
         { "card", 1, 0, 'c' },
@@ -279,7 +279,7 @@ int main(int argc, char * const *argv) {
     /* (It may be unnecessary with an audio stream?) */
     if (ffmpeg_hack) {
         RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-        AudioPacket *dummy_audio = new AudioPacket(48000, 2, 2, 1601);
+        IOAudioPacket *dummy_audio = new IOAudioPacket(1601, 2);
 
         for (int i = 0; i < 2; i++) {
             empty->write_to_fd(vpfd);
@@ -293,7 +293,7 @@ int main(int argc, char * const *argv) {
 
     /* start video and audio sender threads */
     CompressorThread vsthread(&(iadp->output_pipe( )), vpfd);
-    SenderThread<AudioPacket> asthread(apipe, apfd);
+    SenderThread<IOAudioPacket> asthread(apipe, apfd);
 
     /* wait on child process */
     while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 

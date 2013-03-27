@@ -20,6 +20,7 @@
 #include "rsvg_frame.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define MAX_SVG 65536
 

@@ -25,8 +25,14 @@
 
 class ReplayIngest : public Thread {
     public:
-        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT);
+        ReplayIngest(InputAdapter *INPUT, ReplayBuffer *INPUT,
+            ReplayGameData *INPUT = NULL);
         ~ReplayIngest( );
         AsyncPort<ReplayRawFrame> *get_monitor( );
+
+        virtual void trigger( );
+        void suspend_encode( );
+        void resume_encode( );
+        void debug( );
 };
 

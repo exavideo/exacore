@@ -7,7 +7,7 @@ avspipe_avpinput_decklink_OBJECTS = \
 	avspipe/avpinput_decklink.o
 
 avspipe/avpinput_decklink: $(avspipe_avpinput_decklink_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lrt $(graphics_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(drivers_decklink_LIBS) $(common_LIBS) $(raw_frame_LIBS) $(graphics_LIBS)
 
 all_TARGETS += avspipe/avpinput_decklink    
 
@@ -20,18 +20,7 @@ avspipe_avpinput_decklink_mjpeg_OBJECTS = \
 	avspipe/avpinput_decklink_mjpeg.o
 
 avspipe/avpinput_decklink_mjpeg: $(avspipe_avpinput_decklink_mjpeg_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lrt
+	$(CXX) $(LDFLAGS) -o $@ $^ $(drivers_decklink_LIBS) $(common_LIBS) $(raw_frame_LIBS) $(graphics_LIBS) $(mjpeg_LIBS)
 
 all_TARGETS += avspipe/avpinput_decklink_mjpeg
 
-avspipe_avpoutput_decklink_OBJECTS = \
-	$(common_OBJECTS) \
-	$(raw_frame_OBJECTS) \
-	$(drivers_decklink_OBJECTS) \
-	$(thread_OBJECTS) \
-	avspipe/avpoutput_decklink.o
-
-avspipe/avpoutput_decklink: $(avspipe_avpoutput_decklink_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread
-
-all_TARGETS += avspipe/avpoutput_decklink    

@@ -29,15 +29,22 @@ void CbYCrY8422_YCbCr8P422_default(size_t, uint8_t *, uint8_t *,
 void CbYCrY8422_CbYCrY8422_default(size_t, uint8_t *, uint8_t *);
 
 #ifndef SKIP_ASSEMBLY_ROUTINES
-extern "C" {
-    void CbYCrY8422_YCbCr8P422_sse3(size_t, uint8_t *, uint8_t *, 
-            uint8_t *, uint8_t *);
-    void CbYCrY8422_YCbCr8P422_ssse3(size_t, uint8_t *, uint8_t *, 
-            uint8_t *, uint8_t *);
-}
+void CbYCrY8422_BGRAn8_scale_1_4_vector(size_t, uint8_t *,
+        uint8_t *, unsigned int);
+
+void CbYCrY8422_BGRAn8_scale_1_2_vector(size_t, uint8_t *,
+        uint8_t *, unsigned int);
+
+extern "C" void CbYCrY8422_BGRAn8_vector(size_t, uint8_t *, uint8_t *);
+extern "C" void CbYCrY8422_YCbCr8P422_vector(size_t, uint8_t *, uint8_t *,
+        uint8_t *, uint8_t *);
+void CbYCrY8422_CbYCrY8422_scale_1_4_vector(size_t, uint8_t *,
+        uint8_t *, unsigned int);
+
 #endif
 
 void CbYCrY8422_BGRAn8_default(size_t, uint8_t *, uint8_t *);
+
 void CbYCrY8422_BGRAn8_scale_1_2_default(size_t, uint8_t *, 
         uint8_t *, unsigned int);
 void CbYCrY8422_BGRAn8_scale_1_4_default(size_t, uint8_t *, 
@@ -46,29 +53,35 @@ void CbYCrY8422_BGRAn8_scale_1_4_default(size_t, uint8_t *,
 void CbYCrY8422_CbYCrY8422_scan_double(size_t, uint8_t *,
         uint8_t *, unsigned int);
 
+void CbYCrY8422_CbYCrY8422_scale_1_4(size_t, uint8_t *,
+        uint8_t *, unsigned int);
+
+void CbYCrY8422_CbYCrY8422_scan_triple(size_t, uint8_t *,
+        uint8_t *, unsigned int);
 
 class CbYCrY8422Unpacker : public RawFrameUnpacker {
     public:
         CbYCrY8422Unpacker(RawFrame *f) : RawFrameUnpacker(f) {
             /* CPU dispatched routines */
-#ifdef SKIP_ASSEMBLY_ROUTINES
-            do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
-#else
-            if (cpu_ssse3_available( )) {
-                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_ssse3;
-            } else if (cpu_sse3_available( )) {
-                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_sse3;
+
+            if (cpu_sse2_available( )) {
+                do_BGRAn8_scale_1_4 = CbYCrY8422_BGRAn8_scale_1_4_vector;
+                do_BGRAn8_scale_1_2 = CbYCrY8422_BGRAn8_scale_1_2_vector;
+                do_BGRAn8 = CbYCrY8422_BGRAn8_vector;
+                do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_vector;
+                do_CbYCrY8422_scale_1_4 = CbYCrY8422_CbYCrY8422_scale_1_4_vector;
             } else {
+                do_BGRAn8_scale_1_4 = CbYCrY8422_BGRAn8_scale_1_4_default;
+                do_BGRAn8_scale_1_2 = CbYCrY8422_BGRAn8_scale_1_2_default;
+                do_BGRAn8 = CbYCrY8422_BGRAn8_default;
                 do_YCbCr8P422 = CbYCrY8422_YCbCr8P422_default;
+                do_CbYCrY8422_scale_1_4 = CbYCrY8422_CbYCrY8422_scale_1_4;
             }
-#endif
-            
+
             /* Non CPU-dispatched routines */
             do_CbYCrY8422 = CbYCrY8422_CbYCrY8422_default;
-            do_BGRAn8 = CbYCrY8422_BGRAn8_default;
-            do_BGRAn8_scale_1_2 = CbYCrY8422_BGRAn8_scale_1_2_default;
-            do_BGRAn8_scale_1_4 = CbYCrY8422_BGRAn8_scale_1_4_default;
             do_CbYCrY8422_scan_double = CbYCrY8422_CbYCrY8422_scan_double;
+            do_CbYCrY8422_scan_triple = CbYCrY8422_CbYCrY8422_scan_triple;
         }
 };
 

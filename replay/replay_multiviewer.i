@@ -34,6 +34,7 @@ class ReplayMultiviewer : public Thread {
 
         void add_source(const ReplayMultiviewerSourceParams &INPUT);
         void start( );
+        void change_mode( );
 };
 
 struct ReplayMultiviewerSourceParams {

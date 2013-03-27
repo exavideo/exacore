@@ -17,4 +17,5 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+%include "mplayer_display_surface.i"
 %include "framebuffer_display_surface.i"

@@ -25,21 +25,39 @@
 #include "adapter.h"
 #include "replay_data.h"
 #include "replay_buffer.h"
+#include "replay_gamedata.h"
+#include "replay_pv_analyzer.h"
+#include "mutex.h"
 
 class ReplayIngest : public Thread {
     public:
-        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_);
+        ReplayIngest(InputAdapter *iadp_, ReplayBuffer *buf_, 
+                ReplayGameData *gds = NULL);
         ~ReplayIngest( );
 
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
+
+        void suspend_encode( );
+        void resume_encode( );
+
+        virtual void trigger( );
+
+        void debug( );
+
     protected:
         void run_thread( );
         
         InputAdapter *iadp;
         ReplayBuffer *buf;
 
+        ReplayGameData *gd;
+
         ReplayIngest() { };
+
+        Mutex m;
+
+        bool encode_suspended;
 };
 
 #endif

@@ -21,6 +21,7 @@
 #define _MUTEX_H
 
 #include <pthread.h>
+#include <stdint.h>
 
 class Condition;
 
@@ -31,7 +32,10 @@ class Mutex {
         void lock( );
         void unlock( );
     protected:
+        void thread_acquired( );
+        void thread_released( );
         pthread_mutex_t mut;
+        uint64_t msec_locked;
         friend class Condition;
 };
 

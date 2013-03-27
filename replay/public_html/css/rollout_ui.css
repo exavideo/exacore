@@ -1,0 +1,60 @@
+.timer {
+    font-size: 4em;
+}
+
+#timeRolled .timer {
+    color: blue;
+}
+
+#timeRemaining .timer {
+    color: red;
+}
+
+.button {
+    text-align: center;
+    margin-bottom: 10px;
+    margin-right: 10px;
+    width: 296px;
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+#rolloutButton {
+    border: 3px solid blue;
+}
+
+#abortButton {
+    border: 3px solid red;
+}
+
+.cliplist {
+    width: 300px;
+    float: left;
+    margin-right: 10px;
+    text-align: center;
+}
+
+.sortableList {
+    min-height: 400px;
+    list-style-type: none;
+    margin: 0 0 0 0;
+    padding: 0 0 0 0;
+}
+
+.sortableList li {
+    border: 1px solid gray;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    padding: 0 0 0 0;
+}
+
+.cliplistqueue {
+    border: 1px solid blue;
+}
+
+.cliplistavail {
+    border: 1px solid red;
+}

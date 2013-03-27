@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -23,55 +23,94 @@
 #include "thread.h"
 #include "mutex.h"
 #include "adapter.h"
-#include "replay_data.h"
-#include "replay_buffer.h"
 #include "async_port.h"
 #include "rational.h"
-#include "mjpeg_codec.h"
+#include "replay_data.h"
+#include "replay_playout_source.h"
+#include "replay_playout_filter.h"
 
 #include <list>
+#include <vector>
+#include <atomic>
+
+typedef std::list<const char *> StringList;
 
 class ReplayPlayout : public Thread {
     public:
         ReplayPlayout(OutputAdapter *oadp_);
         ~ReplayPlayout( );
 
-        /* Roll a shot and clear the queue of shots to follow. */
-        void roll_shot(const ReplayShot &shot);
-        /* Queue a shot to roll after the current shot passes its end */
-        void queue_shot(const ReplayShot &shot);
-        /* Stop the playout right now */
-        void stop( );
-        /* Adjust the playout rate */
+        /* 
+         * Change the source of media to be played out. 
+         * We will read frames from this source until it runs out.
+         * Any playout source that is currently in use will be deleted.
+         */
+        void set_source(ReplayPlayoutSource *src);
+
+        /* 
+         * Change playout speed to the given fraction of full speed.
+         * Note: Not all possible sources support variable speed.
+         * These sources always play out at full speed.
+         */
         void set_speed(int num, int denom);
 
+        /*
+         * Roll shot.
+         * This is a wrapper around ReplayBufferPlayoutSource
+         * and set_source, provided for convenience and compatibility.
+         */
+        void roll_shot(const ReplayShot &replay);
+
+        /*
+         * Register filter.
+         * Filters can be used e.g. to add graphics to the video output.
+         */
+        void register_filter(ReplayPlayoutFilter *filt);
+
+        /*
+         * Stop, or more precisely, return to idle source.
+         */
+        void stop( );
+
+        /*
+         * Roll out file via AvspipeInputAdapter using e.g. ffmpeg
+         */
+        void avspipe_playout(const char *cmd);
+        /*
+         * Roll out file using libavformat.
+         */
+        void lavf_playout(const char *cmd);
+        /*
+         * Roll out list of files.
+         */
+        void lavf_playout_list(const StringList &files);
+
+        /*
+         * Get information about the current playout source state
+         */
+        timecode_t source_position( );
+        timecode_t source_duration( );
+
+        /* Multiviewer ports. */
         AsyncPort<ReplayRawFrame> monitor;
         AsyncPort<ReplayRawFrame> *get_monitor( ) { return &monitor; }
 
     protected:
         void run_thread( );
-        void get_and_advance_current_fields(ReplayFrameData &f1, 
-                ReplayFrameData &f2, Rational &pos);
 
-        void decode_field(RawFrame *out, ReplayFrameData &field, 
-                ReplayFrameData &cache_data, RawFrame *&cache_frame,
-                bool is_first_field);
-
-        void roll_next_shot( );
+        struct SourceState {
+            timecode_t position;
+            timecode_t duration;
+        };
 
         OutputAdapter *oadp;
-
-        ReplayBuffer *current_source;
-        Rational current_pos;
-        Rational field_rate;
-        timecode_t shot_end;
-
-        std::list<ReplayShot> next_shots;
-
-        Mutex m;
-
-        Mjpeg422Decoder dec;
-
+        ReplayPlayoutSource *idle_source;
+        std::vector<ReplayPlayoutFilter *> filters;
+        std::atomic<ReplayPlayoutSource *> playout_source;
+        std::atomic<Rational *> new_speed;
+        std::atomic<timecode_t> _source_position;
+        std::atomic<timecode_t> _source_duration;
+        Mutex filters_mutex;
 };
 
 #endif

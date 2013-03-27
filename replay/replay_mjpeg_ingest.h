@@ -31,12 +31,14 @@ class ReplayMjpegIngest : public ReplayIngest {
         ReplayMjpegIngest(const char *cmd, ReplayBuffer *buf_);
         ~ReplayMjpegIngest( );
 
+        void trigger( );
     protected:
         void run_thread( );
         
         InputAdapter *iadp;
         ReplayBuffer *buf;
-        int child_fd;
+        int jpeg_fd;
+        int cmd_fd;
         pid_t child_pid;
 
         int read_mjpeg_data(ReplayFrameData &dest);

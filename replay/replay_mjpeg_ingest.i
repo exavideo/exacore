@@ -28,5 +28,6 @@ class ReplayMjpegIngest : public ReplayIngest {
     public:
         ReplayMjpegIngest(const char *INPUT, ReplayBuffer *INPUT);
         ~ReplayMjpegIngest( );
+        void trigger( );
 };
 

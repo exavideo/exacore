@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -69,28 +69,25 @@ void ReplayPreview::mark_out( ) {
 
 void ReplayPreview::run_thread( ) {
     Mjpeg422Decoder dec(1920, 1080);
-    ReplayFrameData rfd;
+    ReplayFrameData *rfd;
     ReplayRawFrame *monitor_frame;
     RawFrame *new_frame;
 
     for (;;) {
         try {
             /* wait for some work to do */
-            wait_update(rfd);
+            rfd = wait_update( );
 
-            /* decode at 960 max width */
-            new_frame = dec.decode(rfd.data_ptr, rfd.data_size, 960);
+            /* decode jpeg at 960 max width */
+            new_frame = dec.decode(rfd->video_data, rfd->video_size, 960);
 
             /* send to multiview */
-            monitor_frame = new ReplayRawFrame(new_frame->convert->BGRAn8( ));
-            delete new_frame;
-            
-            /* fill in timecode and source info for monitor */
+            monitor_frame = new ReplayRawFrame(new_frame);
             monitor_frame->source_name = "Preview";
-            monitor_frame->source_name2 = rfd.source->get_name( );
-            monitor_frame->tc = rfd.pos;
-
+            monitor_frame->source_name2 = rfd->source->get_name( );
+            monitor_frame->tc = rfd->pos;
             monitor.put(monitor_frame);
+            delete rfd;
         } catch (ReplayFrameNotFoundException &e) {
             fprintf(stderr, "replay preview: frame not found\n");
             find_closest_valid_frame( );
@@ -111,7 +108,7 @@ void ReplayPreview::find_closest_valid_frame( ) {
     update_monitor = true;
 }
 
-void ReplayPreview::wait_update(ReplayFrameData &rfd) {
+ReplayFrameData *ReplayPreview::wait_update( ) {
     MutexLock l(m);
     
     /* wait until there is some work to be done */
@@ -122,5 +119,7 @@ void ReplayPreview::wait_update(ReplayFrameData &rfd) {
     update_monitor = false;
 
     /* grab the frame from the buffer */
-    current_shot.source->get_readable_frame(current_pos, rfd);
+    return current_shot.source->read_frame(
+        current_pos, ReplayBuffer::LOAD_VIDEO
+    );
 }

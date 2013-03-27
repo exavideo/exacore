@@ -9,9 +9,11 @@
     </head>
 
     <body>
-        <div id="#header">
+        <div id="header">
             <h1>Instant Replay Shot List</h1>
             <a href="#" id="helpLink">Keyboard Shortcuts</a>
+            <button id="updateList">Update Shot List</button>
+            <button id="clearList">Clear Shot List</button>
         </div>
         <div class="shotList">
             <p>Recorded Shots</p>
@@ -35,8 +37,13 @@
         </div>
 
         <div class="shotList">
-            <p>Saved Shots</p>
-            <div id="savedShots" class="shotScroll">
+            <p>Rollout Files</p>
+            <div>
+                <select size="10" id="filepicker"></select>
+            </div>
+            <div>
+                <button id="rollout_file">Rollout</button>
+                <button id="resume_encode">Resume Encode</button>
             </div>
         </div>
 
@@ -64,6 +71,7 @@
             <button id="preview">Pvw</button>
             <button id="roll">Roll</button>
             <button id="queue">Queue</button>
+            <button id="copy">Copy</button>
             <button id="delete">Del</button>
             <div id="data">
                 
@@ -74,6 +82,9 @@
             <button id="forward">&gt;&gt;</button>
             <button id="out">Out</button>
 
+            <!--<br style="clear: both" />-->
+            <button id="dlvideo">Video</button>
+            <button id="dlaudio">Audio</button>
             <br style="clear: both" />
         </div>
 

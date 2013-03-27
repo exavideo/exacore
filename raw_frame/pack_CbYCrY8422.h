@@ -21,14 +21,32 @@
 #define _PACK_CBYCRY8422_H
 
 #include "raw_frame.h"
+#include "cpu_dispatch.h"
 
 void YCbCr8P422_CbYCrY8422_default(size_t, uint8_t *, uint8_t *,
         uint8_t *, uint8_t *);
 
+void YCbCr8P422_CbYCrY8422_A_default(size_t, size_t, size_t, size_t, size_t, 
+        uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+
+#ifndef SKIP_ASSEMBLY_ROUTINES_
+    extern "C" void YCbCr8P422_CbYCrY8422_vector(size_t, uint8_t *, uint8_t *,
+        uint8_t *, uint8_t *);
+    //extern "C" void YCbCr8P422_CbYCrY8422_A_vector(size_t, size_t, size_t, size_t, 
+        //size_t, uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+#endif
+
 class CbYCrY8422Packer : public RawFramePacker {
     public:
         CbYCrY8422Packer(RawFrame *f) : RawFramePacker(f) {
-            do_YCbCr8P422 = YCbCr8P422_CbYCrY8422_default;
+            if (cpu_sse2_available( )) {
+                do_YCbCr8P422 = YCbCr8P422_CbYCrY8422_vector;
+                //do_YCbCr8P422A = YCbCr8P422_CbYCrY8422_A_vector;
+                do_YCbCr8P422A = YCbCr8P422_CbYCrY8422_A_default;
+            } else {
+                do_YCbCr8P422 = YCbCr8P422_CbYCrY8422_default;
+                do_YCbCr8P422A = YCbCr8P422_CbYCrY8422_A_default;
+            }
         }
 };
 

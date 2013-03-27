@@ -65,12 +65,28 @@ void Mjpeg422Decoder::libjpeg_init( ) {
     jpeg_create_decompress(&cinfo);
 }
 
+void Mjpeg422Decoder::get_comment(std::string &com) {
+    com = comment;
+}
+
 RawFrame *Mjpeg422Decoder::decode(void *data, size_t size, int scale_down) {
     JSAMPARRAY planes[3];
     JDIMENSION scanlines_produced = 0;
 
     jpeg_mem_src(&cinfo, data, size);
+    jpeg_save_markers(&cinfo, JPEG_COM, 64);
     jpeg_read_header(&cinfo, TRUE /* require_image */);
+
+    /* search for a JPEG comment */
+    jpeg_saved_marker_ptr marker = cinfo.marker_list;
+
+    while (marker != NULL) {
+        if (marker->marker == JPEG_COM) {
+            comment.assign((char *)marker->data, marker->data_length);
+            break;
+        }
+        marker = marker->next;
+    }
 
     cinfo.dct_method = JDCT_FASTEST;
     cinfo.raw_data_out = TRUE;

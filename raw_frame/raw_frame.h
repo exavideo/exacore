@@ -47,7 +47,15 @@ class RawFrame {
         RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t scanline_size);
         virtual ~RawFrame( );
 
+        RawFrame *copy( );
+
         uint8_t *scanline(coord_t y) { return _data + _pitch * y; }
+        uint8_t *pixel(coord_t x, coord_t y) { 
+            if (x >= _w || y >= _h) {
+                throw std::runtime_error("invalid pixel access");
+            }
+            return scanline(y) + pixel_size( ) * x; 
+        }
         uint8_t *data( ) { return _data; }
 
         uint8_t global_alpha( ) { return _global_alpha; }
@@ -64,6 +72,9 @@ class RawFrame {
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
 
+        static RawFrame *from_png_data(void *data, size_t size);
+        static RawFrame *from_png_file(const char *path);
+
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
         ssize_t write_to_fd(int fd);
@@ -74,6 +85,7 @@ class RawFrame {
         RawFrameUnpacker *unpack;
         RawFrameDrawOps *draw;
         RawFrameConverter *convert;
+
 
     protected:
         coord_t _w, _h;
@@ -86,6 +98,7 @@ class RawFrame {
         RawFrame(PixelFormat pf);
 
         void initialize_pf(PixelFormat pf);
+        size_t pixel_size( ) const;
         size_t minpitch( ) const;
         virtual void alloc( );
         virtual void free_data( );
@@ -98,6 +111,8 @@ class RawFrame {
         void make_converter( );
         
         FieldDominance _field_dominance;
+
+        static int n_frames;
 };
 
 #define CHECK(x) check((void *)(x))
@@ -106,11 +121,22 @@ class RawFramePacker {
     public:
         RawFramePacker(RawFrame *f_) : f(f_) {
             do_YCbCr8P422 = NULL;
+            do_YCbCr8P422A = NULL;
         }
 
         void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
             CHECK(do_YCbCr8P422);
             do_YCbCr8P422(f->size( ), f->data( ), Y, Cb, Cr);
+        }
+
+        void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr,
+            size_t Ysrcpitch, size_t Cbsrcpitch, size_t Crsrcpitch) {
+            CHECK(do_YCbCr8P422A);
+            do_YCbCr8P422A(
+                f->w( ), f->h( ), 
+                Ysrcpitch, Cbsrcpitch, Crsrcpitch,
+                Y, Cb, Cr, f->data( )
+            );
         }
 
     protected:
@@ -124,6 +150,9 @@ class RawFramePacker {
 
         void (*do_YCbCr8P422)(size_t, uint8_t *, uint8_t *, 
                 uint8_t *, uint8_t *);
+
+        void (*do_YCbCr8P422A)(size_t, size_t, size_t, size_t, size_t,
+            uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
 
 class RawFrameUnpacker {
@@ -135,6 +164,8 @@ class RawFrameUnpacker {
             do_BGRAn8_scale_1_2 = NULL;
             do_BGRAn8_scale_1_4 = NULL;
             do_CbYCrY8422_scan_double = NULL;
+            do_CbYCrY8422_scale_1_4 = NULL;
+            do_CbYCrY8422_scan_triple = NULL;
         }
     
         /* TODO: provide routines for each desired output format here! */
@@ -169,6 +200,18 @@ class RawFrameUnpacker {
                     data, f->pitch( ));
         }
 
+        void CbYCrY8422_scale_1_4(uint8_t *data) {
+            CHECK(do_CbYCrY8422_scale_1_4);
+            do_CbYCrY8422_scale_1_4(f->size( ), f->data( ),
+                    data, f->pitch( ));
+        }
+
+        void CbYCrY8422_scan_triple(uint8_t *data) {
+            CHECK(do_CbYCrY8422_scan_double);
+            do_CbYCrY8422_scan_triple(f->size( ), f->data( ), 
+                    data, f->pitch( ));
+        }
+
     protected:
         void check(void *ptr) {
             if (ptr == NULL) {
@@ -193,6 +236,11 @@ class RawFrameUnpacker {
                 uint8_t *, unsigned int);
         void (*do_CbYCrY8422_scan_double)(size_t, uint8_t *, 
                 uint8_t *, unsigned int);
+        void (*do_CbYCrY8422_scale_1_4)(size_t, uint8_t *, 
+                uint8_t *, unsigned int);
+        void (*do_CbYCrY8422_scan_triple)(size_t, uint8_t *,
+                uint8_t *, unsigned int);
+
 };
 
 class RawFrameConverter {
@@ -254,12 +302,34 @@ class RawFrameConverter {
             return ret;
         }
 
+        RawFrame *CbYCrY8422_scan_triple( ) {
+            RawFrame *ret = new RawFrame(f->w( ) * 3, f->h( ) * 3,
+                    RawFrame::CbYCrY8422);
+            f->unpack->CbYCrY8422_scan_triple(ret->data( ));
+            return ret;
+        }
+
         RawFrame *CbYCrY8422_1080( ) {
             if (f->w( ) == 960 && f->h( ) >= 540) {
                 return CbYCrY8422_scan_double( ); 
             } else {
                 return NULL;
             }
+        }
+
+        RawFrame *CbYCrY8422_scaled(coord_t w, coord_t h) {
+            if (w == f->w( ) / 4 && h == f->h( ) / 4) {
+                return CbYCrY8422_scale_1_4( );
+            } else {
+                return NULL;
+            }
+        }
+
+        RawFrame *CbYCrY8422_scale_1_4( ) {
+            RawFrame *ret = new RawFrame(f->w( ) / 4, f->h( ) / 4,
+                    RawFrame::CbYCrY8422);
+            f->unpack->CbYCrY8422_scale_1_4(ret->data( ));
+            return ret;
         }
     
     protected:

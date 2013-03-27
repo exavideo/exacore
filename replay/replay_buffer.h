@@ -21,52 +21,50 @@
 #define _REPLAY_BUFFER_H
 
 #include "replay_data.h"
+#include "replay_buffer_index.h"
 #include "mutex.h"
+#include "thread.h"
+#include "condition.h"
+#include "block_set.h"
 
 #include <stdexcept>
-
-class ReplayFrameNotFoundException : public virtual std::exception {
-    const char *what() const throw() { return "Frame off ends of buffer"; }
-};
 
 class ReplayBuffer {
     public:
         enum whence_t { ZERO, START, END };
+        enum LoadFlags { LOAD_VIDEO = 0x01, LOAD_THUMBNAIL = 0x02, LOAD_AUDIO = 0x04 };
 
-        ReplayBuffer(const char *path, size_t buffer_size, size_t frame_size,
-                const char *name="(unnamed)");
+        ReplayBuffer(const char *path, const char *name="(unnamed)");
         ~ReplayBuffer( );
 
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
+        
+        /* these are now convenience wrappers around {read,write}_blockset */
+        ReplayFrameData *read_frame(timecode_t frame, int flags);
+        timecode_t write_frame(const ReplayFrameData &frame);
 
-        void get_writable_frame(ReplayFrameData &frame_data);
-        void finish_frame_write( );
-
-        void get_readable_frame(timecode_t tc, ReplayFrameData &frame_data);
+        void read_blockset(timecode_t frame, BlockSet &blkset);
+        timecode_t write_blockset(const BlockSet &blkset);
 
         RawFrame::FieldDominance field_dominance( ) { return _field_dominance; }
         void set_field_dominance(RawFrame::FieldDominance dom) { _field_dominance = dom; }
 
         const char *get_name( );
 
-    private:
-        class MsyncBackground;
-        MsyncBackground *mst;
+        struct FrameHeader {
+            int version;
+            size_t video_size;
+            size_t thumbnail_size;
+            size_t audio_size;
+        };
 
+    private:
+        ReplayBufferIndex *index;
         RawFrame::FieldDominance _field_dominance;
 
         char *name;
+        char *path;
         int fd;
-
-        size_t buffer_size;
-        size_t frame_size;
-        timecode_t n_frames;
-
-        uint8_t *data;
-
-        timecode_t tc_current;
-
-        Mutex m;
 };
 
 #endif

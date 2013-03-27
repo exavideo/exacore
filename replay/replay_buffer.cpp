@@ -20,7 +20,6 @@
 #include "replay_buffer.h"
 #include "posix_util.h"
 
-#include "thread.h"
 #include "pipe.h"
 
 #include <sys/types.h>
@@ -33,171 +32,164 @@
 #include <stdlib.h>
 #include <stdexcept>
 
+#define REPLAY_VIDEO_BLOCK "ReplJpeg"
+#define REPLAY_THUMBNAIL_BLOCK "ReplThum"
+#define REPLAY_AUDIO_BLOCK "ReplAuds"
 
-struct msync_req {
-    void *base;
-    size_t size;
-};
-
-class ReplayBuffer::MsyncBackground : public Thread {
-    public:
-        MsyncBackground( ) : request_queue(256) {
-            start_thread( );        
-        };
-
-        ~MsyncBackground( ) {
-        
-        };
-
-        Pipe<msync_req> request_queue;
-
-    protected:
-        void run_thread( ) {
-            msync_req req;
-
-            for (;;) {
-                req = request_queue.get( );
-                fprintf(stderr, "msync %p(%d)\n", req.base, (int)req.size);
-                msync(req.base, req.size, MS_SYNC);
-            }
-        };
-};
-
-ReplayBuffer::ReplayBuffer(const char *path, size_t buffer_size, 
-        size_t frame_size, const char *name) {
-    int error;
-
-    mst = new MsyncBackground( );
-
+ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
+    struct stat stat;
+    
     _field_dominance = RawFrame::UNKNOWN;
 
-    /* open and allocate buffer file */
-    fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
+    /* open and allocate (if necessary) buffer file */
+    fd = open(path, O_CREAT | O_RDWR, 0644);
     if (fd < 0) {
         throw POSIXError("open");
     }
 
-    error = posix_fallocate(fd, 0, buffer_size);
-    if (error != 0) {
-        throw POSIXError("posix_fallocate", error);
+    if (fstat(fd, &stat) != 0) {
+        throw POSIXError("fstat");
     }
 
-    /* memory map entire buffer file */
-    void *mp;
-    mp = mmap(NULL, buffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (mp == MAP_FAILED) {
-        throw POSIXError("mmap");
-    }
+    fprintf(stderr, "st_mode=%x\n", stat.st_mode);
+    if (S_ISREG(stat.st_mode) == 0) {
+        throw std::runtime_error("not a regular file, cannot use as buffer");
+    } 
 
-    data = (uint8_t *) mp;
-    tc_current = 0;
-    this->buffer_size = buffer_size;
-    this->frame_size = frame_size;
-    this->n_frames = buffer_size / frame_size;
     this->name = strdup(name);
     if (this->name == NULL) {
         throw std::runtime_error("allocation failure");
     }
+
+    this->path = strdup(path);
+    if (this->path == NULL) {
+        throw std::runtime_error("allocation failure");
+    }
+
+    index = new ReplayBufferIndex;
 }
 
 ReplayBuffer::~ReplayBuffer( ) {
-    if (munmap(data, buffer_size) != 0) {
-        throw POSIXError("munmap");
-    }
-
     if (close(fd) != 0) {
         throw POSIXError("close");
     }
 
+    /* 
+     * we deliberately do not delete writer here, that is the responsibility
+     * of the user of the writer. The pointer is only kept around in 
+     * ReplayBuffer for bookkeeping (so we only have one writer per buffer)
+     */
+
     free(name);
+    free(path);
+    delete index;
 }
 
 ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
-    MutexLock l(m);
     ReplayShot *shot = new ReplayShot;
-    timecode_t start_offset;
 
     shot->source = this;
     switch (whence) {
         case ZERO:
+        case START:
             shot->start = offset;
             break;
-        case START:
-            if (tc_current < n_frames) {
-                start_offset = 0;
-            } else {
-                /* may break if optimizer is really dumb?? */
-                start_offset = (tc_current / n_frames) * n_frames;
-            }
-
-            shot->start = start_offset + offset;
-            break;
         case END:
-            shot->start = tc_current - 1 + offset;
+            shot->start = index->get_length( ) - 1 + offset;
             break;
     }
-    shot->length = 0;
 
+    shot->length = 0;
     return shot;
 }
 
-void ReplayBuffer::get_writable_frame(ReplayFrameData &frame_data) {
-    MutexLock l(m);
-    unsigned int frame_index = tc_current % n_frames;
-
-    frame_data.source = this;
-    frame_data.pos = tc_current + 1;
-    frame_data.data_ptr = data + frame_index * frame_size;
-    frame_data.data_size = frame_size;
-}
-
-void ReplayBuffer::finish_frame_write( ) {
-    MutexLock l(m);
-    unsigned int frame_index = tc_current % n_frames;
-
-    unsigned int block_index = frame_index & ~0x3fU;
-    unsigned int block_size = frame_size * 0x40;
-
-    /* have our background thread msync() this stuff */
-    if ((frame_index & 0x3fU) == 0x3fU) {
-        void *data_ptr = data + block_index * frame_size;
-        msync_req req;
-        req.base = data_ptr;
-        req.size = block_size;
-        mst->request_queue.put(req);
-    }
-
-    /* 
-     * force the issue of re-syncing these pages to disk 
-     * so pdflush doesn't block the whole process at a bad time
-     */
-    //msync(data_ptr, frame_size, MS_SYNC);
-    
-    tc_current++;
-}
-
-void ReplayBuffer::get_readable_frame(timecode_t tc, 
-        ReplayFrameData &frame_data) {
-    MutexLock l(m);
-
-    if (tc >= tc_current) {
-        fprintf(stderr, "past the end: tc=%d tc_current=%d\n",
-                (int) tc, (int) tc_current);
-        throw ReplayFrameNotFoundException( );
-    } else if (tc < tc_current - n_frames || tc < 0) { 
-        fprintf(stderr, "past the beginning: tc=%d tc_current=%d\n", 
-                (int) tc, (int) tc_current);
-        throw ReplayFrameNotFoundException( );
-    }
-
-    unsigned int frame_index = tc % n_frames;
-    
-    frame_data.source = this;
-    frame_data.pos = tc;
-    frame_data.data_ptr = data + frame_index * frame_size;
-    frame_data.data_size = frame_size;
-}
 
 const char *ReplayBuffer::get_name( ) {
     return name;
 }
+
+void ReplayBuffer::read_blockset(timecode_t frame, BlockSet &blkset) {
+    off_t base_offset;
+    base_offset = index->get_frame_location(frame);
+    blkset.begin_read(fd, base_offset);
+}
+
+timecode_t ReplayBuffer::write_blockset(const BlockSet &blkset) {
+    size_t total_size;
+    total_size = blkset.write_all(fd);
+    return index->mark_frame(total_size);
+}
+
+/* FIXME: these should be refactored into something cleaner */
+ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, int flags) {
+    BlockSet blkset;
+    read_blockset(frame, blkset);
+
+    ReplayFrameData *ret = new ReplayFrameData;
+    ret->free_data_on_destroy( );
+    ret->source = this;
+    ret->pos = frame;
+
+    if (flags & LOAD_VIDEO) {
+        ret->video_data = blkset.load_alloc_block<uint8_t>(
+            REPLAY_VIDEO_BLOCK, 
+            ret->video_size
+        );
+    }
+
+    if (flags & LOAD_THUMBNAIL) {
+        ret->thumbnail_data = blkset.load_alloc_block<uint8_t>(
+            REPLAY_THUMBNAIL_BLOCK, 
+            ret->thumbnail_size
+        );
+    }
+
+    if (flags & LOAD_AUDIO) {
+        ret->audio = 
+            blkset.load_alloc_object<IOAudioPacket>(REPLAY_AUDIO_BLOCK);
+    }
+
+    /* determine offset and length of next frames and read ahead */
+    try {
+        off_t readahead_start_offset = index->get_frame_location(frame + 1);
+        off_t readahead_end_offset = index->get_frame_location(frame + 9);
+        off_t readahead_length = readahead_end_offset - readahead_start_offset;
+        if (posix_fadvise(fd, readahead_start_offset, 
+                readahead_length, POSIX_FADV_WILLNEED) != 0) {
+            perror("posix_fadvise");
+        }
+    } catch (const ReplayFrameNotFoundException &) {
+        /* pass */
+    }
+
+    return ret;
+}
+
+timecode_t ReplayBuffer::write_frame(const ReplayFrameData &data) {
+    BlockSet blkset;
+
+    if (data.video_size == 0) {
+        throw std::runtime_error("Tried to write empty frame");
+    }
+
+    if (data.video_size > 0) {
+        blkset.add_block(
+            REPLAY_VIDEO_BLOCK, 
+            data.video_data, 
+            data.video_size
+        );
+    }
+    if (data.thumbnail_size > 0) {
+        blkset.add_block(
+            REPLAY_THUMBNAIL_BLOCK, 
+            data.thumbnail_data, 
+            data.thumbnail_size
+        );
+    }
+    if (data.audio != NULL) {
+        blkset.add_object(REPLAY_AUDIO_BLOCK, *(data.audio));
+    }
+
+    return write_blockset(blkset);
+}
+

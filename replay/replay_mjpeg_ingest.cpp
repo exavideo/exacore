@@ -26,13 +26,19 @@
 
 ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd, 
         ReplayBuffer *buf_) {
-    int pipefd[2];
+    int jpeg_pipefd[2];
+    int cmd_pipefd[2];
 
     buf = buf_;
     iadp = NULL;
 
     /* make a pipe for the mjpeg data */
-    if (pipe(pipefd) < 0) {
+    if (pipe(jpeg_pipefd) < 0) {
+        throw POSIXError("ReplayMjpegIngest pipe()");
+    }
+
+    /* and another one for command output */
+    if (pipe(cmd_pipefd) < 0) {
         throw POSIXError("ReplayMjpegIngest pipe()");
     }
 
@@ -41,16 +47,20 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
     if (child_pid < 0) {
         throw POSIXError("ReplayMjpegIngest fork()");
     } else if (child_pid == 0) {
-        close(pipefd[0]);
-        close(STDIN_FILENO);
-        dup2(pipefd[1], STDOUT_FILENO);
+        close(jpeg_pipefd[0]);
+        close(cmd_pipefd[1]);
+        dup2(cmd_pipefd[0], STDIN_FILENO);
+        dup2(jpeg_pipefd[1], STDOUT_FILENO);
         execlp("sh", "sh", "-c", cmd, NULL);
         /* we should never get here */
         perror("execlp");
         abort( );
     } else {
-        close(pipefd[1]);
-        child_fd = pipefd[0];
+        close(jpeg_pipefd[1]);
+        jpeg_fd = jpeg_pipefd[0];
+
+        close(cmd_pipefd[0]);
+        cmd_fd = cmd_pipefd[1];
 
         jpegbuf = new uint8_t[BUFSIZE];
         buf_size = BUFSIZE;
@@ -61,11 +71,13 @@ ReplayMjpegIngest::ReplayMjpegIngest(const char *cmd,
 }
 
 ReplayMjpegIngest::~ReplayMjpegIngest( ) {
-    close(child_fd);
+    close(jpeg_fd);
+    close(cmd_fd);
 }
 
 void ReplayMjpegIngest::run_thread( ) {
     Mjpeg422Decoder dec(1920, 1080);
+    Mjpeg422Encoder thm_enc(1920, 1080);
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     RawFrame *decoded_monitor;
@@ -86,15 +98,17 @@ void ReplayMjpegIngest::run_thread( ) {
         }
 
         /* decode JPEG for monitor */
-        decoded_monitor = dec.decode(dest.data_ptr, dest.data_size, 480);
+        decoded_monitor = dec.decode(dest.main_jpeg( ), 
+                dest.main_jpeg_size( ), 480);
         
-        buf->finish_frame_write( );
+        /* encode thumbnail */
+        thm_enc.encode_to(decoded_monitor, dest.thumb_jpeg( ),
+                dest.thumb_jpeg_size( ));
+
+        buf->finish_frame_write(dest);
 
         /* scale down frame to send to monitor */
-        monitor_frame = new ReplayRawFrame(
-            decoded_monitor->convert->BGRAn8( )
-        );
-        delete decoded_monitor;
+        monitor_frame = new ReplayRawFrame(decoded_monitor);
         
         /* fill in monitor status info */
         monitor_frame->source_name = buf->get_name( );
@@ -112,7 +126,7 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
     for (;;) {
         /* try to read more data into the buffer */
         if (buf_fill < buf_size) {
-            ret = read(child_fd, jpegbuf + buf_fill, buf_size - buf_fill);
+            ret = read(jpeg_fd, jpegbuf + buf_fill, buf_size - buf_fill);
             if (ret < 0) {
                 throw POSIXError("ReplayMjpegIngest read()");
             } else if (ret == 0) {
@@ -136,7 +150,8 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
 
                 if (jpgstart != (size_t) -1) {
                     /* copy JPEG data to frame buffer */
-                    memcpy(dest.data_ptr, jpegbuf+jpgstart, jpgend-jpgstart);
+                    memcpy(dest.main_jpeg( ), jpegbuf+jpgstart, 
+                            jpgend-jpgstart);
                     success_flag = true;
                 }
 
@@ -162,4 +177,9 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
             throw std::runtime_error("data stream appears not to be JPEG");
         }
     }
+}
+
+void ReplayMjpegIngest::trigger( ) {
+    const char *cmd = "DUMP\n";
+    write_all(cmd_fd, cmd, strlen(cmd));
 }

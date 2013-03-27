@@ -22,12 +22,12 @@
 
 #include "pipe.h"
 #include "raw_frame.h"
-#include "audio_packet.h"
+#include "packed_audio_packet.h"
 
 class OutputAdapter {
     public:
         virtual Pipe<RawFrame *> &input_pipe( ) = 0;
-        virtual Pipe<AudioPacket *> *audio_input_pipe( ) { return NULL; }
+        virtual Pipe<IOAudioPacket *> *audio_input_pipe( ) { return NULL; }
         virtual RawFrame::FieldDominance output_dominance( ) { return RawFrame::UNKNOWN; }
         virtual ~OutputAdapter( ) { }
 };
@@ -35,8 +35,9 @@ class OutputAdapter {
 class InputAdapter {
     public:
         virtual Pipe<RawFrame *> &output_pipe( ) = 0;
-        virtual Pipe<AudioPacket *> *audio_output_pipe( ) { return NULL; }
+        virtual Pipe<IOAudioPacket *> *audio_output_pipe( ) { return NULL; }
         virtual ~InputAdapter( ) { }
+        virtual void start( ) = 0;
 };
 
 

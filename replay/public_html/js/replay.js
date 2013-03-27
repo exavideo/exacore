@@ -60,12 +60,15 @@ function rollShot(shot) {
 function queueShot(shot) {
     var div = makeDivForShot(jQuery.extend(true, {}, shot));
 
-    div.find('#queue').text('Copy'); 
+    //div.find('#queue').text('Copy'); 
+    div.find('#queue').hide();
+    div.find('#copy').show();
     div.find('#delete').show();
     div.find('#delete').removeAttr('disabled');
     $('#queuedShots').append(div);
 
     div.show( );
+    selectShot(div);
 }
 
 function rollQueue() {
@@ -104,21 +107,30 @@ function selectShot(div) {
 }
 
 function makeDivForShot(shot) {
-    var new_div = $("#shotPrototype").clone( );
+    var new_div = $("#shotPrototype").clone(true);
+    new_div.attr('id','');
 
     new_div.data('shot', shot);
     new_div.data('offset', 0);
 
-    new_div.find('#shotPreview img').attr('src', '/shots/'+shot.id+'/preview.jpg');
-    new_div.find('#preview').click(function() { previewShot( $(this).parent().data('shot')) });
-    new_div.find('#roll').click(function() { rollShot( $(this).parent().data('shot')) });
-    new_div.find('#queue').click(function() { queueShot( $(this).parent().data('shot')) });
-    new_div.find('#delete').click(function() { $(this).parent().remove() });
+    //new_div.find('#shotPreview img').attr('src', '/shots/'+shot.id+'/preview.jpg');
+    new_div.find('#shotPreview img').attr('src', '/sources/'+shot.source+'/'+shot.start+'/preview.jpg')
+    new_div.find('#preview').click(function() { previewShot( $(this).parent().data('shot')); return false; });
+    new_div.find('#roll').click(function() { rollShot( $(this).parent().data('shot')); return false; });
+    new_div.find('#queue').click(function() { queueShot( $(this).parent().data('shot')); return false; });
+    new_div.find('#copy').click(function() { queueShot( $(this).parent().data('shot')); return false; });
+    new_div.find('#delete').click(function() { $(this).parent().remove(); return false; });
 
     new_div.find('#back').click(seekBackButton);
     new_div.find('#forward').click(seekForwardButton);
     new_div.find('#in').click(markIn);
     new_div.find('#out').click(markOut);
+    new_div.find("#dlvideo").click(downloadVideo);
+    new_div.find("#dlaudio").click(downloadAudio);
+
+    new_div.find('#queue').show( );
+    new_div.find('#copy').hide( );
+    new_div.find('#delete').hide( );
 
     new_div.click(function() { selectShot($(this)) } );
 
@@ -179,6 +191,22 @@ function markOut() {
     updateShotData(shotDiv); 
 }
 
+function downloadVideo() {
+    var shotDiv = $(this).parent();
+    var shot = shotDiv.data('shot');
+
+    url = '/sources/'+shot.source+'/'+shot.start+'/'+shot.length+'/video/shot.mjpg';
+    window.open(url, 'Video Download');
+}
+
+function downloadAudio() {
+    var shotDiv = $(this).parent();
+    var shot = shotDiv.data('shot');
+
+    url = '/sources/'+shot.source+'/'+shot.start+'/'+shot.length+'/audio/2ch_48khz/shot.raw';
+    window.open(url, 'Audio Download');
+}
+
 function seekBackButton() {
     var shotDiv = $(this).parent();
     doSeekBack(shotDiv);
@@ -223,6 +251,7 @@ function updateShotPreview(shotDiv) {
 function populateShots(data) {
     $.each(data, function(i, shot) {
         var div = makeDivForShot(shot);
+        div.find('#copy').hide();
         div.find('#delete').hide();
         div.find('#delete').attr('disabled','disabled');
         $('#recordedShots').append(div);
@@ -230,8 +259,21 @@ function populateShots(data) {
     });
 }
 
+function doRefreshMaybe(data) {
+    var currentCount = $('#recordedShots div.shotView').size();
+    if (currentCount != data.length) {
+        $("#recordedShots").empty();
+        populateShots(data);
+    }
+}
+
+function refreshMaybe() {
+    loadJson('/shots.json', doRefreshMaybe);
+}
+
 function handleKeyboard(evt) {
     var selectedShot = $('.shotViewSelected');
+    var shotData = selectedShot.data('shot');
 
     if (evt.which == 38) {    // 38 = up
         if (selectedShot.prev( ).size( ) > 0) {
@@ -247,15 +289,43 @@ function handleKeyboard(evt) {
         doSeekBack(selectedShot);
     } else if (evt.which == 39) { // 39 = right
         doSeekForward(selectedShot);
+    } else if (evt.which == 73) {
+        selectedShot.find("#in").click();
+    } else if (evt.which == 79) {
+        selectedShot.find("#out").click();
     } else if (evt.which == 81) { // 81 = q
+        queueShot(shotData);
     } else if (evt.which == 80) { // 80 = p
+        previewShot(shotData);
     } else if (evt.which == 82) { // 82 = r
-
+        rollShot(shotData);
     }
 }
 
+function loadFiles( ) {
+    loadJson('/files.json', function(files) {
+        $.each(files, function(i, x) {
+            $('#filepicker').append('<option value="'+x+'">'+x+'</option>');
+        });
+    });
+}
+
+function rolloutFile( ) {
+    var file = $('#filepicker').val( );
+
+    if (file.length > 0) {
+        putJson({filename : file }, '/ffmpeg_rollout.json', function(){});
+    }
+}
+
+function resumeEncode( ) {
+    putJson({ }, '/resume_encode.json');
+}
+
 $(function() {
-    loadJson('/shots.json', populateShots);
+    //loadJson('/shots.json', populateShots);
+    //refreshTimeoutLoop();
+    setInterval(refreshMaybe, 500);
     $('#rollQueue').click(function() { rollQueue( ); });
     $('#emptyQueue').click(function() { emptyQueue( ); });
     $('#queuedShots').sortable();
@@ -263,8 +333,23 @@ $(function() {
         $('#help').dialog('open');
     });
 
+    $('#updateList').click(function() {
+        $('#recordedShots').empty();
+        loadJson('/shots.json', populateShots);
+    });
+
+    $('#clearList').click(function() {
+        if (confirm("Really clear shot list?")) {
+            putJson({ }, '/clear_events', function() { $('#recordedShots').empty(); }); 
+        }
+    });
+
 
     $('#help').dialog({ autoOpen: false });
     $(document).keydown(handleKeyboard);
+
+    loadFiles( );
+    $("#rollout_file").click(rolloutFile);
+    $("#resume_encode").click(resumeEncode);
 });
 

@@ -21,6 +21,7 @@
 #define _OPENREPLAY_CPU_DISPATCH_H
 
 void cpu_force_no_simd( );
+bool cpu_sse2_available( );
 bool cpu_sse3_available( );
 bool cpu_ssse3_available( );
 bool cpu_sse41_available( );

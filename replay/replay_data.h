@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2013 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "raw_frame.h"
+#include "packed_audio_packet.h"
 #include "rational.h"
 
 class ReplayBuffer;
@@ -39,16 +40,7 @@ struct ReplayShot {
     timecode_t length;
 };
 
-/*
- * Data representing a compressed M-JPEG frame in a buffer.
- */
-struct ReplayFrameData {
-    ReplayBuffer *source;
-    timecode_t pos;
-    void *data_ptr;
-    size_t data_size;
-    bool use_first_field;
-};
+#include "replay_frame_data.h"
 
 /*
  * Wrap a reference to a RawFrame object used in the monitor ports.
@@ -60,14 +52,27 @@ struct ReplayRawFrame {
         frame_data = f; 
         source_name = NULL;
         source_name2 = NULL;
+        bgra_data = NULL;
         tc = 0;
     }
-    ~ReplayRawFrame( ) { delete frame_data; }
+    ~ReplayRawFrame( ) { 
+        delete frame_data;
+    }
 
     RawFrame *frame_data;
+    RawFrame *bgra_data;
     /* other stuff goes here */
     const char *source_name;
     const char *source_name2;
+    timecode_t tc;
+    Rational fractional_tc;
+};
+
+/* These are passed between playout and playout sources */
+struct ReplayPlayoutFrame {
+    RawFrame *video_data;
+    IOAudioPacket *audio_data;
+    const char *source_name;
     timecode_t tc;
     Rational fractional_tc;
 };
