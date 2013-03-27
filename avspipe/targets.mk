@@ -3,10 +3,11 @@ avspipe_avpinput_decklink_OBJECTS = \
 	$(raw_frame_OBJECTS) \
 	$(drivers_decklink_OBJECTS) \
 	$(thread_OBJECTS) \
+        $(graphics_OBJECTS) \
 	avspipe/avpinput_decklink.o
 
 avspipe/avpinput_decklink: $(avspipe_avpinput_decklink_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lrt
+	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -pthread -lrt $(graphics_LIBS)
 
 all_TARGETS += avspipe/avpinput_decklink    
 

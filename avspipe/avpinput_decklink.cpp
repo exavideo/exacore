@@ -19,6 +19,7 @@
 
 #include "decklink.h"
 #include "raw_frame.h"
+#include "rsvg_frame.h"
 #include "audio_packet.h"
 #include "pipe.h"
 #include "thread.h"
@@ -27,8 +28,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <getopt.h>
 
@@ -162,15 +167,63 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
     } 
 }
 
+template <class Thing>
+class Filter {
+    public:
+        virtual void filter(Thing *thing) = 0;
+};
+
+class BugFilter : public Filter<RawFrame> {
+    public:
+        BugFilter(const char *svgfile) {
+            int fd;
+            char *data;
+            size_t size;
+            struct stat statbuf;
+
+            fd = open(svgfile, O_RDONLY);
+            if (fd == -1) {
+                throw std::runtime_error("could not open svg file");
+            }
+
+            if (fstat(fd, &statbuf) == -1) {
+                throw std::runtime_error("could not stat svg file");
+            }
+
+            size = statbuf.st_size;
+            data = new char[size];
+
+            if (read_all(fd, data, size) != 1) {
+                throw std::runtime_error("could not read svg file");
+            }
+
+            svgframe = RsvgFrame::render_svg(data, size);
+
+            delete data;
+        }
+
+        ~BugFilter() {
+            delete svgframe;
+        }
+
+        virtual void filter(RawFrame *thing) {
+            thing->draw->alpha_key(0, 0, svgframe, 255);
+        }
+    protected:
+        RawFrame *svgframe;
+};
+
 template <class SendableThing>
 class SenderThread : public Thread {
     public:
-        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd) {
+        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd, 
+                Filter<SendableThing> *filt = NULL) {
             assert(fpipe != NULL);
             assert(out_fd >= 0);
 
             _fpipe = fpipe;
             _out_fd = out_fd;
+            _filter = filt;
             start_thread( );
         }
     protected:
@@ -178,6 +231,10 @@ class SenderThread : public Thread {
             SendableThing *thing;
             for (;;) {
                 thing = _fpipe->get( );
+
+                if (_filter) {
+                    _filter->filter(thing);
+                }
 
                 if (thing->write_to_fd(_out_fd) <= 0) {
                     fprintf(stderr, "write failed or pipe broken\n");
@@ -190,6 +247,7 @@ class SenderThread : public Thread {
 
         Pipe<SendableThing *> *_fpipe;
         int _out_fd;
+        Filter<SendableThing> *_filter;
 };
 
 void usage(const char *argv0) {
@@ -205,11 +263,14 @@ int main(int argc, char * const *argv) {
     InputAdapter *iadp;
     int vpfd, apfd, opt;
     pid_t child;
+    const char *bugfile = NULL;
 
     Pipe<AudioPacket *> *apipe;
+    BugFilter *bugfilter = NULL;
 
     static struct option options[] = {
         { "card", 1, 0, 'c' },
+        { "bug", 1, 0, 'b' },
         { 0, 0, 0, 0 }
     };
 
@@ -217,7 +278,7 @@ int main(int argc, char * const *argv) {
     int ffmpeg_hack = 0;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "fc:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "fc:b:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
                 ffmpeg_hack = 1;
@@ -225,6 +286,10 @@ int main(int argc, char * const *argv) {
 
             case 'c':
                 card = atoi(optarg);
+                break;
+
+            case 'b':
+                bugfile = optarg;
                 break;
 
             default:
@@ -260,8 +325,12 @@ int main(int argc, char * const *argv) {
             RawFrame::CbYCrY8422);
     apipe = iadp->audio_output_pipe( );
 
+    if (bugfile) {
+        bugfilter = new BugFilter(bugfile);
+    }
+
     /* start video and audio sender threads */
-    SenderThread<RawFrame> vsthread(&(iadp->output_pipe( )), vpfd);
+    SenderThread<RawFrame> vsthread(&(iadp->output_pipe( )), vpfd, bugfilter);
     SenderThread<AudioPacket> asthread(apipe, apfd);
 
     /* wait on child process */
