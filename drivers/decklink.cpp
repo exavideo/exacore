@@ -612,7 +612,7 @@ class DeckLinkInputAdapter : public InputAdapter,
         DeckLinkInputAdapter(unsigned int card_index = 0,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
-                bool enable_audio = false) 
+                bool enable_audio = false, unsigned int n_channels = 2) 
                 : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
@@ -634,7 +634,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 audio_pipe = new Pipe<IOAudioPacket *>(IN_PIPE_SIZE);
             }
 
-            n_channels = 2;
+            this->n_channels = n_channels;
             select_audio_input_connection( );
             open_audio_input( );
 
@@ -726,7 +726,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             /* Process audio, if available. */
             if (audio_in != NULL && audio_pipe != NULL) {
                 audio_out = new IOAudioPacket(
-                    audio_in->GetSampleFrameCount( ), 2
+                    audio_in->GetSampleFrameCount( ), n_channels
                 );
 
                 if (audio_in->GetBytes(&data) != S_OK) {
@@ -925,9 +925,9 @@ InputAdapter *create_decklink_input_adapter(unsigned int card_index,
 
 InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,
-        RawFrame::PixelFormat pf) {
+        RawFrame::PixelFormat pf, unsigned int n_channels) {
     
     return new DeckLinkInputAdapter(card_index, 
-            decklink_norm, decklink_input, pf, true);
+            decklink_norm, decklink_input, pf, true, n_channels);
 }
 

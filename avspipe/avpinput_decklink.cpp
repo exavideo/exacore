@@ -24,6 +24,7 @@
 #include "pipe.h"
 #include "thread.h"
 #include "xmalloc.h"
+#include "mjpeg_codec.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -213,6 +214,7 @@ class BugFilter : public Filter<RawFrame> {
         RawFrame *svgframe;
 };
 
+
 template <class SendableThing>
 class SenderThread : public Thread {
     public:
@@ -250,10 +252,40 @@ class SenderThread : public Thread {
         Filter<SendableThing> *_filter;
 };
 
+class CompressorThread : public SenderThread<RawFrame> {
+    public:
+        CompressorThread(Pipe<RawFrame *> *fpipe, int out_fd,
+                Filter<RawFrame> *filt = NULL, int qual = 80) 
+            : SenderThread(fpipe, out_fd, filt),
+            enc(1920, 1080, qual, 16*1024*1024) { }
+
+    protected:
+        void run_thread(void) {
+            RawFrame *f;
+
+            for (;;) {
+                f = _fpipe->get( );
+
+                if (_filter) {
+                    _filter->filter(f);
+                }
+
+                enc.encode(f);
+                delete f;
+                write_all(_out_fd, enc.get_data( ), enc.get_data_size( ));
+            }
+        }
+
+        Mjpeg422Encoder enc;
+};
+
 void usage(const char *argv0) {
     fprintf(stderr, "usage: %s [-c n] [-f] 'command'\n", argv0);
-    fprintf(stderr, "-c n: use card 'n'");
-    fprintf(stderr, "-f: enable ffmpeg streaming hack");
+    fprintf(stderr, "-c n: use card 'n'\n");
+    fprintf(stderr, "-f: enable ffmpeg streaming hack\n");
+    fprintf(stderr, "-j: output M-JPEG instead of raw video\n");
+    fprintf(stderr, "-q [0-100]: M-JPEG quality scale\n");
+    fprintf(stderr, "--channels n: record n audio channels (default 2)\n");
     fprintf(stderr, "in 'command':\n");
     fprintf(stderr, "%%a = audio pipe fd\n");
     fprintf(stderr, "%%v = video pipe fd\n");
@@ -271,14 +303,18 @@ int main(int argc, char * const *argv) {
     static struct option options[] = {
         { "card", 1, 0, 'c' },
         { "bug", 1, 0, 'b' },
+        { "channels", 1, 0, 'C' },
         { 0, 0, 0, 0 }
     };
 
     int card = 0;
     int ffmpeg_hack = 0;
+    int audio_channels = 2;
+    int jpeg = 0;
+    int quality = 80;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "fc:b:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "jfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
                 ffmpeg_hack = 1;
@@ -290,6 +326,22 @@ int main(int argc, char * const *argv) {
 
             case 'b':
                 bugfile = optarg;
+                break;
+
+            case 'C':
+                audio_channels = atoi(optarg);
+                break;
+
+            case 'j':
+                jpeg = 1;
+                break;
+
+            case 'q':
+                quality = atoi(optarg);
+                if (quality < 0 || quality > 100) {
+                    usage(argv[0]);
+                    exit(1);
+                }
                 break;
 
             default:
@@ -322,7 +374,7 @@ int main(int argc, char * const *argv) {
     }
 
     iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
-            RawFrame::CbYCrY8422);
+            RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
 
     if (bugfile) {
@@ -330,8 +382,17 @@ int main(int argc, char * const *argv) {
     }
 
     /* start video and audio sender threads */
-    SenderThread<RawFrame> vsthread(&(iadp->output_pipe( )), vpfd, bugfilter);
+    if (jpeg) {
+        new CompressorThread(
+            &(iadp->output_pipe( )), vpfd, 
+            bugfilter, quality
+        );
+    } else {
+        new SenderThread<RawFrame>(&(iadp->output_pipe( )), vpfd, bugfilter);
+    }
+
     SenderThread<IOAudioPacket> asthread(apipe, apfd);
+    iadp->start( );
 
     /* wait on child process */
     while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 
