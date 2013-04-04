@@ -145,8 +145,12 @@ ReplayFrameData *ReplayBuffer::read_frame(timecode_t frame, int flags) {
     }
 
     if (flags & LOAD_AUDIO) {
-        ret->audio = 
-            blkset.load_alloc_object<IOAudioPacket>(REPLAY_AUDIO_BLOCK);
+        try {
+            ret->audio = 
+                blkset.load_alloc_object<IOAudioPacket>(REPLAY_AUDIO_BLOCK);
+        } catch (const std::runtime_error &e) {
+            ret->audio = NULL;
+        }
     }
 
     /* determine offset and length of next frames and read ahead */
