@@ -81,11 +81,9 @@ void ReplayMjpegIngest::run_thread( ) {
     ReplayRawFrame *monitor_frame;
     ReplayFrameData dest;
     RawFrame *decoded_monitor;
+    dest.pos = 0;
 
     for (;;) {
-        /* obtain writable frame from buffer */
-        buf->get_writable_frame(dest);
-
         /* read M-JPEG data from child process */
         if (read_mjpeg_data(dest) == 0) {
             break; /* no more JPEG data */
@@ -98,14 +96,15 @@ void ReplayMjpegIngest::run_thread( ) {
         }
 
         /* decode JPEG for monitor */
-        decoded_monitor = dec.decode(dest.main_jpeg( ), 
-                dest.main_jpeg_size( ), 480);
+        decoded_monitor = dec.decode(dest.video_data, dest.video_size, 480);
         
         /* encode thumbnail */
-        thm_enc.encode_to(decoded_monitor, dest.thumb_jpeg( ),
-                dest.thumb_jpeg_size( ));
+        thm_enc.encode(decoded_monitor);
+        dest.thumbnail_data = (uint8_t *)thm_enc.get_data( );
+        dest.thumbnail_size = thm_enc.get_data_size( );
 
-        buf->finish_frame_write(dest);
+        buf->write_frame(dest);
+        free(dest.video_data);
 
         /* scale down frame to send to monitor */
         monitor_frame = new ReplayRawFrame(decoded_monitor);
@@ -113,7 +112,8 @@ void ReplayMjpegIngest::run_thread( ) {
         /* fill in monitor status info */
         monitor_frame->source_name = buf->get_name( );
         monitor_frame->tc = dest.pos;
-
+        dest.pos ++;
+    
         monitor.put(monitor_frame);
     }
 }
@@ -150,8 +150,10 @@ int ReplayMjpegIngest::read_mjpeg_data(ReplayFrameData &dest) {
 
                 if (jpgstart != (size_t) -1) {
                     /* copy JPEG data to frame buffer */
-                    memcpy(dest.main_jpeg( ), jpegbuf+jpgstart, 
-                            jpgend-jpgstart);
+                    dest.video_data = (uint8_t *)malloc(jpgend-jpgstart);
+                    dest.video_size = jpgend-jpgstart;
+                    memcpy(dest.video_data, jpegbuf+jpgstart, dest.video_size);
+
                     success_flag = true;
                 }
 
