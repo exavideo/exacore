@@ -37,6 +37,7 @@ class PackedAudioPacket : public Serializable {
         template <class U> PackedAudioPacket<U> *copy( ) const;
         template <class U> PlanarAudioPacket<U> *make_planar( ) const;
         PackedAudioPacket<T> *clone( ) { return copy<T>( ); }
+        PackedAudioPacket<T> *change_channels(size_t n_out_channels);
         void zero( );
 
         T *data( ) { return _data; }

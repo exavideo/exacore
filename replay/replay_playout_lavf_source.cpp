@@ -225,13 +225,20 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
         }
 
         if (audio_codecctx->channels != 2) {
-            throw std::runtime_error("need 2-channel");
+            PackedAudioPacket<int16_t> apkt(    
+                audio_frame.nb_samples, 
+                audio_codecctx->channels
+            );    
+            memcpy(apkt.data( ), audio_frame.data[0], apkt.size_bytes( ));
+            PackedAudioPacket<int16_t> *twoch = apkt.change_channels(2);
+            pending_audio.add_packet(twoch);
+            delete twoch;
+        } else {
+            pending_audio.add_packed_samples(
+                (int16_t *)audio_frame.data[0],
+                audio_frame.nb_samples
+            );
         }
-
-        pending_audio.add_packed_samples(
-            (int16_t *)audio_frame.data[0],
-            audio_frame.nb_samples
-        );
 
         return 1;
     } else {

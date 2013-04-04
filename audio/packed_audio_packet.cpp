@@ -102,3 +102,20 @@ void PackedAudioPacket<T>::serialize(SerializeStream &str) const {
     str << _channels;
     str.write_array_byref(_data, _samples * _channels);
 }
+
+template <class T>
+PackedAudioPacket<T> *PackedAudioPacket<T>::change_channels(size_t new_n) {    
+    size_t s, c;
+    PackedAudioPacket<T> *ret = new PackedAudioPacket<T>(_samples, new_n);
+    for (s = 0; s < _samples; s++) {
+        for (c = 0; c < new_n; c++) {
+            if (c < _channels) {
+                ret->_data[s*new_n+c] = _data[s*_channels+c];
+            } else {
+                ret->_data[s*new_n+c] = 0;
+            }
+        }
+    }
+    
+    return ret;
+}
