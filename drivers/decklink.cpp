@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h> // debug
 
 #define IN_PIPE_SIZE 256
 #define OUT_PIPE_SIZE 4
@@ -485,6 +486,12 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
+            if (config->SetInt(bmdDeckLinkConfigVideoOutputConversionMode,
+                    bmdVideoOutputHardwareLetterboxDownconversion) != S_OK) {
+                fprintf(stderr, "DeckLink output: warning: "
+                        "cannot enable hardware letterboxing\n");
+            }
+
             if (config->SetInt(bmdDeckLinkConfigBypass, -1) != S_OK) {
                 fprintf(stderr, "DeckLink output: warning: "
                         "cannot deactivate card bypass relay\n"
@@ -605,11 +612,12 @@ class DeckLinkInputAdapter : public InputAdapter,
         DeckLinkInputAdapter(unsigned int card_index = 0,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
-                bool enable_audio = false) 
+                bool enable_audio = false, unsigned int n_channels = 2) 
                 : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
             started = false;
+            signal_lost = false;
 
             n_frames = 0;
             start_time = 0;
@@ -626,7 +634,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                 audio_pipe = new Pipe<IOAudioPacket *>(IN_PIPE_SIZE);
             }
 
-            n_channels = 2;
+            this->n_channels = n_channels;
             select_audio_input_connection( );
             open_audio_input( );
 
@@ -691,19 +699,26 @@ class DeckLinkInputAdapter : public InputAdapter,
             /* Process video frame if available. */
             if (in != NULL) {
                 if (in->GetFlags( ) & bmdFrameHasNoInputSource) {
-                    fprintf(stderr, "DeckLink input: no signal\n");
-                } else {
-                    //out = new DecklinkInputRawFrame(in, pf);
-                    out = create_raw_frame_from_decklink(in, pf);
-                    out->set_field_dominance(dominance);
-                    
-                    if (out_pipe.can_put( ) && started) {
-                        out_pipe.put(out);
-                        avsync++;
-                    } else {
-                        fprintf(stderr, "DeckLink: dropping input frame on floor\n");
-                        delete out;
+                    if (!signal_lost) {
+                        fprintf(stderr, "DeckLink input: signal lost\n");
+                        signal_lost = true;
                     }
+                } else {
+                    if (signal_lost) {
+                        fprintf(stderr, "DeckLink input: signal re-acquired\n");
+                        signal_lost = false;
+                    }
+                }
+
+                out = create_raw_frame_from_decklink(in, pf);
+                out->set_field_dominance(dominance);
+                
+                if (out_pipe.can_put( ) && started) {
+                    out_pipe.put(out);
+                    avsync++;
+                } else {
+                    fprintf(stderr, "DeckLink: dropping input frame on floor\n");
+                    delete out;
                 }
 
             } 
@@ -711,7 +726,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             /* Process audio, if available. */
             if (audio_in != NULL && audio_pipe != NULL) {
                 audio_out = new IOAudioPacket(
-                    audio_in->GetSampleFrameCount( ), 2
+                    audio_in->GetSampleFrameCount( ), n_channels
                 );
 
                 if (audio_in->GetBytes(&data) != S_OK) {
@@ -752,6 +767,7 @@ class DeckLinkInputAdapter : public InputAdapter,
         Pipe<RawFrame *> out_pipe;
 
         bool started;
+        bool signal_lost;
 
         RawFrame::PixelFormat pf;
         RawFrame::FieldDominance dominance;
@@ -909,9 +925,9 @@ InputAdapter *create_decklink_input_adapter(unsigned int card_index,
 
 InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,
-        RawFrame::PixelFormat pf) {
+        RawFrame::PixelFormat pf, unsigned int n_channels) {
     
     return new DeckLinkInputAdapter(card_index, 
-            decklink_norm, decklink_input, pf, true);
+            decklink_norm, decklink_input, pf, true, n_channels);
 }
 

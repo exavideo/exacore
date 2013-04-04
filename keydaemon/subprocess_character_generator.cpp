@@ -145,17 +145,22 @@ void SubprocessCharacterGenerator::run_thread( ) {
 
             /* render SVG to frame */
             frame = do_render(data, size);
-            frame->set_global_alpha(alpha);
-            free(data);
-
-            /* update cache */
             if (cache_frame != NULL) {
                 delete cache_frame;
             }
-            cache_frame = frame->copy( );
+            if (frame != NULL) {
+                frame->set_global_alpha(alpha);
+                free(data);
 
-            /* put frame down the pipe */
-            _output_pipe.put(frame);
+                /* update cache */
+                cache_frame = frame->copy( );
+
+                /* put frame down the pipe */
+                _output_pipe.put(frame);
+            } else {
+                cache_frame = NULL;
+                _output_pipe.put(NULL);
+            }
         } else if (cache_frame != NULL) {
             frame = cache_frame->copy( );
             frame->set_global_alpha(alpha);

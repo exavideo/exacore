@@ -19,16 +19,22 @@
 
 #include "decklink.h"
 #include "raw_frame.h"
+#include "rsvg_frame.h"
 #include "packed_audio_packet.h"
 #include "pipe.h"
 #include "thread.h"
 #include "xmalloc.h"
+#include "mjpeg_codec.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <getopt.h>
 
@@ -162,16 +168,64 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
     } 
 }
 
+template <class Thing>
+class Filter {
+    public:
+        virtual void filter(Thing *thing) = 0;
+};
+
+class BugFilter : public Filter<RawFrame> {
+    public:
+        BugFilter(const char *svgfile) {
+            int fd;
+            char *data;
+            size_t size;
+            struct stat statbuf;
+
+            fd = open(svgfile, O_RDONLY);
+            if (fd == -1) {
+                throw std::runtime_error("could not open svg file");
+            }
+
+            if (fstat(fd, &statbuf) == -1) {
+                throw std::runtime_error("could not stat svg file");
+            }
+
+            size = statbuf.st_size;
+            data = new char[size];
+
+            if (read_all(fd, data, size) != 1) {
+                throw std::runtime_error("could not read svg file");
+            }
+
+            svgframe = RsvgFrame::render_svg(data, size);
+
+            delete data;
+        }
+
+        ~BugFilter() {
+            delete svgframe;
+        }
+
+        virtual void filter(RawFrame *thing) {
+            thing->draw->alpha_key(0, 0, svgframe, 255);
+        }
+    protected:
+        RawFrame *svgframe;
+};
+
+
 template <class SendableThing>
 class SenderThread : public Thread {
     public:
-        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd) {
+        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd, 
+                Filter<SendableThing> *filt = NULL) {
             assert(fpipe != NULL);
             assert(out_fd >= 0);
 
             _fpipe = fpipe;
             _out_fd = out_fd;
-
+            _filter = filt;
             start_thread( );
         }
     protected:
@@ -179,6 +233,10 @@ class SenderThread : public Thread {
             SendableThing *thing;
             for (;;) {
                 thing = _fpipe->get( );
+
+                if (_filter) {
+                    _filter->filter(thing);
+                }
 
                 if (thing->write_to_fd(_out_fd) <= 0) {
                     fprintf(stderr, "write failed or pipe broken\n");
@@ -191,10 +249,43 @@ class SenderThread : public Thread {
 
         Pipe<SendableThing *> *_fpipe;
         int _out_fd;
+        Filter<SendableThing> *_filter;
+};
+
+class CompressorThread : public SenderThread<RawFrame> {
+    public:
+        CompressorThread(Pipe<RawFrame *> *fpipe, int out_fd,
+                Filter<RawFrame> *filt = NULL, int qual = 80) 
+            : SenderThread(fpipe, out_fd, filt),
+            enc(1920, 1080, qual, 16*1024*1024) { }
+
+    protected:
+        void run_thread(void) {
+            RawFrame *f;
+
+            for (;;) {
+                f = _fpipe->get( );
+
+                if (_filter) {
+                    _filter->filter(f);
+                }
+
+                enc.encode(f);
+                delete f;
+                write_all(_out_fd, enc.get_data( ), enc.get_data_size( ));
+            }
+        }
+
+        Mjpeg422Encoder enc;
 };
 
 void usage(const char *argv0) {
-    fprintf(stderr, "usage: %s [-c n] 'command'\n", argv0);
+    fprintf(stderr, "usage: %s [-c n] [-f] 'command'\n", argv0);
+    fprintf(stderr, "-c n: use card 'n'\n");
+    fprintf(stderr, "-f: enable ffmpeg streaming hack\n");
+    fprintf(stderr, "-j: output M-JPEG instead of raw video\n");
+    fprintf(stderr, "-q [0-100]: M-JPEG quality scale\n");
+    fprintf(stderr, "--channels n: record n audio channels (default 2)\n");
     fprintf(stderr, "in 'command':\n");
     fprintf(stderr, "%%a = audio pipe fd\n");
     fprintf(stderr, "%%v = video pipe fd\n");
@@ -204,21 +295,53 @@ int main(int argc, char * const *argv) {
     InputAdapter *iadp;
     int vpfd, apfd, opt;
     pid_t child;
+    const char *bugfile = NULL;
 
     Pipe<IOAudioPacket *> *apipe;
+    BugFilter *bugfilter = NULL;
 
     static struct option options[] = {
         { "card", 1, 0, 'c' },
+        { "bug", 1, 0, 'b' },
+        { "channels", 1, 0, 'C' },
         { 0, 0, 0, 0 }
     };
 
     int card = 0;
+    int ffmpeg_hack = 0;
+    int audio_channels = 2;
+    int jpeg = 0;
+    int quality = 80;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "c:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "jfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
+            case 'f':
+                ffmpeg_hack = 1;
+                break;
+
             case 'c':
                 card = atoi(optarg);
+                break;
+
+            case 'b':
+                bugfile = optarg;
+                break;
+
+            case 'C':
+                audio_channels = atoi(optarg);
+                break;
+
+            case 'j':
+                jpeg = 1;
+                break;
+
+            case 'q':
+                quality = atoi(optarg);
+                if (quality < 0 || quality > 100) {
+                    usage(argv[0]);
+                    exit(1);
+                }
                 break;
 
             default:
@@ -240,21 +363,36 @@ int main(int argc, char * const *argv) {
 
     /* bogus ffmpeg workaround (i.e. writing filler to the pipes) goes here */
     /* (It may be unnecessary with an audio stream?) */
-    RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-    IOAudioPacket *dummy_audio = new IOAudioPacket(1601, 2);
+    if (ffmpeg_hack) {
+        RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+        IOAudioPacket *dummy_audio = new IOAudioPacket(1601, 2);
 
-    for (int i = 0; i < 2; i++) {
-        empty->write_to_fd(vpfd);
-        dummy_audio->write_to_fd(apfd);
+        for (int i = 0; i < 2; i++) {
+            empty->write_to_fd(vpfd);
+            dummy_audio->write_to_fd(apfd);
+        }
     }
 
     iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
-            RawFrame::CbYCrY8422);
+            RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
 
+    if (bugfile) {
+        bugfilter = new BugFilter(bugfile);
+    }
+
     /* start video and audio sender threads */
-    SenderThread<RawFrame> vsthread(&(iadp->output_pipe( )), vpfd);
+    if (jpeg) {
+        new CompressorThread(
+            &(iadp->output_pipe( )), vpfd, 
+            bugfilter, quality
+        );
+    } else {
+        new SenderThread<RawFrame>(&(iadp->output_pipe( )), vpfd, bugfilter);
+    }
+
     SenderThread<IOAudioPacket> asthread(apipe, apfd);
+    iadp->start( );
 
     /* wait on child process */
     while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 

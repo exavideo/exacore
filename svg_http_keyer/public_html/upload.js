@@ -43,4 +43,12 @@ $(document).ready(function() {
     $("#titleDown").click(function() {
         postJson('/dissolve_out/30', {});
     });
+
+    $("#d0").click(function() {
+        postJson('/dirty_level/0', {});
+    });
+
+    $("#d1").click(function() {
+        postJson('/dirty_level/1', {});
+    });
 });
