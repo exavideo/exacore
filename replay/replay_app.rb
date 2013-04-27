@@ -57,6 +57,10 @@ module Replay
             @buffer.make_shot(timecode, ReplayBuffer::START)
         end
 
+        def align_shot(shot)
+            @buffer.align_shot(shot)
+        end
+
         def monitor
             @ingest.monitor
         end
