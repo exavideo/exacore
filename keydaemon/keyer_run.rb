@@ -4,8 +4,7 @@ include Keyer
 keyer = KeyerApp.new
 
 scbd = SvgSubprocessCharacterGenerator.new(
-    #'cd /root/scoreboard; ruby scoreboard_server.rb', 1
-    'cd /root/scoreboard_fb; ruby scoreboard_server.rb', 1
+    'cd /opt/scoreboard; ruby scoreboard_server.rb', 1
 )
 
 scbd.set_x 150
@@ -33,9 +32,9 @@ graphics.set_y 0
 
 keyer.cg graphics
 
-inp = create_decklink_input_adapter_with_audio(0, 0, 0, RawFrame::CbYCrY8422)
-out1 = create_decklink_output_adapter_with_audio(1, 0, RawFrame::CbYCrY8422)
-out2 = create_decklink_output_adapter_with_audio(2, 0, RawFrame::CbYCrY8422)
+inp = create_decklink_input_adapter_with_audio(0, 0, 0, RawFrame::CbYCrY8422, 8)
+out1 = create_decklink_output_adapter_with_audio(1, 0, RawFrame::CbYCrY8422, 8)
+out2 = create_decklink_output_adapter_with_audio(2, 0, RawFrame::CbYCrY8422, 8)
 
 keyer.input inp
 keyer.output out1
