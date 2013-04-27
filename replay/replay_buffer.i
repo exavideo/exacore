@@ -29,6 +29,7 @@ class ReplayBuffer {
         enum whence_t { ZERO, START, END };
 
         ReplayShot *make_shot(timecode_t, whence_t = END);
+        ReplayShot *align_shot(ReplayShot *IN);
 
         const char *get_name( );
 };

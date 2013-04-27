@@ -103,6 +103,24 @@ ReplayShot *ReplayBuffer::make_shot(timecode_t offset, whence_t whence) {
     return shot;
 }
 
+ReplayShot *ReplayBuffer::align_shot(ReplayShot *other) {
+    ReplayShot *shot = new ReplayShot;
+    uint64_t timestamp;
+    timecode_t frame;
+
+    shot->source = this;
+    timestamp = other->source->get_frame_timestamp(other->start);
+    frame = index->find_timecode(timestamp);
+
+    shot->start = frame;
+    shot->length = 0;
+
+    return shot;
+}
+
+uint64_t ReplayBuffer::get_frame_timestamp(timecode_t frame) {
+    return index->get_frame_timestamp(frame);
+}
 
 const char *ReplayBuffer::get_name( ) {
     return name;

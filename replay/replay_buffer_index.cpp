@@ -18,6 +18,7 @@
  */
 
 #include "replay_buffer_index.h"
+#include "clocks.h"
 
 ReplayBufferIndex::ReplayBufferIndex(size_t n_frames) {
     n_frames_written = 0;
@@ -43,9 +44,49 @@ off_t ReplayBufferIndex::get_frame_location(timecode_t frame) {
     }
 }
 
+uint64_t ReplayBufferIndex::get_frame_timestamp(timecode_t frame) {
+    if (frame < n_frames_written && frame >= 0) {
+        return data[frame].timestamp;
+    } else {
+        throw ReplayFrameNotFoundException( );
+    }
+}
+
+timecode_t ReplayBufferIndex::find_timecode(uint64_t timestamp) {
+    timecode_t end = n_frames_written-1;
+
+    if (timestamp <= data[0].timestamp) {
+        return data[0].timestamp;
+    } else if (timestamp >= data[end].timestamp) {
+        return data[end].timestamp;
+    } else {
+        return timestamp_search(timestamp, 0, end);
+    }
+}
+
+timecode_t ReplayBufferIndex::timestamp_search(
+    uint64_t stamp,
+    timecode_t start,
+    timecode_t end
+) {
+    timecode_t mid = (start+end)/2;
+    if (end <= start) {
+        return start;
+    } else if (data[end].timestamp <= stamp) {
+        return end;
+    } else if (data[mid].timestamp <= stamp) {
+        /* data[end].timestamp > stamp so exclude it */
+        return timestamp_search(stamp, mid, end-1);
+    } else {
+        /* data[mid].timestamp > stamp so we exclude it */
+        return timestamp_search(stamp, start, mid-1);
+    }
+}
+
 timecode_t ReplayBufferIndex::mark_frame(size_t length) {
     if (n_frames_written < n_frames_total) {
         data[n_frames_written].start = n_bytes_written;
+        data[n_frames_written].timestamp = clock_monotonic_msec( );
         n_bytes_written += length;
         /* 
          * since n_frames_written is atomic, all the above writes must 
