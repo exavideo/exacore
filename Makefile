@@ -57,9 +57,11 @@ endif
 	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $< 
 
 %.rbo: %.rbcpp
+	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -MM -MF $@.d -MT $@ -x c++ $<
 	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -c -o $@ -x c++ $<
 
 %.rbcpp : %.i
+	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -MM -MF $@.d -MT $@ $<
 	$(SWIG) $(SUBDIR_INCLUDES) -Wall -c++ -ruby -o $@ $<
 
 # And one for assembly files
