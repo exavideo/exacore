@@ -27,7 +27,7 @@ OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
 
 OutputAdapter *create_decklink_output_adapter_with_audio(
         unsigned int card_index, unsigned int decklink_norm, 
-        RawFrame::PixelFormat pf);
+        RawFrame::PixelFormat pf, unsigned int n_channels = 2);
 
 InputAdapter *create_decklink_input_adapter(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,

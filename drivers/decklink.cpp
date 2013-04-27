@@ -211,7 +211,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         DeckLinkOutputAdapter(unsigned int card_index = 0, 
                 unsigned int norm_ = 0, 
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
-                bool enable_audio = false) 
+                bool enable_audio = false, unsigned int n_channels = 2) 
                 : deckLink(NULL), 
                 deckLinkOutput(NULL), frame_counter(0),
                 last_frame(NULL), in_pipe(OUT_PIPE_SIZE), audio_in_pipe(NULL) {
@@ -232,7 +232,10 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             preroll_video_frames(4);
 
             if (enable_audio) {
+                this->n_channels = n_channels;
                 setup_audio( );
+            } else {
+                this->n_channels = 0;
             }
 
             start_video( );
@@ -324,7 +327,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                          * insert dummy audio as needed to compensate for 
                          * dropped video frames
                          */
-                        audio = new IOAudioPacket(1601, 2);
+                        audio = new IOAudioPacket(1601, n_channels);
                         audio->zero( );
                         audio_adjust--;
                     } else {
@@ -421,9 +424,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         }
 
         void setup_audio( ) {
-            /* FIXME hard coded default */
-            n_channels = 2; 
-            IOAudioPacket preroll_audio(4*1601, 2);
+            IOAudioPacket preroll_audio(4*1601, n_channels);
             preroll_audio.zero( );
 
             audio_in_pipe = new Pipe<IOAudioPacket *>(OUT_PIPE_SIZE);
@@ -925,8 +926,9 @@ OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
 
 OutputAdapter *create_decklink_output_adapter_with_audio(
         unsigned int card_index, unsigned int decklink_norm,
-        RawFrame::PixelFormat pf) {
-    return new DeckLinkOutputAdapter(card_index, decklink_norm, pf, true);
+        RawFrame::PixelFormat pf, unsigned int n_channels) {
+    return new DeckLinkOutputAdapter(card_index, decklink_norm, pf, 
+            true, n_channels);
 }
 
 InputAdapter *create_decklink_input_adapter(unsigned int card_index,

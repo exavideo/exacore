@@ -29,11 +29,11 @@ OutputAdapter *create_decklink_output_adapter(unsigned int,
         unsigned int, RawFrame::PixelFormat);
 
 OutputAdapter *create_decklink_output_adapter_with_audio(unsigned int, 
-        unsigned int, RawFrame::PixelFormat);
+        unsigned int, RawFrame::PixelFormat, unsigned int = 2);
 
 InputAdapter *create_decklink_input_adapter(unsigned int, unsigned int,
         unsigned int, RawFrame::PixelFormat);
 
 InputAdapter *create_decklink_input_adapter_with_audio(unsigned int, 
-        unsigned int, unsigned int, RawFrame::PixelFormat);
+        unsigned int, unsigned int, RawFrame::PixelFormat, unsigned int = 2);
 
