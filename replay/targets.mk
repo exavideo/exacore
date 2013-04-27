@@ -53,7 +53,7 @@ replay_replay_so_OBJECTS = \
 	replay/replay_global.rbo 
 
 replay/replay.so: $(replay_replay_so_OBJECTS)
-	$(CXX) $(LDFLAGS) -shared -o $@ $^ -ljpeg -ldl -pthread $(graphics_LIBS) $(lavf_LIBS)
+	$(CXX) $(LDFLAGS) -shared -o $@ $^ $(mjpeg_LIBS) $(drivers_decklink_LIBS) $(graphics_LIBS) $(lavf_LIBS)
 
 replay/replay_playout_lavf_source_test: $(replay_base_OBJECTS) replay/replay_playout_lavf_source_test.o
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -lpthread $(graphics_LIBS) $(lavf_LIBS)
