@@ -147,6 +147,16 @@ test_decklink_multi_capture_OBJECTS = \
 tests/decklink_multi_capture: $(test_decklink_multi_capture_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(drivers_decklink_LIBS) $(raw_frame_LIBS) $(thread_LIBS) $(mjpeg_LIBS)
 
+test_decklink_audio_only_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_audio_only.o
+
+tests/decklink_audio_only: $(test_decklink_audio_only_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(drivers_decklink_LIBS) $(raw_frame_LIBS) $(thread_LIBS)
+
 all_TARGETS += tests/decklink_multi_capture
 
 test_v4l2_input_OBJECTS = \

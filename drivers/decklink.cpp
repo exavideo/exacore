@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011, 2013 Andrew H. Armenia.
  * 
  * This file is part of openreplay.
  * 
@@ -612,12 +612,14 @@ class DeckLinkInputAdapter : public InputAdapter,
         DeckLinkInputAdapter(unsigned int card_index = 0,
                 unsigned int norm_ = 0, unsigned int input_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
-                bool enable_audio = false, unsigned int n_channels = 2) 
+                bool enable_audio = false, unsigned int n_channels = 2,
+                bool enable_video = true)
                 : deckLink(NULL), out_pipe(IN_PIPE_SIZE) {
 
             audio_pipe = NULL;
             started = false;
             signal_lost = false;
+            this->enable_video = enable_video;
 
             n_frames = 0;
             start_time = 0;
@@ -710,17 +712,24 @@ class DeckLinkInputAdapter : public InputAdapter,
                     }
                 }
 
-                out = create_raw_frame_from_decklink(in, pf);
-                out->set_field_dominance(dominance);
-                
-                if (out_pipe.can_put( ) && started) {
-                    out_pipe.put(out);
-                    avsync++;
-                } else {
-                    fprintf(stderr, "DeckLink: dropping input frame on floor\n");
-                    delete out;
+                /* 
+                 * we can't actually tell the card to just not send video,
+                 * so if video is disabled, we just ignore the video frames...
+                 */
+                if (enable_video) {
+                    out = create_raw_frame_from_decklink(in, pf);
+                    out->set_field_dominance(dominance);
+                    
+                    if (out_pipe.can_put( ) && started) {
+                        if (enable_video) {
+                            out_pipe.put(out);
+                            avsync++;
+                        }
+                    } else {
+                        fprintf(stderr, "DeckLink: dropping input frame\n");
+                        delete out;
+                    }
                 }
-
             } 
 
             /* Process audio, if available. */
@@ -746,7 +755,11 @@ class DeckLinkInputAdapter : public InputAdapter,
             } 
 
 
-            if ((avsync > 10 || avsync < -10) && audio_pipe != NULL) {
+            if (
+                    (avsync > 10 || avsync < -10) 
+                    && audio_pipe != NULL 
+                    && enable_video
+            ) {
                 fprintf(stderr, "DeckLink warning: avsync drift = %d\n", avsync);
             }
 
@@ -768,6 +781,7 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         bool started;
         bool signal_lost;
+        bool enable_video;
 
         RawFrame::PixelFormat pf;
         RawFrame::FieldDominance dominance;
@@ -931,3 +945,12 @@ InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
             decklink_norm, decklink_input, pf, true, n_channels);
 }
 
+InputAdapter *create_decklink_audio_input_adapter(
+        unsigned int card_index, unsigned int decklink_norm,
+        unsigned int decklink_input, unsigned int n_channels
+) {
+    return new DeckLinkInputAdapter(
+        card_index, decklink_norm, decklink_input, 
+        RawFrame::CbYCrY8422, true, n_channels, false
+    );
+}
