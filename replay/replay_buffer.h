@@ -29,6 +29,11 @@
 
 #include <stdexcept>
 
+#define REPLAY_VIDEO_BLOCK "ReplJpeg"
+#define REPLAY_THUMBNAIL_BLOCK "ReplThum"
+#define REPLAY_AUDIO_BLOCK "ReplAuds"
+#define REPLAY_PVOC_BLOCK "ReplPvoc"
+
 class ReplayBuffer {
     public:
         enum whence_t { ZERO, START, END };

@@ -32,10 +32,6 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-#define REPLAY_VIDEO_BLOCK "ReplJpeg"
-#define REPLAY_THUMBNAIL_BLOCK "ReplThum"
-#define REPLAY_AUDIO_BLOCK "ReplAuds"
-
 ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     struct stat stat;
     
