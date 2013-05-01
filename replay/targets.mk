@@ -42,6 +42,7 @@ replay_base_OBJECTS = \
 	replay/replay_gamedata.o \
 	replay/replay_frame_data.o \
 	replay/replay_frame_cache.o \
+        replay/replay_audio_buffer_playout.o \
 	replay/replay_playout_bars_source.o \
 	replay/replay_playout_buffer_source.o \
 	replay/replay_playout_avspipe_source.o \

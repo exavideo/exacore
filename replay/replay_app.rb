@@ -16,6 +16,29 @@ class Integer
 end
 
 module Replay
+    class ReplayAudioSource
+        def initialize(opts={})
+            input = opts[:input]
+            chmap = opts[:map]
+
+            fail "need input" unless input
+            fail "need map" unless chmap
+
+            @ingest = ReplayAudioIngest.new(input)
+            @buffers = { }
+            chmap.each_pair do |channel, file|
+                buf = ReplayBuffer.new(file)
+                @buffers[channel] = buf
+                @ingest.map_channel(channel, buf)
+            end
+            @ingest.start
+        end
+
+        def channel(i)
+            @buffers[i] || fail("channel not being recorded")
+        end
+    end
+
     class ReplaySource
         def initialize(opts={})
             input = opts[:input]
@@ -149,6 +172,7 @@ module Replay
     class ReplayApp
         def initialize
             @sources = []
+            @audio_sources = []
 
             @dpys = FramebufferDisplaySurface.new
             @multiviewer = ReplayMultiviewer.new(@dpys)
@@ -210,6 +234,12 @@ module Replay
                 @mvx = 0
                 @mvy += @source_pvw_height
             end
+        end
+
+        def add_audio_source(opts={})
+            source = ReplayAudioSource.new(opts)
+            @audio_sources << source
+            source
         end
 
 

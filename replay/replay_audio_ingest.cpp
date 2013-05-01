@@ -27,6 +27,9 @@ ReplayAudioIngest::ReplayAudioIngest(InputAdapter *iadp) {
     pipe = iadp->audio_output_pipe( );
     running = false;
     stop = false;
+    set_fft_parameters( );
+
+    iadp->start( );
 }
 
 ReplayAudioIngest::ReplayAudioIngest(Pipe<IOAudioPacket *> *ipipe) {
@@ -37,16 +40,12 @@ ReplayAudioIngest::ReplayAudioIngest(Pipe<IOAudioPacket *> *ipipe) {
     pipe = ipipe;
     running = false;
     stop = false;
+    set_fft_parameters( );
 }
 
 ReplayAudioIngest::~ReplayAudioIngest( ) {
     stop = true;
     join_thread( );
-} 
-
-void ReplayAudioIngest::start( ) {
-    running = true;
-    start_thread( );
 
     /* clean up per-channel buffers */
     for (channel_entry &e : channel_map) {
@@ -54,6 +53,11 @@ void ReplayAudioIngest::start( ) {
         delete [] e.last_frame;
         delete e.fifo;
     }
+} 
+
+void ReplayAudioIngest::start( ) {
+    running = true;
+    start_thread( );
 }
 
 void ReplayAudioIngest::set_fft_parameters( ) {
@@ -61,6 +65,7 @@ void ReplayAudioIngest::set_fft_parameters( ) {
     fft_hop = 256;
     window = new float[fft_size];
     fft = new FFT<float>(fft_size);
+    output_frame = new std::complex<float>[fft_size];
     /* FIXME: need to actually create a window function and use it... */
 }
 

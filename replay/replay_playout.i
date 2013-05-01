@@ -43,6 +43,7 @@ class ReplayPlayout : public Thread {
         void avspipe_playout(const char *INPUT);
         void lavf_playout(const char *INPUT);
         void lavf_playout_list(const StringList &INPUT);
+        void map_channel(unsigned int, ReplayBuffer *INPUT);
         timecode_t source_position( );
         timecode_t source_duration( );
 };

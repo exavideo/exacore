@@ -45,6 +45,7 @@ class ReplayBuffer {
         ReplayShot *make_shot(timecode_t offset, whence_t whence = END);
         ReplayShot *align_shot(ReplayShot *other);
 
+        timecode_t get_frame_timecode(uint64_t timestamp);
         uint64_t get_frame_timestamp(timecode_t frame);
         
         /* these are now convenience wrappers around {read,write}_blockset */

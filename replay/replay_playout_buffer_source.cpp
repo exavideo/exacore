@@ -30,6 +30,18 @@ ReplayPlayoutBufferSource::~ReplayPlayoutBufferSource( ) {
 
 }
 
+void ReplayPlayoutBufferSource::map_channel(
+    unsigned int ch, 
+    ReplayBuffer *buf
+) {
+    audio_playout.map_channel(ch, buf);
+
+    /* FIXME this is kind of inefficient */
+    audio_playout.set_position(
+        source->get_frame_timestamp(pos.integer_part( ))
+    );
+}
+
 void ReplayPlayoutBufferSource::read_frame(
         ReplayPlayoutFrame &frame_data, 
         Rational speed
@@ -72,17 +84,9 @@ void ReplayPlayoutBufferSource::read_frame(
 
         pos += speed;
 
-        if (speed == Rational(1,2)) {
-            IOAudioPacket *ap = cache.get_audio(source, pos.integer_part( ));
-            if (ap) {
-                frame_data.audio_data = ap->clone( );
-            }
-        } 
-
-        if (frame_data.audio_data == NULL) {
-            frame_data.audio_data = audio_allocator.allocate( );
-            frame_data.audio_data->zero( );
-        }
+        frame_data.audio_data = audio_allocator.allocate( );
+        frame_data.audio_data->zero( );
+        audio_playout.fill_packet(frame_data.audio_data, speed);
 
         frame_data.source_name = source->get_name( );
     } catch (const ReplayFrameNotFoundException &) {

@@ -24,6 +24,7 @@
 #include "replay_buffer.h"
 #include "replay_frame_cache.h"
 #include "replay_playout_source.h"
+#include "replay_audio_buffer_playout.h"
 #include "avspipe_allocators.h"
 
 class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
@@ -31,6 +32,7 @@ class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
         ReplayPlayoutBufferSource(const ReplayShot &shot);
         ~ReplayPlayoutBufferSource( );
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+        void map_channel(unsigned int ch, ReplayBuffer *buf);
         timecode_t position( );
         timecode_t duration( );
 
@@ -45,6 +47,8 @@ class ReplayPlayoutBufferSource : public ReplayPlayoutSource {
             RawFrame *dst, int dst_field, 
             RawFrame *src, int src_field
         );
+
+        ReplayAudioBufferPlayout audio_playout;
 };
 
 #endif
