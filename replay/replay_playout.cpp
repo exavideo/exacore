@@ -128,7 +128,7 @@ void ReplayPlayout::roll_shot(const ReplayShot &shot) {
         newsrc->map_channel(ch.no, ch.buf);
     }
 
-    set_source(new ReplayPlayoutBufferSource(shot));
+    set_source(newsrc);
 }
 
 void ReplayPlayout::map_channel(unsigned int ch, ReplayBuffer *buf) {

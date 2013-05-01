@@ -114,6 +114,10 @@ ReplayShot *ReplayBuffer::align_shot(ReplayShot *other) {
     return shot;
 }
 
+timecode_t ReplayBuffer::get_frame_timecode(uint64_t timestamp) {
+    return index->find_timecode(timestamp);
+}
+
 uint64_t ReplayBuffer::get_frame_timestamp(timecode_t frame) {
     return index->get_frame_timestamp(frame);
 }

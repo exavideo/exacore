@@ -29,6 +29,7 @@ ReplayAudioBufferPlayout::ReplayAudioBufferPlayout( ) {
      */
     fft_size = 1024;
     fft_hop = 256;
+    scale_factor = float(fft_hop) / (float(fft_size) * float(fft_size));
 
     initialize_fft( );
 }
@@ -87,6 +88,8 @@ void ReplayAudioBufferPlayout::map_channel(
     chnew.phase_accumulator = new std::complex<float>[fft_size];
     chnew.overlap_add_buffer = new float[fft_size];
     chnew.fifo = new AudioFIFO<float>;
+
+    channel_map.push_back(chnew);
 }
 
 void ReplayAudioBufferPlayout::fill_packet(
