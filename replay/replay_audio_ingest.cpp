@@ -136,7 +136,6 @@ void ReplayAudioIngest::emit_frame(channel_entry &ch) {
 
     /* take FFT of ch.fifo->data( ) into ch.current_frame */
     fft->compute(ch.current_frame, ch.fifo->data( ));
-    ch.fifo->pop_samples(fft_hop);
 
     /* subtract phase of last_frame from phase of current_frame to get output_frame */
     for (i = 0; i < fft_size; i++) {
@@ -154,5 +153,7 @@ void ReplayAudioIngest::emit_frame(channel_entry &ch) {
 
     /* write output_frame to buffer */
     bset.add_block(REPLAY_PVOC_BLOCK, output_frame, fft_size);
+    bset.add_block("Debug001", ch.fifo->data( ), fft_size);
     ch.buffer->write_blockset(bset);
+    ch.fifo->pop_samples(fft_hop);
 }

@@ -18,6 +18,7 @@
  */
 
 #include "replay_audio_buffer_playout.h"
+#include <iostream>
 
 ReplayAudioBufferPlayout::ReplayAudioBufferPlayout( ) {
     max_channel_no = 0;
@@ -118,12 +119,19 @@ void ReplayAudioBufferPlayout::fill_packet(
 template <class T>
 static void numarray_pop(T *array, size_t n, size_t s) {
     size_t i;
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < (s - n); i++) {
         array[i] = array[i+n];
     }
 
-    for (i = n; i < s; i++) {
+    for (i = (s - n); i < s; i++) {
         array[i] = 0;
+    }
+}
+
+template <class T>
+static void numarray_dump(T *array, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        std::cout << array[i] << std::endl;
     }
 }
 
@@ -158,7 +166,7 @@ void ReplayAudioBufferPlayout::synthesize_samples(channel_data &ch) {
 
     /* now get real part, scale, and overlap-add */
     for (size_t i = 0; i < fft_size; i++) {
-        ch.overlap_add_buffer[i] += std::real(ifft_result[i]) / scale_factor;
+        ch.overlap_add_buffer[i] += std::real(ifft_result[i]) * scale_factor;
     }
 
     /* shift off first fft_hop samples from overlap_add_buffer into fifo */

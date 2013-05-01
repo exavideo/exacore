@@ -24,9 +24,12 @@
 
 template <class T, class U>
 void numarray_copy(T *dst, const U *src, size_t n) {
-    while (n != 0) {
-        n--;
-        dst[n] = src[n];
+    /* 
+     * this works for dst and src overlapping, 
+     * as long as the move is downward 
+     */
+    for (size_t i = 0; i < n; i++) {
+        dst[i] = src[i];
     }
 }
 
