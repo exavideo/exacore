@@ -208,7 +208,9 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
                 break;
 
             default:
-                throw std::runtime_error("don't understand that AVPixelFormat");
+                fprintf(stderr, "ReplayPlayoutLavfSource doesn't know how "
+                    "to handle AVPixelFormat %d\n", lavc_frame->format);
+                memset(fr->data( ), 128, fr->size( ));
                 break;
         }
 
