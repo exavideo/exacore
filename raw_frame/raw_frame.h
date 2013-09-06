@@ -81,9 +81,26 @@ class RawFrame {
         ssize_t write_tga_to_fd(int fd);
 #endif
 
+        /* 
+         * pack methods take raw data in various formats and pack them 
+         * into this object e.g. aRawFrame->pack->YCbCr8P422(Y, Cb, Cr)
+         */
         RawFramePacker *pack;
+        /* 
+         * unpack methods do the opposite of pack methods: they take the
+         * picture stored in a RawFrame and place a copy in the desired
+         * format in the destination given.
+         */         
         RawFrameUnpacker *unpack;
+        /*
+         * draw methods modify this RawFrame by operations such as, e.g.
+         * keying in part of another RawFrame.
+         */
         RawFrameDrawOps *draw;
+        /*
+         * convert methods return a new RawFrame object with the same picture
+         * as this one, but in a different format.
+         */
         RawFrameConverter *convert;
 
 
@@ -139,6 +156,16 @@ class RawFramePacker {
             );
         }
 
+        void YCbCr8P420(uint8_t *Y, uint8_t *Cb, uint8_t *Cr,
+            size_t Ysrcpitch, size_t Cbsrcpitch, size_t Crsrcpitch) {
+            CHECK(do_YCbCr8P420A);
+            do_YCbCr8P420A(
+                f->w( ), f->h( ),
+                Ysrcpitch, Cbsrcpitch, Crsrcpitch,
+                Y, Cb, Cr, f->data( )
+            );
+        }
+
     protected:
         void check(void *ptr) {
             if (ptr == NULL) {
@@ -152,6 +179,9 @@ class RawFramePacker {
                 uint8_t *, uint8_t *);
 
         void (*do_YCbCr8P422A)(size_t, size_t, size_t, size_t, size_t,
+            uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+
+        void (*do_YCbCr8P420A)(size_t, size_t, size_t, size_t, size_t,
             uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 };
 
