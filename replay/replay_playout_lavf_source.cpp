@@ -207,6 +207,17 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
                 memcpy(fr->data( ), lavc_frame->data[0], fr->size( ));
                 break;
 
+            case AV_PIX_FMT_YUV420P:
+                fr->pack->YCbCr8P420(
+                    lavc_frame->data[0],
+                    lavc_frame->data[1],
+                    lavc_frame->data[2],
+                    lavc_frame->linesize[0],
+                    lavc_frame->linesize[1],
+                    lavc_frame->linesize[2]
+                );
+                break;
+
             default:
                 fprintf(stderr, "ReplayPlayoutLavfSource doesn't know how "
                     "to handle AVPixelFormat %d\n", lavc_frame->format);
