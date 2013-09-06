@@ -86,7 +86,7 @@ void ReplayPlayoutBufferSource::read_frame(
 
         frame_data.audio_data = audio_allocator.allocate( );
         frame_data.audio_data->zero( );
-        audio_playout.fill_packet(frame_data.audio_data, speed);
+        audio_playout.fill_packet(frame_data.audio_data, speed*2);
 
         frame_data.source_name = source->get_name( );
     } catch (const ReplayFrameNotFoundException &) {
