@@ -391,12 +391,9 @@ class ReplayServer < Patchbay
         # DANGER DANGER DANGER
         # FIXME FIXME FIXME
         # THIS IS A GLARINC SECURITY HOLE
-        p inbound_json
         filename = inbound_json["filename"]
-        cmd = "ffmpeg -i \"#{filename}\" -f rawvideo -s 1920x1080 -pix_fmt uyvy422 pipe:%v -f s16le -ac 2 -ar 48000 pipe:%a </dev/null"
-        p cmd
         replay_app.suspend_encode
-        replay_app.program.avspipe_playout(cmd)
+        replay_app.program.lavf_playout(filename)
         render :json => ''
     end
 
