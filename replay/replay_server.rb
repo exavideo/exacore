@@ -392,7 +392,6 @@ class ReplayServer < Patchbay
         # FIXME FIXME FIXME
         # THIS IS A GLARINC SECURITY HOLE
         filename = inbound_json["filename"]
-        replay_app.suspend_encode
         replay_app.program.lavf_playout(filename)
         render :json => ''
     end
