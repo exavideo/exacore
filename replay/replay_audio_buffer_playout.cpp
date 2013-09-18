@@ -29,7 +29,7 @@ ReplayAudioBufferPlayout::ReplayAudioBufferPlayout( ) {
      * defined separately in both places.
      */
     fft_size = 1024;
-    fft_hop = 256;
+    fft_hop = 128;
     scale_factor = float(fft_hop) / (float(fft_size) * float(fft_size));
 
     initialize_fft( );

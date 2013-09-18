@@ -62,7 +62,7 @@ void ReplayAudioIngest::start( ) {
 
 void ReplayAudioIngest::set_fft_parameters( ) {
     fft_size = 1024;
-    fft_hop = 256;
+    fft_hop = 128;
     window = new float[fft_size];
     fft = new FFT<float>(fft_size);
     output_frame = new std::complex<float>[fft_size];
