@@ -81,6 +81,8 @@ class BlockSet {
         void begin_read(int fd, off_t start);
         size_t write_all(int fd) const;
 
+        off_t end_offset( );
+
     protected:
         struct BlockHeader {
             char label[8];

@@ -178,3 +178,7 @@ size_t BlockSet::read_data(const char *label, void *data, size_t size) {
 
     return size_to_read;
 }
+
+off_t BlockSet::end_offset( ) {
+    return blocks.back( ).offset;
+}
