@@ -63,4 +63,7 @@ replay/replay_playout_lavf_source_test: $(replay_base_OBJECTS) replay/replay_pla
 replay/replay_buffer_to_mjpeg: $(common_OBJECTS) $(thread_OBJECTS) replay/replay_buffer_to_mjpeg.o
 	$(CXX) $(LDFLAGS) -o $@ $^ -lpthread $(common_LIBS)
 
+replay/replay_buffer_to_audio: $(common_OBJECTS) $(thread_OBJECTS) replay/replay_buffer_to_audio.o
+	$(CXX) $(LDFLAGS) -o $@ $^ -lpthread $(common_LIBS)
+
 all_TARGETS += replay/replay.so
