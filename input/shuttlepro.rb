@@ -11,11 +11,13 @@ class ShuttleProInput
         @device = File.open(devices[0])
 
         Thread.new { 
-            begin
-                poll_events 
-            rescue => e
-                puts e
-                print e.backtrace.join("\n")
+            loop do
+                begin
+                    poll_events 
+                rescue => e
+                    puts e
+                    print e.backtrace.join("\n")
+                end
             end
         }
     end
