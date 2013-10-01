@@ -201,6 +201,10 @@ class ReplayLocalControl < ShuttleProInput
         if source < @app.sources.length
             @current_preview_source = source
             @app.preview.shot = @app.sources[source].align_shot @app.preview.shot
+
+            # this does not take effect until the next shot is rolled
+            # so we can just do it here
+            @app.program.map_channels(@app.sources[source].channel_map)
         end
     end
 

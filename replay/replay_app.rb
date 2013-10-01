@@ -48,6 +48,8 @@ module Replay
             game_data = opts[:game_data] || \
                 fail("Cannot create source without game data");
 
+            @channel_map = opts[:channel_map] || {}
+
             @buffer = ReplayBuffer.new(file, name)
 
             if input
@@ -57,6 +59,10 @@ module Replay
             else
                 fail "need some input source"
             end
+        end
+
+        def channel_map
+            @channel_map
         end
 
         def debug
@@ -99,6 +105,16 @@ module Replay
             sh = ReplayShot.new
             get_shot(sh)
             sh
+        end
+    end
+
+    class ReplayPlayout
+        # take a ruby hash and map all channels
+        def map_channels(map)
+            clear_channel_map
+            map.each_pair do |channel, buffer|
+                map_channel(channel, buffer)    
+            end
         end
     end
 

@@ -78,6 +78,11 @@ class ReplayPlayout : public Thread {
         void map_channel(unsigned int ch, ReplayBuffer *buf);
 
         /*
+         * Clear audio channel mappings.
+         */
+        void clear_channel_map( );
+
+        /*
          * Roll out file via AvspipeInputAdapter using e.g. ffmpeg
          */
         void avspipe_playout(const char *cmd);

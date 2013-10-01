@@ -139,6 +139,10 @@ void ReplayPlayout::map_channel(unsigned int ch, ReplayBuffer *buf) {
     channel_map.push_back(newent);
 }
 
+void ReplayPlayout::clear_channel_map( ) {
+    channel_map.clear( );
+}
+
 void ReplayPlayout::set_speed(int num, int denom) {
     Rational *old = new_speed.exchange(new Rational(num, denom));
     if (old != NULL) {
