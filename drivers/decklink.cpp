@@ -229,7 +229,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             deckLink = find_card(card_index);
             configure_card( );
             open_card( );
-            preroll_video_frames(4);
+            preroll_video_frames(5);
 
             if (enable_audio) {
                 this->n_channels = n_channels;
@@ -424,7 +424,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         }
 
         void setup_audio( ) {
-            IOAudioPacket preroll_audio(4*1601, n_channels);
+            IOAudioPacket preroll_audio(8008, n_channels);
             preroll_audio.zero( );
 
             audio_in_pipe = new Pipe<IOAudioPacket *>(OUT_PIPE_SIZE);
@@ -581,6 +581,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 input->unpack->CbYCrY8422((uint8_t *) data);
             } else {
                 fprintf(stderr, "DeckLink: on fire\n");
+		audio_adjust += 1;
             }
             
             set_frame_timecode(frame);
