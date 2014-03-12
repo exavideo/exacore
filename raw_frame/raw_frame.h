@@ -72,8 +72,9 @@ class RawFrame {
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
 
+	static RawFrame *from_image_file(const char *path);
         static RawFrame *from_png_data(void *data, size_t size);
-        static RawFrame *from_png_file(const char *path);
+	static RawFrame *from_tga_data(const void *data, size_t size);
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);

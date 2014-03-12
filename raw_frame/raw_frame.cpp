@@ -242,28 +242,43 @@ static void pngmem_read_data(png_structp read_ptr, png_bytep data,
     }
 }
 
-RawFrame *RawFrame::from_png_file(const char *file) {
+RawFrame *RawFrame::from_image_file(const char *file) {
     int fd;
     struct stat st;
     void *data;
     RawFrame *ret;
+    const char *ext;
+
+    if (strlen(file) < 4) {
+        throw std::runtime_error("no file extension?");
+    }
+
+    ext = file + strlen(file) - 4;
 
     fd = open(file, O_RDONLY);
 
     if (fd == -1) {
-        throw POSIXError("open png file");
+        throw POSIXError("open image file");
     }
 
     if (fstat(fd, &st) != 0) {
-        throw POSIXError("stat png file");
+        throw POSIXError("stat image file");
     }
 
     data = malloc(st.st_size);
     if (read_all(fd, data, st.st_size) != 1) {
-        throw std::runtime_error("failed to read PNG file");
+        throw std::runtime_error("failed to read image file");
     }
 
-    ret = RawFrame::from_png_data(data, st.st_size);
+    if (!strcasecmp(ext, ".png")) {
+        ret = RawFrame::from_png_data(data, st.st_size);
+    } else if (!strcasecmp(ext, ".tga")) {
+        ret = RawFrame::from_tga_data(data, st.st_size);
+    } else {
+        free(data);
+        throw std::runtime_error("unrecognized image format");
+    }
+
     free(data);
     return ret;
 }
@@ -336,6 +351,82 @@ RawFrame *RawFrame::from_png_data(void *data, size_t size) {
     png_destroy_read_struct(&png_dec, &png_info, NULL);
 
     return out;
+}
+
+RawFrame *RawFrame::from_tga_data(const void *data, size_t size) {
+    RawFrame *output;
+
+    const uint8_t *bytes = (const uint8_t *)data;
+    const uint8_t *tga_line;
+    uint8_t id_size; 
+    uint8_t colormap; 
+    uint8_t imagetype; 
+    uint16_t w, h;
+    uint8_t bit_depth;
+    uint8_t attribute;
+
+    bool flip_vertical = true;
+
+    if (size < 18) {
+        throw std::runtime_error("not enough data to decode TGA");
+    }
+
+    id_size = bytes[0];
+    colormap = bytes[1];
+    imagetype = bytes[2];
+    bit_depth = bytes[16];
+    attribute = bytes[17];
+
+    if (colormap != 0) {
+        throw std::runtime_error("indexed TGA files not supported");
+    }
+
+    if (imagetype != 2) {
+        throw std::runtime_error("only color TGA files supported");
+    }
+
+    if (bit_depth != 32) {
+        throw std::runtime_error("only 32-bit TGA files supported");
+    }
+
+    if ((attribute & 0x0f) != 8) {
+        fprintf(stderr, "warning: TGA alpha channel not 8 bits?\n");
+    }
+
+    if ((attribute & 0x10) != 0) {
+        fprintf(stderr, "warning: TGA horizontally flipped, can't handle yet\n");
+    }
+
+    if ((attribute & 0x20) != 0) {
+        flip_vertical = false;
+    }
+
+    w = bytes[13] << 8 | bytes[12];
+    h = bytes[15] << 8 | bytes[14];
+
+    if (size < (size_t)(18 + id_size + 4*w*h)) {
+        throw std::runtime_error("not enough data to decode TGA");
+    }
+    
+    fprintf(stderr, "load tga %dx%d\n", w, h);
+    output = new RawFrame(w, h, RawFrame::BGRAn8);
+    tga_line = bytes + 18 + id_size;
+
+    for (int i = 0; i < h; i++) {
+        uint8_t *line;
+
+        if (flip_vertical) {
+            line = output->scanline(h-i-1);
+        } else {
+            line = output->scanline(i);
+        }
+
+        memcpy(line, tga_line, 4*w);
+        tga_line += 4*w;
+    }
+
+    return output;
+
 }
 
 ssize_t RawFrame::write_tga_to_fd(int fd) {

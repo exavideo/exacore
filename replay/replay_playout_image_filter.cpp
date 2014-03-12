@@ -67,6 +67,6 @@ ReplayPlayoutImageFilter *ReplayPlayoutImageFilter::from_png(
         coord_t x,
         coord_t y
 ) {
-    RawFrame *image = RawFrame::from_png_file(path);
+    RawFrame *image = RawFrame::from_image_file(path);
     return new ReplayPlayoutImageFilter(image, x, y);
 }
