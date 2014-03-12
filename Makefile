@@ -30,7 +30,8 @@ SUBDIR_INCLUDES = \
 	-Igraphics/ \
 	-Ireplay/ \
 	-Iavspipe/ \
-	-Idisplay_surface \
+	-Idisplay_surface/ \
+	-Ikeydaemon/
 
 include $(shell find . -iname 'subdir.mk')
 include $(shell find . -iname 'targets.mk')

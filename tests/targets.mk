@@ -289,3 +289,25 @@ tests/clock_monotonic: $(test_clock_monotonic_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(thread_LIBS)
 
 all_TARGETS += tests/clock_monotonic    
+
+test_js_cg_script_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(graphics_OBJECTS) \
+	$(thread_OBJECTS) \
+	$(keydaemon_OBJECTS) \
+	tests/test_js_cg_script.o
+
+tests/test_js_cg_script: $(test_js_cg_script_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(thread_LIBS) $(graphics_LIBS) $(raw_frame_LIBS) $(keydaemon_LIBS)
+
+test_js_cg_script_torture_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(graphics_OBJECTS) \
+	$(thread_OBJECTS) \
+	$(keydaemon_OBJECTS) \
+	tests/js_cg_script_torture.o
+
+tests/js_cg_script_torture: $(test_js_cg_script_torture_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(thread_LIBS) $(graphics_LIBS) $(raw_frame_LIBS) $(keydaemon_LIBS)

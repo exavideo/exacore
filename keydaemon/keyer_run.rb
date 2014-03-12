@@ -15,7 +15,7 @@ scbd.set_y 50
 keyer.cg scbd
 
 bug = SvgSubprocessCharacterGenerator.new(
-    'cd ..; ruby scoreboard/static_svg.rb /root/bug.svg'
+    'cd ..; ruby scoreboard/static_svg.rb /home/rpitv/bug.svg'
 )
 
 bug.set_x 0
@@ -23,9 +23,11 @@ bug.set_y 0
 
 keyer.cg bug
 
-graphics = PngSubprocessCharacterGenerator.new(
-    'cd ../svg_http_keyer; ruby svg_http_keyer.rb'
-)
+#graphics = PngSubprocessCharacterGenerator.new(
+#    'cd ../svg_http_keyer; ruby svg_http_keyer.rb'
+#)
+
+graphics = JsCharacterGenerator.new('ruby js_keyer_server.rb')
 
 graphics.set_x 0
 graphics.set_y 0
