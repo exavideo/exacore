@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Exavideo LLC.
+ * Copyright 2011, 2014 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -22,6 +22,14 @@
 static void BGRAn8_BGRAn8_key(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha);
 
+static void BGRAn8_BGRAn8_composite(
+		RawFrame *dst, RawFrame *src,
+		coord_t dst_x, coord_t dst_y,
+		uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h
+);
+
 void BGRAn8_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
     switch (key->pixel_format( )) {
@@ -31,6 +39,24 @@ void BGRAn8_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         default:
             throw std::runtime_error("unsupported pixel formats");
     }
+}
+
+void BGRAn8_alpha_composite_default(RawFrame *bkgd, RawFrame *key,
+		coord_t x, coord_t y, uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h) {
+	
+	switch (key->pixel_format( )) {
+		case RawFrame::BGRAn8:
+			BGRAn8_BGRAn8_composite(
+				bkgd, key, x, y, galpha, 
+				src_x, src_y, w, h
+			);
+			break;
+		default:
+			throw std::runtime_error("unsupported pixel formats");
+	}
+
 }
 
 static void BGRAn8_BGRAn8_key(RawFrame *bkgd, RawFrame *key,
@@ -66,4 +92,81 @@ static void BGRAn8_BGRAn8_key(RawFrame *bkgd, RawFrame *key,
             dst_scanline += 4;
         }
     }
+}
+
+static void BGRAn8_BGRAn8_composite(
+		RawFrame *dst, RawFrame *src,
+		coord_t dst_x, coord_t dst_y,
+		uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h
+) {
+	uint8_t *src_scanline;
+	uint8_t *dst_scanline;
+
+	int rb, gb, bb, ab;
+	int rk, gk, bk, ak;
+
+	coord_t act_w, act_h;
+
+	act_w = w;
+
+	if (src_x + w > src->w( )) {
+		act_w = src->w( ) - src_x;
+	}
+
+	if (dst_x + w > dst->w( )) {
+		act_w = dst->w( ) - dst_x;
+	}
+
+	act_h = h;
+
+	if (src_y + h > src->h( )) {
+		act_h = src->h( ) - src_y;
+	}
+
+	if (dst_y + h > dst->h( )) {
+		act_h = dst->h( ) - dst_y;
+	}
+
+	if (src_x > src->w( )) {
+		fprintf(stderr, "src_x > src w...?\n");
+		return;
+	}
+
+	if (src_y > src->h( )) {
+		fprintf(stderr, "src_y > src h...?\n");
+		return;
+	}
+	
+	for (int yd = dst_y, ys = src_y; ys < src_y + act_h; yd++, ys++) {
+		src_scanline = src->scanline(ys) + 4*src_x;
+		dst_scanline = dst->scanline(yd) + 4*dst_x;
+
+		for (int xd = dst_x, xs = src_x; xs < src_x + act_w; 
+				xd++, xs++) {
+
+			bk = src_scanline[0];
+			gk = src_scanline[1];
+			rk = src_scanline[2];
+			ak = src_scanline[3];
+
+			ak = ak * galpha / 255;
+
+			bb = dst_scanline[0];
+			gb = dst_scanline[1];
+			rb = dst_scanline[2];
+			ab = dst_scanline[3];
+
+			/* note that here the alpha is blended between the two as well */
+			dst_scanline[0] = (bk * ak + bb * (255 - ak)) / 255;
+			dst_scanline[1] = (gk * ak + gb * (255 - ak)) / 255;
+			dst_scanline[2] = (rk * ak + rb * (255 - ak)) / 255;
+			dst_scanline[3] = (ak * ak + ab * (255 - ak)) / 255;
+
+			src_scanline += 4;
+			dst_scanline += 4;
+		}
+	}
+
 }

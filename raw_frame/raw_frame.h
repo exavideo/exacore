@@ -345,6 +345,7 @@ class RawFrameDrawOps {
     public:
         RawFrameDrawOps(RawFrame *f_) : f(f_) { 
             do_alpha_blend = NULL;
+            do_alpha_composite = NULL;
             do_blit = NULL;
         }
 
@@ -354,6 +355,14 @@ class RawFrameDrawOps {
             do_alpha_blend(f, key, x, y, galpha);
         }
 
+        void alpha_composite(coord_t x, coord_t y, RawFrame *key,
+                coord_t src_x, coord_t src_y, coord_t w, coord_t h,
+                uint8_t galpha) {
+
+            CHECK(do_alpha_composite);
+            do_alpha_composite(f, key, x, y, galpha, src_x, src_y, w, h);
+        }
+
         void blit(coord_t x, coord_t y, RawFrame *src) {
             CHECK(do_blit);
             do_blit(f, src, x, y);
@@ -361,12 +370,18 @@ class RawFrameDrawOps {
     protected:
         void check(void *ptr) {
             if (ptr == NULL) {
-                throw std::runtime_error("Conversion not supported");
+                throw std::runtime_error("Drawing operation not supported");
             }
         }
 
         void (*do_alpha_blend)(RawFrame *bkgd, RawFrame *key, 
                 coord_t x, coord_t y, uint8_t galpha);
+
+        void (*do_alpha_composite)(RawFrame *bkgd, RawFrame *key, 
+                coord_t x, coord_t y, uint8_t galpha, 
+                coord_t src_x, coord_t src_y,
+                coord_t w, coord_t h);
+
         void (*do_blit)(RawFrame *bkgd, RawFrame *src, coord_t x, coord_t y);
 
         RawFrame *f;
