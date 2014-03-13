@@ -311,3 +311,12 @@ test_js_cg_script_torture_OBJECTS = \
 
 tests/js_cg_script_torture: $(test_js_cg_script_torture_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(thread_LIBS) $(graphics_LIBS) $(raw_frame_LIBS) $(keydaemon_LIBS)
+
+test_BGRAn8_BGRAn8_composite_chunk_sse2_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	tests/test_BGRAn8_BGRAn8_composite_chunk_sse2.o
+
+tests/test_BGRAn8_BGRAn8_composite_chunk_sse2: $(test_BGRAn8_BGRAn8_composite_chunk_sse2_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS)
+

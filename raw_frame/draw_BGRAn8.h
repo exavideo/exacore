@@ -24,16 +24,31 @@ void BGRAn8_blit_default(RawFrame *bkgd, RawFrame *src, coord_t x, coord_t y);
 void BGRAn8_alpha_key_default(RawFrame *bkgd, RawFrame *key, 
         coord_t x, coord_t y, uint8_t galpha);
 void BGRAn8_alpha_composite_default(RawFrame *bkgd, RawFrame *key,
-	coord_t x, coord_t y, uint8_t galpha,
-	coord_t src_x, coord_t src_y,
-	coord_t w, coord_t h);
+        coord_t x, coord_t y, uint8_t galpha,
+        coord_t src_x, coord_t src_y,
+        coord_t w, coord_t h);
+
+#ifndef SKIP_ASSEMBLY_ROUTINES
+void BGRAn8_alpha_composite_sse2(RawFrame *bkgd, RawFrame *key,
+        coord_t x, coord_t y, uint8_t galpha,
+        coord_t src_x, coord_t src_y,
+        coord_t w, coord_t h);
+#endif
 
 class BGRAn8DrawOps : public RawFrameDrawOps {
     public:
         BGRAn8DrawOps(RawFrame *f_) : RawFrameDrawOps(f_) {
             do_blit = BGRAn8_blit_default;
             do_alpha_blend = BGRAn8_alpha_key_default;
-	    do_alpha_composite = BGRAn8_alpha_composite_default;
+#ifndef SKIP_ASSEMBLY_ROUTINES
+            if (cpu_sse2_available( )) {
+                do_alpha_composite = BGRAn8_alpha_composite_sse2;
+            } else {
+                do_alpha_composite = BGRAn8_alpha_composite_default;
+            }
+#else
+            do_alpha_composite = BGRAn8_alpha_composite_default;
+#endif
         }
 };
 

@@ -30,6 +30,44 @@ static void BGRAn8_BGRAn8_composite(
 		coord_t w, coord_t h
 );
 
+#ifndef SKIP_ASSEMBLY_ROUTINES
+static void BGRAn8_BGRAn8_composite_aligned_sse2(
+		RawFrame *dst, RawFrame *src,
+		coord_t dst_x, coord_t dst_y,
+		uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h
+);
+
+extern "C" void BGRAn8_BGRAn8_composite_chunk_sse2(
+	uint8_t *dst, uint8_t *src, size_t count, 
+	unsigned int global_alpha
+);
+#endif
+
+static void fixup_width_height(
+	RawFrame *dst, RawFrame *src,
+	coord_t dst_x, coord_t dst_y,
+	coord_t src_x, coord_t src_y,
+	coord_t &w, coord_t &h
+) {
+	if (src_x + w > src->w( )) {
+		w = src->w( ) - src_x;
+	}
+
+	if (dst_x + w > dst->w( )) {
+		w = dst->w( ) - dst_x;
+	}
+
+	if (src_y + h > src->h( )) {
+		h = src->h( ) - src_y;
+	}
+
+	if (dst_y + h > dst->h( )) {
+		h = dst->h( ) - dst_y;
+	}
+}
+
 void BGRAn8_alpha_key_default(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
     switch (key->pixel_format( )) {
@@ -46,6 +84,13 @@ void BGRAn8_alpha_composite_default(RawFrame *bkgd, RawFrame *key,
 		coord_t src_x, coord_t src_y,
 		coord_t w, coord_t h) {
 	
+	fixup_width_height(
+		bkgd, key,
+		x, y,
+		src_x, src_y,
+		w, h
+	);
+
 	switch (key->pixel_format( )) {
 		case RawFrame::BGRAn8:
 			BGRAn8_BGRAn8_composite(
@@ -58,6 +103,79 @@ void BGRAn8_alpha_composite_default(RawFrame *bkgd, RawFrame *key,
 	}
 
 }
+
+#ifndef SKIP_ASSEMBLY_ROUTINES
+void BGRAn8_alpha_composite_sse2(RawFrame *bkgd, RawFrame *key,
+		coord_t x, coord_t y, uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h) {
+
+	coord_t aligned_w;
+
+	fixup_width_height(
+		bkgd, key,
+		x, y,
+		src_x, src_y,
+		w, h
+	);
+
+	switch (key->pixel_format( )) {
+		case RawFrame::BGRAn8:
+			/* 
+			 * sse2 routine only operates if w is a multiple of 4.
+			 * Use it first, then pick up the pieces with the slow
+			 * routine.
+			 */
+			if (w > 4) {
+				aligned_w = (w/4)*4;
+				BGRAn8_BGRAn8_composite_aligned_sse2(
+					bkgd, key, x, y, galpha,
+					src_x, src_y, aligned_w, h
+				);
+
+				w -= aligned_w;
+				x += aligned_w;
+				src_x += aligned_w;
+			}
+
+			if (w != 0) {
+				BGRAn8_BGRAn8_composite(
+					bkgd, key, x, y, galpha, 
+					src_x, src_y, w, h
+				);
+			}
+			break;
+		default:
+			throw std::runtime_error("unsupported pixel formats");
+	}
+}
+
+static void BGRAn8_BGRAn8_composite_aligned_sse2(
+		RawFrame *dst, RawFrame *src,
+		coord_t dst_x, coord_t dst_y,
+		uint8_t galpha,
+		coord_t src_x, coord_t src_y,
+		coord_t w, coord_t h
+) {
+	uint8_t *src_scanline;
+	uint8_t *dst_scanline;
+
+	while (h > 0) {
+		src_scanline = src->scanline(src_y) + 4*src_x;
+		dst_scanline = dst->scanline(dst_y) + 4*dst_x;
+
+		BGRAn8_BGRAn8_composite_chunk_sse2( 
+			dst_scanline, src_scanline, 
+			4*w, galpha
+		);
+
+		src_y++;
+		dst_y++;
+		h--;
+	}
+
+}
+#endif
 
 static void BGRAn8_BGRAn8_key(RawFrame *bkgd, RawFrame *key,
         coord_t x, coord_t y, uint8_t galpha) {
@@ -94,6 +212,8 @@ static void BGRAn8_BGRAn8_key(RawFrame *bkgd, RawFrame *key,
     }
 }
 
+
+
 static void BGRAn8_BGRAn8_composite(
 		RawFrame *dst, RawFrame *src,
 		coord_t dst_x, coord_t dst_y,
@@ -104,66 +224,34 @@ static void BGRAn8_BGRAn8_composite(
 	uint8_t *src_scanline;
 	uint8_t *dst_scanline;
 
-	int rb, gb, bb, ab;
-	int rk, gk, bk, ak;
+	float rb, gb, bb, ab;
+	float rk, gk, bk, ak;
+	float ag = galpha / 255.0f;
 
-	coord_t act_w, act_h;
-
-	act_w = w;
-
-	if (src_x + act_w > src->w( )) {
-		act_w = src->w( ) - src_x;
-	}
-
-	if (dst_x + act_w > dst->w( )) {
-		act_w = dst->w( ) - dst_x;
-	}
-
-	act_h = h;
-
-	if (src_y + act_h > src->h( )) {
-		act_h = src->h( ) - src_y;
-	}
-
-	if (dst_y + act_h > dst->h( )) {
-		act_h = dst->h( ) - dst_y;
-	}
-
-	if (src_x > src->w( )) {
-		fprintf(stderr, "src_x > src w...?\n");
-		return;
-	}
-
-	if (src_y > src->h( )) {
-		fprintf(stderr, "src_y > src h...?\n");
-		return;
-	}
-	
-	for (int yd = dst_y, ys = src_y; ys < src_y + act_h; yd++, ys++) {
+	for (int yd = dst_y, ys = src_y; ys < src_y + h; yd++, ys++) {
 		src_scanline = src->scanline(ys) + 4*src_x;
 		dst_scanline = dst->scanline(yd) + 4*dst_x;
 
-		for (int xd = dst_x, xs = src_x; xs < src_x + act_w; 
-				xd++, xs++) {
+		for (int xd = dst_x, xs = src_x; xs < src_x + w; xd++, xs++) {
+			ak = src_scanline[3] * ag / 255.0f;
+			
+			bk = src_scanline[0] * ak;
+			gk = src_scanline[1] * ak;
+			rk = src_scanline[2] * ak;
 
-			bk = src_scanline[0];
-			gk = src_scanline[1];
-			rk = src_scanline[2];
-			ak = src_scanline[3];
+			ab = dst_scanline[3] / 255.0f;
+			ab -= ab * ak;
 
-			ak = ak * galpha / 255;
+			bb = dst_scanline[0] * ab;
+			gb = dst_scanline[1] * ab;
+			rb = dst_scanline[2] * ab;
 
-			bb = dst_scanline[0];
-			gb = dst_scanline[1];
-			rb = dst_scanline[2];
-			ab = dst_scanline[3];
+			ab += ak;
 
-			ab = ab * (255 - ak) / 255;
-
-			dst_scanline[0] = (bk * ak + bb * ab) / (ak + ab + 1);
-			dst_scanline[1] = (gk * ak + gb * ab) / (ak + ab + 1);
-			dst_scanline[2] = (rk * ak + rb * ab) / (ak + ab + 1);
-			dst_scanline[3] = ak + ab;
+			dst_scanline[0] = (bk + bb) / ab;
+			dst_scanline[1] = (gk + gb) / ab;
+			dst_scanline[2] = (rk + rb) / ab;
+			dst_scanline[3] = ab * 255.0;
 
 			src_scanline += 4;
 			dst_scanline += 4;
