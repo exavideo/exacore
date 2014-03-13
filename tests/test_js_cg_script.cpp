@@ -30,11 +30,14 @@ int main(int argc, const char *argv[]) {
 	char *script;
 	int script_fd;
 	struct stat st;
+	int n_frames;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s script.js\n", argv[0]);
+	if (argc != 3) {
+		fprintf(stderr, "usage: %s script.js n_frames\n", argv[0]);
 		return 1;
 	}
+
+	n_frames = atoi(argv[2]);
 
 	script_fd = open(argv[1], O_RDONLY);
 	if (script_fd < 0) {
@@ -61,9 +64,9 @@ int main(int argc, const char *argv[]) {
 	}
 
 	JsCharacterGeneratorScript cg_script(script, strlen(script));	
-	for (int i = 0; i < 30; i++) {
+	for (int i = 0; i < n_frames; i++) {
 		frame = cg_script.render_frame( );
-		frame->write_to_fd(STDOUT_FILENO);
+		frame->write_tga_to_fd(STDOUT_FILENO);
 		delete frame;
 	}
 
