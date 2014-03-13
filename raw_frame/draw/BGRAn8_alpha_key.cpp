@@ -111,21 +111,21 @@ static void BGRAn8_BGRAn8_composite(
 
 	act_w = w;
 
-	if (src_x + w > src->w( )) {
+	if (src_x + act_w > src->w( )) {
 		act_w = src->w( ) - src_x;
 	}
 
-	if (dst_x + w > dst->w( )) {
+	if (dst_x + act_w > dst->w( )) {
 		act_w = dst->w( ) - dst_x;
 	}
 
 	act_h = h;
 
-	if (src_y + h > src->h( )) {
+	if (src_y + act_h > src->h( )) {
 		act_h = src->h( ) - src_y;
 	}
 
-	if (dst_y + h > dst->h( )) {
+	if (dst_y + act_h > dst->h( )) {
 		act_h = dst->h( ) - dst_y;
 	}
 
@@ -158,11 +158,12 @@ static void BGRAn8_BGRAn8_composite(
 			rb = dst_scanline[2];
 			ab = dst_scanline[3];
 
-			/* note that here the alpha is blended between the two as well */
-			dst_scanline[0] = (bk * ak + bb * (255 - ak)) / 255;
-			dst_scanline[1] = (gk * ak + gb * (255 - ak)) / 255;
-			dst_scanline[2] = (rk * ak + rb * (255 - ak)) / 255;
-			dst_scanline[3] = (ak * ak + ab * (255 - ak)) / 255;
+			ab = ab * (255 - ak) / 255;
+
+			dst_scanline[0] = (bk * ak + bb * ab) / (ak + ab + 1);
+			dst_scanline[1] = (gk * ak + gb * ab) / (ak + ab + 1);
+			dst_scanline[2] = (rk * ak + rb * ab) / (ak + ab + 1);
+			dst_scanline[3] = ak + ab;
 
 			src_scanline += 4;
 			dst_scanline += 4;
