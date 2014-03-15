@@ -9,20 +9,27 @@ Thin::Logging.silent = true
 
 class JsKeyerControl < Patchbay
     put '/script' do
-        script = put_data
-        header = [ script.length, 0 ].pack('LL')
-        STDOUT.write(header)
-	STDOUT.write(script)
-	STDOUT.flush
+        write_message(0, put_data)
+        render :json => ''
+    end
 
-	render :json => ''
+    put '/command' do
+        write_message(1, put_data)
+        render :json => ''
     end
 
 protected
+    def write_message(type, msg)
+        header = [ msg.length, type ].pack('LL')
+        STDOUT.write(header)
+        STDOUT.write(msg)
+        STDOUT.flush
+    end
+
     def put_data
-	inp = environment['rack.input']
-	inp.rewind
-	inp.read
+        inp = environment['rack.input']
+        inp.rewind
+        inp.read
     end
 end
 
