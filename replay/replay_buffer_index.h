@@ -36,8 +36,7 @@ class ReplayBufferIndexFullException : public virtual std::exception {
 
 class ReplayBufferIndex {
     public:
-        /* 640k frames should be enough for anybody :) */
-        ReplayBufferIndex(size_t n_frames = 640*1024);
+        ReplayBufferIndex(size_t n_frames = 8192*1024);
         ~ReplayBufferIndex( );
         off_t get_frame_location(timecode_t frame);
         uint64_t get_frame_timestamp(timecode_t frame);

@@ -34,6 +34,7 @@ replay_base_OBJECTS = \
 	replay/replay_buffer_index.o \
 	replay/replay_ingest.o \
         replay/replay_mjpeg_ingest.o \
+        replay/replay_audio_ingest.o \
 	replay/replay_preview.o \
 	replay/replay_playout.o \
 	replay/replay_multiviewer.o \
@@ -41,6 +42,7 @@ replay_base_OBJECTS = \
 	replay/replay_gamedata.o \
 	replay/replay_frame_data.o \
 	replay/replay_frame_cache.o \
+        replay/replay_audio_buffer_playout.o \
 	replay/replay_playout_bars_source.o \
 	replay/replay_playout_buffer_source.o \
 	replay/replay_playout_avspipe_source.o \
@@ -57,5 +59,11 @@ replay/replay.so: $(replay_replay_so_OBJECTS)
 
 replay/replay_playout_lavf_source_test: $(replay_base_OBJECTS) replay/replay_playout_lavf_source_test.o
 	$(CXX) $(LDFLAGS) -o $@ $^ -ljpeg -ldl -lpthread $(graphics_LIBS) $(lavf_LIBS)
+
+replay/replay_buffer_to_mjpeg: $(common_OBJECTS) $(thread_OBJECTS) replay/replay_buffer_to_mjpeg.o
+	$(CXX) $(LDFLAGS) -o $@ $^ -lpthread $(common_LIBS)
+
+replay/replay_buffer_to_audio: $(common_OBJECTS) $(thread_OBJECTS) replay/replay_buffer_to_audio.o
+	$(CXX) $(LDFLAGS) -o $@ $^ -lpthread $(common_LIBS)
 
 all_TARGETS += replay/replay.so

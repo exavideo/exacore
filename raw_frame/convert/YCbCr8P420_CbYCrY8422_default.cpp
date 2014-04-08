@@ -17,23 +17,34 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PV_ANALYZER_H
-#define _REPLAY_PV_ANALYZER_H
+#include <stdint.h>
+#include <stddef.h>
 
-#include "audio_fifo.h"
-#include "replay_pv_frame.h"
+void YCbCr8P420_CbYCrY8422_A_default(
+    size_t w, size_t h,
+    size_t Ypitch, size_t Cbpitch, size_t Crpitch,
+    uint8_t *Y, uint8_t *Cb, uint8_t *Cr, uint8_t *dst
+) {
+    uint8_t *sY, *sCb, *sCr;
+    unsigned int i;
 
-class ReplayPvAnalyzer {
-    public:
-        ReplayPvAnalyzer( );
-        ReplayPvAnalyzer(ReplayBuffer *buf);
-        ~ReplayPvAnalyzer( );
+    while (h-- > 0) {
+        sY = Y;
+        sCb = Cb;
+        sCr = Cr;
 
-        void analyze(IOAudioPacket *apkt);
-    protected:
-        AudioFIFO<float> *afifo;
-        std::vector<ReplayPvFrame> coded_frames;
-        void emit_frame( );
-};
+        for (i = 0; i < w; i += 2) {
+            *(dst++) = *(sCb++);
+            *(dst++) = *(sY++);
+            *(dst++) = *(sCr++);
+            *(dst++) = *(sY++);
+        }
 
-#endif
+        Y += Ypitch;
+        /* move Cb and Cr to next line only every other output line */
+        if (h & 0x01) {
+            Cb += Cbpitch;
+            Cr += Crpitch;
+        }
+    }
+}

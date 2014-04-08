@@ -32,10 +32,6 @@
 #include <stdlib.h>
 #include <stdexcept>
 
-#define REPLAY_VIDEO_BLOCK "ReplJpeg"
-#define REPLAY_THUMBNAIL_BLOCK "ReplThum"
-#define REPLAY_AUDIO_BLOCK "ReplAuds"
-
 ReplayBuffer::ReplayBuffer(const char *path, const char *name) {
     struct stat stat;
     
@@ -116,6 +112,10 @@ ReplayShot *ReplayBuffer::align_shot(ReplayShot *other) {
     shot->length = 0;
 
     return shot;
+}
+
+timecode_t ReplayBuffer::get_frame_timecode(uint64_t timestamp) {
+    return index->find_timecode(timestamp);
 }
 
 uint64_t ReplayBuffer::get_frame_timestamp(timecode_t frame) {

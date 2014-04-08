@@ -20,6 +20,8 @@
 #ifndef _PLANAR_AUDIO_PACKET_H
 #define _PLANAR_AUDIO_PACKET_H
 
+#include <stdexcept>
+
 template <class T>
 class PackedAudioPacket;
 

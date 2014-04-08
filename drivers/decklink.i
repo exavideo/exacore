@@ -37,3 +37,9 @@ InputAdapter *create_decklink_input_adapter(unsigned int, unsigned int,
 InputAdapter *create_decklink_input_adapter_with_audio(unsigned int, 
         unsigned int, unsigned int, RawFrame::PixelFormat, unsigned int = 2);
 
+InputAdapter *create_decklink_audio_input_adapter(
+    unsigned int card_index,
+    unsigned int decklink_norm,
+    unsigned int decklink_input,
+    unsigned int n_channels = 2
+);

@@ -125,6 +125,55 @@ void AudioFIFO<T>::fill_packet(PlanarAudioPacket<U> *apkt) {
     pop_words(apkt->size_words( ));
 }
 
+template <class T> template <class U>
+void AudioFIFO<T>::fill_channel(
+    PlanarAudioPacket<U> *apkt,
+    unsigned int ch
+) {
+    U *dp;
+    size_t i;
+
+    if (apkt->size_samples( ) > fill_samples( )) {
+        throw std::runtime_error("inadequate amount of data in FIFO");
+    }
+    
+    dp = apkt->channel(ch);
+
+    for (i = 0; i < apkt->size_samples( ); i++) {
+        *dp = _data[i*n_channels];
+        dp++;
+    }
+
+    pop_samples(apkt->size_samples( ));
+
+}
+
+template <class T> template <class U>
+void AudioFIFO<T>::fill_channel(
+    PackedAudioPacket<U> *apkt,
+    unsigned int ch
+) {
+    U *dp;
+    size_t i;
+
+    if (apkt->size_samples( ) > fill_samples( )) {
+        throw std::runtime_error("inadequate amount of data in FIFO");
+    }
+
+    if (ch >= apkt->channels( )) {
+        throw std::runtime_error("not enough channels in apkt");
+    }
+
+    dp = apkt->data( ) + ch;
+
+    for (i = 0; i < apkt->size_samples( ); i++) {
+        *dp = _data[i*n_channels];
+        dp += apkt->channels( );
+    }
+
+    pop_samples(apkt->size_samples( ));
+}
+
 /* Reallocate internal buffer and copy data. */
 template <class T>
 void AudioFIFO<T>::reallocate(size_t new_size) {

@@ -16,6 +16,29 @@ class Integer
 end
 
 module Replay
+    class ReplayAudioSource
+        def initialize(opts={})
+            input = opts[:input]
+            chmap = opts[:map]
+
+            fail "need input" unless input
+            fail "need map" unless chmap
+
+            @ingest = ReplayAudioIngest.new(input)
+            @buffers = { }
+            chmap.each_pair do |channel, file|
+                buf = ReplayBuffer.new(file)
+                @buffers[channel] = buf
+                @ingest.map_channel(channel, buf)
+            end
+            @ingest.start
+        end
+
+        def channel(i)
+            @buffers[i] || fail("channel not being recorded")
+        end
+    end
+
     class ReplaySource
         def initialize(opts={})
             input = opts[:input]
@@ -24,6 +47,8 @@ module Replay
             name = opts[:name] || file
             game_data = opts[:game_data] || \
                 fail("Cannot create source without game data");
+
+            @channel_map = opts[:channel_map] || {}
 
             @buffer = ReplayBuffer.new(file, name)
 
@@ -34,6 +59,10 @@ module Replay
             else
                 fail "need some input source"
             end
+        end
+
+        def channel_map
+            @channel_map
         end
 
         def debug
@@ -76,6 +105,16 @@ module Replay
             sh = ReplayShot.new
             get_shot(sh)
             sh
+        end
+    end
+
+    class ReplayPlayout
+        # take a ruby hash and map all channels
+        def map_channels(map)
+            clear_channel_map
+            map.each_pair do |channel, buffer|
+                map_channel(channel, buffer)    
+            end
         end
     end
 
@@ -149,6 +188,7 @@ module Replay
     class ReplayApp
         def initialize
             @sources = []
+            @audio_sources = []
 
             @dpys = FramebufferDisplaySurface.new
             @multiviewer = ReplayMultiviewer.new(@dpys)
@@ -210,6 +250,12 @@ module Replay
                 @mvx = 0
                 @mvy += @source_pvw_height
             end
+        end
+
+        def add_audio_source(opts={})
+            source = ReplayAudioSource.new(opts)
+            @audio_sources << source
+            source
         end
 
 

@@ -73,6 +73,16 @@ class ReplayPlayout : public Thread {
         void stop( );
 
         /*
+         * Map audio channels to buffers.
+         */
+        void map_channel(unsigned int ch, ReplayBuffer *buf);
+
+        /*
+         * Clear audio channel mappings.
+         */
+        void clear_channel_map( );
+
+        /*
          * Roll out file via AvspipeInputAdapter using e.g. ffmpeg
          */
         void avspipe_playout(const char *cmd);
@@ -103,6 +113,11 @@ class ReplayPlayout : public Thread {
             timecode_t duration;
         };
 
+        struct ChannelMapEntry {
+            unsigned int no;
+            ReplayBuffer *buf;
+        };
+
         OutputAdapter *oadp;
         ReplayPlayoutSource *idle_source;
         std::vector<ReplayPlayoutFilter *> filters;
@@ -111,6 +126,8 @@ class ReplayPlayout : public Thread {
         std::atomic<timecode_t> _source_position;
         std::atomic<timecode_t> _source_duration;
         Mutex filters_mutex;
+
+        std::vector<ChannelMapEntry> channel_map;
 };
 
 #endif

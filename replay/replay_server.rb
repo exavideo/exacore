@@ -198,7 +198,14 @@ class ReplayLocalControl < ShuttleProInput
     end
 
     def preview_source(source)
-        @app.preview.shot = @app.sources[source].align_shot @app.preview.shot
+        if source < @app.sources.length
+            @current_preview_source = source
+            @app.preview.shot = @app.sources[source].align_shot @app.preview.shot
+
+            # this does not take effect until the next shot is rolled
+            # so we can just do it here
+            @app.program.map_channels(@app.sources[source].channel_map)
+        end
     end
 
     def capture_event
@@ -383,7 +390,7 @@ class ReplayServer < Patchbay
     end
 
     get '/files.json' do
-        ROLLOUT_DIR = '/root/rollout'
+        ROLLOUT_DIR = '/home/rpitv/rollout'
         render :json => Dir.glob(ROLLOUT_DIR + '/*.{avi,mov,mpg}').to_json
     end
 
@@ -391,12 +398,8 @@ class ReplayServer < Patchbay
         # DANGER DANGER DANGER
         # FIXME FIXME FIXME
         # THIS IS A GLARINC SECURITY HOLE
-        p inbound_json
         filename = inbound_json["filename"]
-        cmd = "ffmpeg -i \"#{filename}\" -f rawvideo -s 1920x1080 -pix_fmt uyvy422 pipe:%v -f s16le -ac 2 -ar 48000 pipe:%a </dev/null"
-        p cmd
-        replay_app.suspend_encode
-        replay_app.program.avspipe_playout(cmd)
+        replay_app.program.lavf_playout(filename)
         render :json => ''
     end
 

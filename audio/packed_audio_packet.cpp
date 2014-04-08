@@ -78,6 +78,8 @@ PlanarAudioPacket<U> *PackedAudioPacket<T>::make_planar( ) const {
             ret->data( )[j*_samples+i] = (U) _data[i*_channels+j];
         }
     }
+
+    return ret;
 }
 
 template <class T>

@@ -122,7 +122,25 @@ void ReplayPlayout::set_source(ReplayPlayoutSource *src) {
 
 /* compatibility wrapper */
 void ReplayPlayout::roll_shot(const ReplayShot &shot) {
-    set_source(new ReplayPlayoutBufferSource(shot));
+    /* copy channel mappings to playout source */
+    ReplayPlayoutBufferSource *newsrc = new ReplayPlayoutBufferSource(shot);
+    for (ChannelMapEntry &ch : channel_map) {
+        newsrc->map_channel(ch.no, ch.buf);
+    }
+
+    set_source(newsrc);
+}
+
+void ReplayPlayout::map_channel(unsigned int ch, ReplayBuffer *buf) {
+    ChannelMapEntry newent;
+    newent.no = ch;
+    newent.buf = buf;
+    /* FIXME should first search the map for a pre-existing mapping */
+    channel_map.push_back(newent);
+}
+
+void ReplayPlayout::clear_channel_map( ) {
+    channel_map.clear( );
 }
 
 void ReplayPlayout::set_speed(int num, int denom) {

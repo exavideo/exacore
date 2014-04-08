@@ -17,35 +17,17 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REPLAY_PV_FRAME_H
-#define _REPLAY_PV_FRAME_H
+%{
+    #include "replay_audio_ingest.h"
+%}
 
-#include "serialize.h"
-#include <fftw3.h>
-
-class ReplayPvFrame : public Serializable {
+class ReplayAudioIngest : public Thread {
     public:
-        ReplayPvFrame( );
-        ReplayPvFrame(
-            const ReplayPvFrame &before, 
-            const ReplayPvFrame &after, 
-            float interp
-        );
+        ReplayAudioIngest(InputAdapter *INPUT);
+        ReplayAudioIngest(Pipe<IOAudioPacket *> *INPUT);
+        ~ReplayAudioIngest( );
 
-        ~ReplayPvFrame( );
-        void set_fft(float *data, size_t fft_size);
-        bool is_polar( ) { return format == POLAR; }
-        bool is_rect( ) { return format == RECTANGULAR; }
-        
-    protected:
-        float *src_data;
-        float *data;
-        size_t size;
-
-        void make_polar( );
-        void make_rectangular( );
-
-        enum { RECTANGULAR, POLAR } format;
+        void map_channel(unsigned int, ReplayBuffer *INPUT);
+        void start( );
 };
 
-#endif
