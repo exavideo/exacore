@@ -4,6 +4,7 @@ require 'rubygems'
 require 'patchbay'
 require 'thin'
 require 'base64'
+require 'trollop'
 
 Thin::Logging.silent = true
 
@@ -71,6 +72,17 @@ Thread.new do
 end
 
 class KeyerServer < Patchbay
+    def load_key(fn)
+        data = IO.read(fn, :mode => "rb")
+        Thread.exclusive do
+            $svgdata = data
+        end
+    end
+
+    def force_up
+        $trans_state = UP
+    end
+
     post '/key' do
         # read the postdata into template
         Thread.exclusive do
@@ -154,5 +166,17 @@ class KeyerServer < Patchbay
     self.files_dir = 'public_html'
 end
 
+opts = Trollop::options do
+    opt :port, "Port to listen on", :short => 'p', :default => 4567
+    opt :filename, "File to load initially", :short => 'f', :type => :string
+end
+
 app = KeyerServer.new
-app.run(:Host => '::', :Port => 4567)
+
+if opts[:filename]
+    STDERR.puts "loading key #{opts[:filename]}"
+    app.load_key(opts[:filename])
+    app.force_up
+end
+
+app.run(:Host => '::1', :Port => opts[:port])
