@@ -30,6 +30,8 @@ RawFrame *PngSubprocessCharacterGenerator::do_render(void *data, size_t size) {
     try {
         return RawFrame::from_png_data(data, size);
     } catch(...) {
+        fprintf(stderr, "PngSubprocessCharacterGenerator: "
+            "failed to load PNG image from data!\n");
         return NULL;
     }
 }
