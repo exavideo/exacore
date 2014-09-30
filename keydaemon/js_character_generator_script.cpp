@@ -173,6 +173,14 @@ void JsCharacterGeneratorScript::draw(
     coord_t dest_x, coord_t dest_y,
     coord_t w, coord_t h, uint8_t galpha
 ) {
+    if (w == (coord_t) -1) {
+        w = assets[asset_id]->w( );
+    }
+
+    if (h == (coord_t) -1) {
+        h = assets[asset_id]->h( );
+    }
+
     current_frame->draw->alpha_composite(
         dest_x, dest_y, 
         assets[asset_id], 
