@@ -10,12 +10,12 @@ Thin::Logging.silent = true
 class JsKeyerControl < Patchbay
     put '/script' do
         write_message(0, put_data)
-        render :json => ''
+        render :json => '{ status: \'ok\' }'
     end
 
     put '/command' do
         write_message(1, put_data)
-        render :json => ''
+        render :json => '{ status: \'ok\' }'
     end
 
 protected
