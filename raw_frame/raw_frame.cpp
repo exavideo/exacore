@@ -270,6 +270,8 @@ RawFrame *RawFrame::from_image_file(const char *file) {
         throw std::runtime_error("failed to read image file");
     }
 
+    close(fd);
+
     if (!strcasecmp(ext, ".png")) {
         ret = RawFrame::from_png_data(data, st.st_size);
     } else if (!strcasecmp(ext, ".tga")) {
