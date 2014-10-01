@@ -52,8 +52,9 @@ struct decklink_pixel_format {
 
 static struct decklink_norm norms[] = {
     /* This list is not exhaustive. */
-    { "1080i 59.94", 30000, 1001, bmdModeHD1080i5994, 1920, 1080 },
+    { "1080/59.94i", 30000, 1001, bmdModeHD1080i5994, 1920, 1080 },
     { "NTSC", 30000, 1001, bmdModeNTSC, 720, 486 },
+    { "1080/30p", 30000, 1000, bmdModeHD1080p30, 1920, 1080 },
 };
 
 static struct decklink_connection connections[] = {
