@@ -19,6 +19,7 @@
 
 #include "js_character_generator_script.h"
 #include <string.h>
+#include "posix_util.h"
 
 using namespace v8;
 
@@ -160,9 +161,16 @@ RawFrame *JsCharacterGeneratorScript::render_frame( ) {
 
 
 unsigned int JsCharacterGeneratorScript::load_asset(const char *path) {
-    RawFrame *asset = RawFrame::from_image_file(path);
-    fprintf(stderr, "JsCharacterGeneratorScript: load asset %s\n", path);
+    RawFrame *asset;
 
+    try {
+        asset = RawFrame::from_image_file(path);
+    } catch (...) {
+        fprintf(stderr, "JsCharacterGeneratorScript: load %s failed\n", path);
+        return (unsigned int) -1;
+    }
+
+    fprintf(stderr, "JsCharacterGeneratorScript: load asset %s\n", path);
     assets.push_back(asset);
     return assets.size( ) - 1;  
 }
@@ -173,6 +181,11 @@ void JsCharacterGeneratorScript::draw(
     coord_t dest_x, coord_t dest_y,
     coord_t w, coord_t h, uint8_t galpha
 ) {
+    if (asset_id == (unsigned int) -1) {
+        /* this is an asset that failed to load, so don't try drawing */
+        return;
+    }
+
     if (w == (coord_t) -1) {
         w = assets[asset_id]->w( );
     }
