@@ -38,6 +38,7 @@ class InputAdapter {
         virtual Pipe<IOAudioPacket *> *audio_output_pipe( ) { return NULL; }
         virtual ~InputAdapter( ) { }
         virtual void start( ) = 0;
+        virtual void rotate180( ) = 0;
 };
 
 

@@ -126,6 +126,7 @@ class V4L2UpscaledInputAdapter : public InputAdapter,
         virtual Pipe<RawFrame *> &output_pipe( ) { return out_pipe; }
         virtual Pipe<IOAudioPacket *> *audio_output_pipe( ) { return NULL; }
         virtual void start( ) { }
+        virtual void rotate180( ) { }
 
     private:
         V4L2UpscaledInputAdapter(const V4L2UpscaledInputAdapter &cam); 

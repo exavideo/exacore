@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, 2013 Andrew H. Armenia.
+ * Copyright 2011, 2013, 2014 Andrew H. Armenia.
  * 
  * This file is part of openreplay.
  * 
@@ -148,8 +148,42 @@ static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode,
     return RawFrame::UNKNOWN; 
 }
 
+static void flip_copy(RawFrame *dst, uint8_t *src) {
+    coord_t w, h, sline, dline, pixel;
+    size_t pitch;
+
+    w = dst->w( );
+    h = dst->h( );
+    pitch = dst->pitch( );
+
+    uint8_t *dp, *sp;
+    uint8_t y1, y2, cb, cr;
+
+    for (dline = 0, sline = h-1; dline < h; dline++, sline--) {
+        sp = src + (pitch*sline) + 2*w;
+        dp = dst->scanline(dline);
+
+        for (pixel = 0; pixel < w; pixel += 2) {
+            y2 = *(--sp);
+            cr = *(--sp);
+            y1 = *(--sp);
+            cb = *(--sp);
+
+            sp -= 4;
+
+            /* flip luma components, leave chroma as is */
+            *(dp++) = cb;
+            *(dp++) = y2;
+            *(dp++) = cr;
+            *(dp++) = y1;
+        }
+    }
+
+
+}
+
 RawFrame *create_raw_frame_from_decklink(IDeckLinkVideoFrame *frame,
-        RawFrame::PixelFormat pf) {
+        RawFrame::PixelFormat pf, bool rotate = false) {
     void *dp;
     RawFrame *ret = new RawFrame(
         frame->GetWidth( ),
@@ -161,10 +195,15 @@ RawFrame *create_raw_frame_from_decklink(IDeckLinkVideoFrame *frame,
         throw std::runtime_error("Cannot get pointer to raw data");
     }
 
-    memcpy(ret->data( ), dp, ret->size( ));
+    if (rotate) {
+        flip_copy(ret, (uint8_t *) dp);
+    } else {
+        memcpy(ret->data( ), dp, ret->size( ));
+    }
 
     return ret;
 }
+
 /* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
 class DecklinkInputRawFrame : public RawFrame {
     public:
@@ -622,6 +661,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             audio_pipe = NULL;
             started = false;
             signal_lost = false;
+            rotate = false;
             this->enable_video = enable_video;
 
             n_frames = 0;
@@ -660,6 +700,10 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         virtual void start( ) {
             started = true;
+        }
+
+        virtual void rotate180( ) {
+            rotate = true;
         }
 
         virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv) { 
@@ -720,7 +764,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                  * so if video is disabled, we just ignore the video frames...
                  */
                 if (enable_video) {
-                    out = create_raw_frame_from_decklink(in, pf);
+                    out = create_raw_frame_from_decklink(in, pf, rotate);
                     out->set_field_dominance(dominance);
                     
                     if (out_pipe.can_put( ) && started) {
@@ -796,6 +840,8 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         uint64_t n_frames;
         uint64_t start_time;
+
+        bool rotate;
 
         int avsync;
 
