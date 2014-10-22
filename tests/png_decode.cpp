@@ -21,6 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "mjpeg_codec.h"
 #include "raw_frame.h"
@@ -29,19 +32,31 @@
 #include "hex_dump.h"
 
 int main(int argc, char **argv) {
-    if (argc > 1 && strcmp(argv[1], "-n") == 0) {
-        cpu_force_no_simd( );
-    }
-    
-    /* allocate 4MB buffer */
-    const size_t bufsize = 4*1024*1024;
+    int fd;
+    struct stat st;
 
-    void *buf = malloc(bufsize);
-    ssize_t size = read_all(STDIN_FILENO, buf, bufsize);
-
-    for (int i = 0; i < 1000; i++) {
-        fprintf(stderr, "buf=%p size=%zu\n", buf, size);
-        RawFrame *frame = RawFrame::from_png_data(buf, size);
-        delete frame;
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s image.png\n", argv[0]);
+        return 1;
     }
+
+    fd = open(argv[1], O_RDONLY);
+    if (fd < 0) {
+        throw POSIXError("open png file");
+    }
+
+    if (fstat(fd, &st) != 0) {
+        throw POSIXError("stat png file");
+    }
+
+    void *buf = malloc(st.st_size);
+    if (read_all(fd, buf, st.st_size) <= 0) {
+        throw POSIXError("read png file");
+    }
+
+    close(fd);
+
+    RawFrame *frame = RawFrame::from_png_data(buf, st.st_size);
+    frame->write_tga_to_fd(STDOUT_FILENO);
+    delete frame;
 }

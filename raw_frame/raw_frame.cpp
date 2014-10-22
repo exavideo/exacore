@@ -331,11 +331,29 @@ RawFrame *RawFrame::from_png_data(void *data, size_t size) {
 
     png_set_interlace_handling(png_dec);
 
-    if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) {
-        png_set_bgr(png_dec);
-    } else {
-        throw std::runtime_error("Cannot use non-RGBA PNG");
+    if (
+        (png_info->valid & PNG_INFO_tRNS) == 0 &&
+        (color_type & PNG_COLOR_MASK_ALPHA) == 0
+    ) {
+        throw std::runtime_error("cannot deal with non-transparent PNGs yet");
     }
+
+    if ((color_type & PNG_COLOR_MASK_PALETTE) != 0) {
+        /* we have a palette, so expand to RGB */
+        png_set_expand(png_dec);
+    }
+
+    if ((color_type & PNG_COLOR_MASK_COLOR) == 0) {
+        /* convert grayscale image to RGB */
+        png_set_gray_to_rgb(png_dec);
+    }
+
+    if (png_info->valid & PNG_INFO_tRNS) {
+        /* if we have a transparent color, expand it to an alpha channel */
+        png_set_expand(png_dec);
+    } 
+
+    png_set_bgr(png_dec);
 
     out = new RawFrame(w0, h0, RawFrame::BGRAn8);
 

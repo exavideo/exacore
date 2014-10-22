@@ -65,7 +65,7 @@ private
     end
 end
 
-oadp = Replay::create_decklink_output_adapter_with_audio(0, 0, RawFrame::CbYCrY8422)
+oadp = Replay::create_decklink_output_adapter_with_audio(7, 0, RawFrame::CbYCrY8422)
 prog = ReplayPlayout.new(oadp)
 app = RolloutServer.new(prog)
 app.run(:Host => '::0', :Port => 3000)
