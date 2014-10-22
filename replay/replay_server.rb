@@ -218,6 +218,9 @@ class ReplayLocalControl < ShuttleProInput
         @event_id += 1
         @current_event.shots = @app.each_source.map { |src| src.make_shot_now }
         @app.preview.shot = @current_event.shots[@current_preview_source]
+        @app.program.map_channels(
+            @app.sources[@current_preview_source].channel_map
+        )
 
         @web_interface.send_event(@current_event)
     end
