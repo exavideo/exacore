@@ -160,7 +160,7 @@ RawFrame *JsCharacterGeneratorScript::render_frame( ) {
 }
 
 
-unsigned int JsCharacterGeneratorScript::load_asset(const char *path) {
+int JsCharacterGeneratorScript::load_asset(const char *path) {
     RawFrame *asset;
 
     try {
@@ -176,12 +176,12 @@ unsigned int JsCharacterGeneratorScript::load_asset(const char *path) {
 }
 
 void JsCharacterGeneratorScript::draw(
-    unsigned int asset_id,
+    int asset_id,
     coord_t src_x, coord_t src_y,
     coord_t dest_x, coord_t dest_y,
     coord_t w, coord_t h, uint8_t galpha
 ) {
-    if (asset_id == (unsigned int) -1) {
+    if (asset_id == -1) {
         /* this is an asset that failed to load, so don't try drawing */
         return;
     }

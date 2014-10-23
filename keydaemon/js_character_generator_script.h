@@ -31,9 +31,9 @@ class JsCharacterGeneratorScript {
 		RawFrame *render_frame( );
 		void send_message(const char *data, size_t size);
 
-		unsigned int load_asset(const char *path);
+		int load_asset(const char *path);
 		void draw(
-			unsigned int asset, coord_t src_x, coord_t src_y, 
+			int asset, coord_t src_x, coord_t src_y, 
 			coord_t dest_x, coord_t dest_y, coord_t w, coord_t h,
 			uint8_t galpha
 		);
