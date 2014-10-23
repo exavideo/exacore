@@ -5,6 +5,7 @@ require 'patchbay'
 require 'thin'
 require 'base64'
 require 'trollop'
+require 'json'
 
 Thin::Logging.silent = true
 
@@ -28,7 +29,6 @@ Thread.new do
             if dummy.nil?
                 break
             end
-
 
             # dissolve state logic
             Thread.exclusive do
@@ -76,6 +76,7 @@ class KeyerServer < Patchbay
         data = IO.read(fn, :mode => "rb")
         Thread.exclusive do
             $svgdata = data
+            $lastkey_written = data
         end
     end
 
@@ -92,6 +93,7 @@ class KeyerServer < Patchbay
                 f.write data
             end
             $svgdata = data
+            $lastkey_written = data
         end
         render :json => ''
     end
@@ -105,6 +107,7 @@ class KeyerServer < Patchbay
                 f.write data
             end
             $svgdata = data
+            $lastkey_written = data
         end
         render :json => ''
     end
@@ -116,6 +119,7 @@ class KeyerServer < Patchbay
             rawdata = Base64.decode64(md.post_match)
             Thread.exclusive do
                 $svgdata = rawdata
+                $lastkey_written = data
             end
         end
     end
@@ -130,6 +134,12 @@ class KeyerServer < Patchbay
             else
                 render :json => '', :status => 503
             end
+        end
+    end
+
+    post '/cut_in' do
+        Thread.exclusive do
+            $trans_state = UP
         end
     end
 
@@ -150,6 +160,21 @@ class KeyerServer < Patchbay
             else
                 render :json => '', :status => 503
             end
+        end
+    end
+
+    get '/state' do
+        if $trans_state == DOWN or $trans_state == OUT
+            render :json => { 'state' => 'down' }.to_json
+        else
+            render :json => { 'state' => 'up' }.to_json
+        end
+    end
+
+    get '/key' do
+        Thread.exclusive do
+            STDERR.puts "SVG data length: #{$lastkey_written.length}"
+            render :png => $lastkey_written
         end
     end
 
