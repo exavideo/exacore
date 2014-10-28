@@ -394,14 +394,18 @@ class ReplayServer < Patchbay
 
     get '/files.json' do
         ROLLOUT_DIR = '/home/rpitv/rollout'
-        render :json => Dir.glob(ROLLOUT_DIR + '/*.{avi,mov,mpg}').to_json
+        render :json => Dir.glob(ROLLOUT_DIR + '/*.{avi,mov,mpg}').sort.to_json
     end
 
     put '/ffmpeg_rollout.json' do
         # DANGER DANGER DANGER
         # FIXME FIXME FIXME
-        # THIS IS A GLARINC SECURITY HOLE
+        # THIS IS A GLARING SECURITY HOLE
         filename = inbound_json["filename"]
+
+        # take keyers down first
+        @app.disable_all_filters
+
         replay_app.program.lavf_playout(filename)
         render :json => ''
     end

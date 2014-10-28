@@ -215,6 +215,12 @@ module Replay
             @filters = []
         end
 
+        def disable_all_filters
+            @filters.each do |filter|
+                filter.disable
+            end
+        end
+
         def toggle_filter(fid)
             if fid < @filters.length
                 filter = @filters[fid]
