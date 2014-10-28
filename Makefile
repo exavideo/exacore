@@ -6,10 +6,10 @@
 
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -fPIC -std=c++11
+CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11 
 
 # don't use -Werror for swig-generated code
-SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -fPIC -std=c++11
+SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
 LDFLAGS=-g -rdynamic $(LOCAL_LDFLAGS)
 RUBY_INCLUDES=`ruby ruby_cflags.rb`
 ASM=yasm -f elf64 -g dwarf2
@@ -30,8 +30,8 @@ SUBDIR_INCLUDES = \
 	-Igraphics/ \
 	-Ireplay/ \
 	-Iavspipe/ \
-	-Idisplay_surface/ \
-	-Ikeydaemon/
+	-Ikeydaemon/ \
+	-Idisplay_surface \
 
 include $(shell find . -iname 'subdir.mk')
 include $(shell find . -iname 'targets.mk')
