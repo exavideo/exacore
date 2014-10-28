@@ -237,7 +237,8 @@ class CgFilter : public Filter<RawFrame> {
         CharacterGenerator *cg;
 };
 
-class FilterChain : public Filter<RawFrame> {
+template <class T>
+class FilterChain : public Filter<T> {
     public:
         FilterChain() {
             
@@ -247,18 +248,18 @@ class FilterChain : public Filter<RawFrame> {
             
         }
 
-        virtual void filter(RawFrame *thing) {
-            for (Filter<RawFrame> *&filt : filters) {
+        virtual void filter(T *thing) {
+            for (Filter<T> *&filt : filters) {
                 filt->filter(thing);
             }
         }
 
-        void add_filter(Filter<RawFrame> *filt) {
+        void add_filter(Filter<T> *filt) {
             filters.push_back(filt);
         }
 
     protected:
-        std::vector<Filter<RawFrame> *> filters;
+        std::vector<Filter<T> *> filters;
 };
 
 template <class SendableThing>
@@ -355,6 +356,30 @@ class CompressorThread : public SenderThread<RawFrame> {
         Mjpeg422Encoder enc;
 };
 
+/* Filter to mix together all audio channels to mono. */
+class MixdownFilter : public Filter<IOAudioPacket> {
+    public:
+        void filter(IOAudioPacket *pkt) {
+            int32_t sum; 
+            int16_t *sample_ptr = pkt->data( );
+        
+            for (size_t i = 0; i < pkt->size_samples( ); i++) {
+                sum = 0;
+                for (size_t j = 0; j < pkt->channels( ); j++) {
+                    sum += sample_ptr[j];
+                }
+
+                sum /= pkt->channels( );
+        
+                for (size_t j = 0; j < pkt->channels( ); j++) {
+                    sample_ptr[j] = sum;
+                }
+        
+                sample_ptr += pkt->channels( );
+            }
+        }
+};
+
 void usage(const char *argv0) {
     fprintf(stderr, "usage: %s [-c n] [-f] 'command'\n", argv0);
     fprintf(stderr, "-c n: use card 'n'\n");
@@ -378,8 +403,8 @@ int main(int argc, char * const *argv) {
     coord_t x = 0, y = 0;
 
     Pipe<IOAudioPacket *> *apipe;
-    //Filter<RawFrame> *filter = NULL;
-    FilterChain filter_chain;
+    FilterChain<RawFrame> filter_chain;
+    FilterChain<IOAudioPacket> audio_filter_chain;
 
     static struct option options[] = {
         { "card", 1, 0, 'c' },
@@ -400,10 +425,14 @@ int main(int argc, char * const *argv) {
     bool preview = false;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "pjfc:b:q:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "pmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
                 preroll = 1;
+                break;
+
+            case 'm':
+                audio_filter_chain.add_filter(new MixdownFilter);
                 break;
 
             case 'c':
@@ -474,9 +503,6 @@ int main(int argc, char * const *argv) {
     }
 
 
-
-    
-
     iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
             RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
@@ -510,7 +536,8 @@ int main(int argc, char * const *argv) {
 
     asthread = new SenderThread<IOAudioPacket>(
         apipe, apfd, 
-        NULL, preview_out ? preview_out->audio_input_pipe() : NULL
+        &audio_filter_chain, 
+        preview_out ? preview_out->audio_input_pipe() : NULL
     );
 
     /* set up some preroll frames if requested */
