@@ -159,6 +159,8 @@ BlockSet::BlockData &BlockSet::find_block(const char *label) {
             return blk;
         }
     }
+
+    fprintf(stderr, "Block %s not found\n", label);
     
     /* throw BlockNotFoundError? */
     throw std::runtime_error("Block not found");
