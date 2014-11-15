@@ -194,6 +194,7 @@ end
 opts = Trollop::options do
     opt :port, "Port to listen on", :short => 'p', :default => 4567
     opt :filename, "File to load initially", :short => 'f', :type => :string
+    opt :dirty, "Initial dirty level", :short => 'd', :default => 0
 end
 
 app = KeyerServer.new
@@ -202,6 +203,10 @@ if opts[:filename]
     STDERR.puts "loading key #{opts[:filename]}"
     app.load_key(opts[:filename])
     app.force_up
+end
+
+if opts[:dirty]
+    $dirty_level = opts[:dirty]
 end
 
 app.run(:Host => '::1', :Port => opts[:port])

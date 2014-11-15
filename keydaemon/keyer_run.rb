@@ -23,7 +23,7 @@ keyer.cg scbd
 
 
 graphics = PngSubprocessCharacterGenerator.new(
-    'cd ../svg_http_keyer; ruby svg_http_keyer.rb'
+    'cd ../svg_http_keyer; ruby svg_http_keyer.rb -d 1'
 )
 graphics.set_x 0
 graphics.set_y 0
