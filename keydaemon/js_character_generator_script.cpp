@@ -247,6 +247,6 @@ unsigned int JsCharacterGeneratorScript::dirty_level( ) {
         return 0;   /* default dirty level if none defined */
     }
 #else
-    return 0;
+    return 1;
 #endif
 }
