@@ -25,6 +25,8 @@
 #include "thread.h"
 #include "xmalloc.h"
 #include "mjpeg_codec.h"
+#include "svg_subprocess_character_generator.h"
+#include "png_subprocess_character_generator.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -214,23 +216,90 @@ class BugFilter : public Filter<RawFrame> {
         RawFrame *svgframe;
 };
 
+class CgFilter : public Filter<RawFrame> {
+    public:
+        CgFilter(CharacterGenerator *cg) {
+            this->cg = cg;
+        }
+
+        virtual void filter(RawFrame *thing) {
+            RawFrame *key = cg->output_pipe( ).get( );
+
+            if (key != NULL) {
+                thing->draw->alpha_key(cg->x( ), cg->y( ), 
+                    key, key->global_alpha( ));
+
+                delete key;
+            }
+        }   
+
+    protected:
+        CharacterGenerator *cg;
+};
+
+template <class T>
+class FilterChain : public Filter<T> {
+    public:
+        FilterChain() {
+            
+        }
+
+        ~FilterChain() {
+            
+        }
+
+        virtual void filter(T *thing) {
+            for (Filter<T> *&filt : filters) {
+                filt->filter(thing);
+            }
+        }
+
+        void add_filter(Filter<T> *filt) {
+            filters.push_back(filt);
+        }
+
+    protected:
+        std::vector<Filter<T> *> filters;
+};
 
 template <class SendableThing>
 class SenderThread : public Thread {
     public:
         SenderThread(Pipe<SendableThing *> *fpipe, int out_fd, 
-                Filter<SendableThing> *filt = NULL) {
+            Filter<SendableThing> *filt = NULL, 
+		    Pipe<SendableThing *> *ppipe = NULL
+	    ) {
             assert(fpipe != NULL);
             assert(out_fd >= 0);
 
             _fpipe = fpipe;
+            _ppipe = ppipe;
             _out_fd = out_fd;
             _filter = filt;
+
+            _preroll_obj = NULL;
+            _preroll_frames = 0;
+        }
+
+        void start( ) {
             start_thread( );
         }
+
+        void set_preroll(SendableThing *preroll_obj, int preroll_frames) {
+            _preroll_obj = preroll_obj;
+            _preroll_frames = preroll_frames;
+        }
+
     protected:
         void run_thread(void) {
             SendableThing *thing;
+
+            while (_preroll_frames > 0) {
+                fprintf(stderr, "preroll: %d\n", _preroll_frames);
+                _preroll_obj->write_to_fd(_out_fd);
+                _preroll_frames--;
+            }
+
             for (;;) {
                 thing = _fpipe->get( );
 
@@ -238,18 +307,26 @@ class SenderThread : public Thread {
                     _filter->filter(thing);
                 }
 
+
                 if (thing->write_to_fd(_out_fd) <= 0) {
                     fprintf(stderr, "write failed or pipe broken\n");
                     break;
                 }
 
-                delete thing;
+		if (_ppipe) {
+			_ppipe->put(thing);
+		} else {
+			delete thing;
+		}
             }
         }
 
         Pipe<SendableThing *> *_fpipe;
+        Pipe<SendableThing *> *_ppipe;
         int _out_fd;
         Filter<SendableThing> *_filter;
+        SendableThing *_preroll_obj;
+        int _preroll_frames;
 };
 
 class CompressorThread : public SenderThread<RawFrame> {
@@ -279,12 +356,37 @@ class CompressorThread : public SenderThread<RawFrame> {
         Mjpeg422Encoder enc;
 };
 
+/* Filter to mix together all audio channels to mono. */
+class MixdownFilter : public Filter<IOAudioPacket> {
+    public:
+        void filter(IOAudioPacket *pkt) {
+            int32_t sum; 
+            int16_t *sample_ptr = pkt->data( );
+        
+            for (size_t i = 0; i < pkt->size_samples( ); i++) {
+                sum = 0;
+                for (size_t j = 0; j < pkt->channels( ); j++) {
+                    sum += sample_ptr[j];
+                }
+
+                sum /= pkt->channels( );
+        
+                for (size_t j = 0; j < pkt->channels( ); j++) {
+                    sample_ptr[j] = sum;
+                }
+        
+                sample_ptr += pkt->channels( );
+            }
+        }
+};
+
 void usage(const char *argv0) {
     fprintf(stderr, "usage: %s [-c n] [-f] 'command'\n", argv0);
     fprintf(stderr, "-c n: use card 'n'\n");
     fprintf(stderr, "-f: enable ffmpeg streaming hack\n");
     fprintf(stderr, "-j: output M-JPEG instead of raw video\n");
     fprintf(stderr, "-q [0-100]: M-JPEG quality scale\n");
+    fprintf(stderr, "-p: preview out to DeckLink\n");
     fprintf(stderr, "--channels n: record n audio channels (default 2)\n");
     fprintf(stderr, "in 'command':\n");
     fprintf(stderr, "%%a = audio pipe fd\n");
@@ -293,31 +395,44 @@ void usage(const char *argv0) {
 
 int main(int argc, char * const *argv) {
     InputAdapter *iadp;
+    OutputAdapter *preview_out = NULL;
+
     int vpfd, apfd, opt;
     pid_t child;
-    const char *bugfile = NULL;
+    CharacterGenerator *cg;
+    coord_t x = 0, y = 0;
 
     Pipe<IOAudioPacket *> *apipe;
-    BugFilter *bugfilter = NULL;
+    FilterChain<RawFrame> filter_chain;
+    FilterChain<IOAudioPacket> audio_filter_chain;
 
     static struct option options[] = {
         { "card", 1, 0, 'c' },
         { "bug", 1, 0, 'b' },
         { "channels", 1, 0, 'C' },
+        { "svg-cg", 1, 0, 's' },
+        { "png-cg", 1, 0, 'P' },
+        { "cg-x", 1, 0, 'x' },
+        { "cg-y", 1, 0, 'y' },
         { 0, 0, 0, 0 }
     };
 
     int card = 0;
-    int ffmpeg_hack = 0;
+    int preroll = 0;
     int audio_channels = 2;
     int jpeg = 0;
     int quality = 80;
+    bool preview = false;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "jfc:b:q:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "pmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
-                ffmpeg_hack = 1;
+                preroll = 1;
+                break;
+
+            case 'm':
+                audio_filter_chain.add_filter(new MixdownFilter);
                 break;
 
             case 'c':
@@ -325,7 +440,7 @@ int main(int argc, char * const *argv) {
                 break;
 
             case 'b':
-                bugfile = optarg;
+                filter_chain.add_filter(new BugFilter(optarg));
                 break;
 
             case 'C':
@@ -342,6 +457,32 @@ int main(int argc, char * const *argv) {
                     usage(argv[0]);
                     exit(1);
                 }
+                break;
+
+            case 's':
+                cg = new SvgSubprocessCharacterGenerator(optarg);
+                cg->set_x(x);
+                cg->set_y(y);
+                filter_chain.add_filter(new CgFilter(cg));
+                break;
+
+            case 'P':
+                cg = new PngSubprocessCharacterGenerator(optarg);
+                cg->set_x(x);
+                cg->set_y(y);
+                filter_chain.add_filter(new CgFilter(cg));
+                break;
+
+            case 'x':
+                x = atoi(optarg);
+                break;
+
+            case 'y':
+                y = atoi(optarg);
+                break;
+
+            case 'p':
+                preview = true;
                 break;
 
             default:
@@ -361,37 +502,56 @@ int main(int argc, char * const *argv) {
         return 1;
     }
 
-    /* bogus ffmpeg workaround (i.e. writing filler to the pipes) goes here */
-    /* (It may be unnecessary with an audio stream?) */
-    if (ffmpeg_hack) {
-        RawFrame *empty = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-        IOAudioPacket *dummy_audio = new IOAudioPacket(1601, 2);
-
-        for (int i = 0; i < 2; i++) {
-            empty->write_to_fd(vpfd);
-            dummy_audio->write_to_fd(apfd);
-        }
-    }
 
     iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
             RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
 
-    if (bugfile) {
-        bugfilter = new BugFilter(bugfile);
+    if (preview) {
+        preview_out = create_decklink_output_adapter_with_audio(2, 0, RawFrame::CbYCrY8422, audio_channels);
     }
 
+    SenderThread<RawFrame> *vsthread;
+    SenderThread<IOAudioPacket> *asthread;
     /* start video and audio sender threads */
     if (jpeg) {
-        new CompressorThread(
+        vsthread = new CompressorThread(
             &(iadp->output_pipe( )), vpfd, 
-            bugfilter, quality
+            &filter_chain, quality
         );
     } else {
-        new SenderThread<RawFrame>(&(iadp->output_pipe( )), vpfd, bugfilter);
+        if (preview_out) {
+            vsthread = new SenderThread<RawFrame>(
+                &(iadp->output_pipe( )), vpfd, 
+                &filter_chain, 
+                &(preview_out->input_pipe( ))
+            );
+        } else {
+            vsthread = new SenderThread<RawFrame>(
+                &(iadp->output_pipe( )), vpfd, 
+                &filter_chain
+            );
+        }
     }
 
-    SenderThread<IOAudioPacket> asthread(apipe, apfd);
+    asthread = new SenderThread<IOAudioPacket>(
+        apipe, apfd, 
+        &audio_filter_chain, 
+        preview_out ? preview_out->audio_input_pipe() : NULL
+    );
+
+    /* set up some preroll frames if requested */
+    if (preroll) {
+        RawFrame *preroll_frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
+        IOAudioPacket *preroll_audio = new IOAudioPacket(1601, audio_channels);
+
+        vsthread->set_preroll(preroll_frame, 600);
+        asthread->set_preroll(preroll_audio, 600);
+    }
+
+    asthread->start( );
+    vsthread->start( );
+
     iadp->start( );
 
     /* wait on child process */

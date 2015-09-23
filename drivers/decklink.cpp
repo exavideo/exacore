@@ -28,7 +28,7 @@
 #include <string.h>
 #include <time.h> // debug
 
-#define IN_PIPE_SIZE 256
+#define IN_PIPE_SIZE 8
 #define OUT_PIPE_SIZE 4
 
 struct decklink_norm {
@@ -667,6 +667,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             n_frames = 0;
             start_time = 0;
             avsync = 0;
+            drop_audio = 0;
 
             pf = pf_;
             bpf = convert_pf(pf_);
@@ -774,6 +775,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                         }
                     } else {
                         fprintf(stderr, "DeckLink: dropping input frame\n");
+                        drop_audio++;
                         delete out;
                     }
                 }
@@ -792,7 +794,11 @@ class DeckLinkInputAdapter : public InputAdapter,
                 }
 
                 memcpy(audio_out->data( ), data, audio_out->size_bytes( ));
-                if (audio_pipe->can_put( ) && started) {
+                if (drop_audio > 0) {
+                    fprintf(stderr, "DeckLink: dropping some audio to get back in sync\n");
+                    delete audio_out;
+                    drop_audio--;
+                } else if (audio_pipe->can_put( ) && started) {
                     audio_pipe->put(audio_out);
                     avsync--;
                 } else {
@@ -844,6 +850,7 @@ class DeckLinkInputAdapter : public InputAdapter,
         bool rotate;
 
         int avsync;
+        unsigned int drop_audio;
 
         Pipe<IOAudioPacket *> *audio_pipe;
 
