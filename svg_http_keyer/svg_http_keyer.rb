@@ -209,4 +209,4 @@ if opts[:dirty]
     $dirty_level = opts[:dirty]
 end
 
-app.run(:Host => '::1', :Port => opts[:port])
+app.run(:Host => 'localhost', :Port => opts[:port])

@@ -34,5 +34,5 @@ protected
 end
 
 app = JsKeyerControl.new
-app.run(:Host => '::1', :Port => 3004)
+app.run(:Host => 'localhost', :Port => 3004)
 
