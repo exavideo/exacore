@@ -61,6 +61,11 @@ ReplayPlayoutLavfSource::ReplayPlayoutLavfSource(const char *filename) :
 {
 	ensure_registered( );
 	
+    audio_frame = av_frame_alloc();
+    if (!audio_frame) {
+        throw std::runtime_error("av_frame_alloc failed");
+    }
+
     // Try to open file
     if (avformat_open_input(&format_ctx, filename, NULL, NULL) != 0) {
         throw std::runtime_error("avformat_open_input failed");
@@ -179,7 +184,7 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
             avcodec_decode_video2(video_codecctx, lavc_frame, 
                     &frame_finished, &packet);
         } else if (packet.stream_index == audio_stream) {
-            avcodec_decode_audio4(audio_codecctx, &audio_frame, 
+            avcodec_decode_audio4(audio_codecctx, audio_frame, 
                     &audio_finished, &packet);
         }
 
@@ -239,17 +244,17 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
 
         if (audio_codecctx->channels != 2) {
             PackedAudioPacket<int16_t> apkt(    
-                audio_frame.nb_samples, 
+                audio_frame->nb_samples, 
                 audio_codecctx->channels
             );    
-            memcpy(apkt.data( ), audio_frame.data[0], apkt.size_bytes( ));
+            memcpy(apkt.data( ), audio_frame->data[0], apkt.size_bytes( ));
             PackedAudioPacket<int16_t> *twoch = apkt.change_channels(2);
             pending_audio.add_packet(twoch);
             delete twoch;
         } else {
             pending_audio.add_packed_samples(
-                (int16_t *)audio_frame.data[0],
-                audio_frame.nb_samples
+                (int16_t *)audio_frame->data[0],
+                audio_frame->nb_samples
             );
         }
 

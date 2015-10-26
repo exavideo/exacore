@@ -60,7 +60,7 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
 
         AVCodecContext *audio_codecctx;
         AVCodec *audio_codec;
-        AVFrame audio_frame;
+        AVFrame *audio_frame;
 
         timecode_t n_frames;
         AudioFIFO<int16_t> pending_audio;
