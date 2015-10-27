@@ -29,6 +29,7 @@ class ReplayPlayoutBarsSource : public ReplayPlayoutSource {
         ~ReplayPlayoutBarsSource( );
 
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
+        void set_frame(RawFrame *new_frame);
         timecode_t duration( );
         timecode_t position( );
 
