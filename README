@@ -1,5 +1,23 @@
-apt-get install build-essential librsvg2-dev libcairo2-dev libfreetype6-dev yasm libjpeg8-dev swig
+Install some dependencies:
+apt-get install build-essential librsvg2-dev libcairo2-dev \
+libfreetype6-dev yasm libjpeg62-turbo-dev swig 
+
+Be sure FFmpeg is installed, preferably from source.
 
 Install rvm; rvm install 1.9.2; rvm --default use 1.9.2
 
-Install libjpeg_turbo!
+Install libjpeg_turbo! libjpeg62-dev on Debian jessie is libjpeg-turbo as of 12/2/2015.
+
+Quick start guide to make up for very incomplete documentation:
+make replay/replay.so input/input.so
+cd replay
+
+mv replay_config.rb.example replay_config.rb
+vim replay_config.rb	# set up your sources
+
+vim replay_server.rb	# search for create_decklink_output_adapter, change 7
+			# to the card number you want to use for output
+
+ruby replay_server.rb	# make sure your ShuttlePRO controller is plugged in;
+			# also make sure your console is at 1920x1080
+

@@ -1,0 +1,43 @@
+configure do |app|
+	# Set up some cameras.
+	# create_decklink_input_adapter(card_number, format, input, pixel_format)
+	#
+	# valid formats:
+	# 0 = 1080i 59.94
+	# 1 = 480i NTSC
+	# 2 = 1080p 30.00
+	#
+	# valid inputs:
+	#
+	# 0 = copper SDI
+	# 1 = fiber SDI
+	# 2 = HDMI
+	# 3 = analog component
+	# 4 = S-Video
+	# 5 = composite
+	#
+	# once the input is open, add to the replay app
+
+	# four 1080i 59.94 cameras (on DeckLink cards 0 through 3)
+	iadp = Replay::create_decklink_input_adapter(0, 0, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam1', :name => 'CAM 1')
+
+	iadp = Replay::create_decklink_input_adapter(1, 0, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam2', :name => 'CAM 2')
+
+	iadp = Replay::create_decklink_input_adapter(2, 0, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam3', :name => 'CAM 3')
+
+	iadp = Replay::create_decklink_input_adapter(3, 0, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam4', :name => 'CAM 4')
+
+	# and 2 1080p30 cameras (on cards 4 and 5)
+	iadp = Replay::create_decklink_input_adapter(4, 2, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam5', :name => 'Overhead E')
+
+	iadp = Replay::create_decklink_input_adapter(5, 2, 0, Replay::RawFrame::CbYCrY8422)
+	app.add_source(:input => iadp, :file => '/mnt/buffer/cam6', :name => 'Overhead W')
+
+	# Add a downstream key.
+	app.add_png_file_dsk('/path/to/replay_graphic.png', 0, 0)
+end
