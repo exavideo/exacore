@@ -31,7 +31,9 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <poll.h>
 
+#define TIMEOUT_MS 30000
 #define PARSE_BUF_SIZE 1048576
 
 class H264TcpInputAdapter : public InputAdapter {
@@ -214,6 +216,7 @@ void H264TcpInputAdapter::worker_proc( ) {
     size_t last_start = 0;
     size_t bytes_in_buf = 0;
     size_t buf_scanned = 0;
+    struct pollfd pfd;
 
     buf = new uint8_t[PARSE_BUF_SIZE];
 
@@ -227,6 +230,22 @@ void H264TcpInputAdapter::worker_proc( ) {
             }
 
             fprintf(stderr, "socket open (%s:%s)\n", _host.c_str(), _port.c_str());
+        }
+
+        /* poll the socket so we have a defined timeout on the read */
+        pfd.fd = sockfd;
+        pfd.events = POLLIN;
+        retval = poll(&pfd, 1, TIMEOUT_MS);
+        if (retval < 0) {
+            perror("poll");
+            close(sockfd);
+            sockfd = -1;
+            continue;
+        } else if (retval == 0) {
+            fprintf(stderr, "timed out reading from socket\n");
+            close(sockfd);
+            sockfd = -1;
+            continue;
         }
 
         /* fill the buffer from the socket */
