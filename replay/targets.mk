@@ -10,6 +10,7 @@ replay_replay_test_OBJECTS = \
 	$(mjpeg_OBJECTS) \
 	$(raw_frame_OBJECTS) \
     $(drivers_decklink_OBJECTS) \
+    $(drivers_h264_tcp_input_OBJECTS) \
     $(thread_OBJECTS) \
     $(display_surface_OBJECTS) \
     $(graphics_OBJECTS) \
@@ -27,6 +28,7 @@ replay_base_OBJECTS = \
 	$(thread_OBJECTS) \
 	$(display_surface_OBJECTS) \
 	$(drivers_decklink_OBJECTS) \
+	$(drivers_h264_tcp_input_OBJECTS) \
 	$(drivers_v4l2_OBJECTS) \
 	$(graphics_OBJECTS) \
 	$(avspipe_OBJECTS) \
