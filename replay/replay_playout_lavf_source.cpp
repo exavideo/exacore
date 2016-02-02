@@ -136,6 +136,16 @@ void ReplayPlayoutLavfSource::ensure_registered( ) {
     }
 }
 
+void ReplayPlayoutLavfSource::seek(int64_t usec) {
+	int ret;
+
+	ret = av_seek_frame(format_ctx, -1, usec, 0);
+
+	if (ret < 0) {
+		fprintf(stderr, "av_seek_frame() failed!\n");
+	}
+}
+
 void ReplayPlayoutLavfSource::read_frame(
         ReplayPlayoutFrame &frame_data, 
         Rational speed

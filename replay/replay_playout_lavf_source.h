@@ -39,6 +39,9 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
         ReplayPlayoutLavfSource(const char *filename);
         ~ReplayPlayoutLavfSource( );
 
+        /* dirty hack job to test out seeking */
+        void seek(int64_t usec);
+
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
         static timecode_t get_file_duration(const char *filename);
         timecode_t position( );

@@ -51,6 +51,7 @@ replay_base_OBJECTS = \
 	replay/replay_playout_lavf_source.o \
 	replay/replay_playout_queue_source.o \
 	replay/replay_playout_image_filter.o \
+	replay/rollout_preview.o \
 
 replay_replay_so_OBJECTS = \
 	$(replay_base_OBJECTS) \

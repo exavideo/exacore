@@ -91,6 +91,7 @@ class ReplayPlayout : public Thread {
          * Roll out file using libavformat.
          */
         void lavf_playout(const char *cmd);
+        void lavf_playout(const char *cmd, int64_t offset);
         /*
          * Roll out list of files.
          */

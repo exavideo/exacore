@@ -179,6 +179,12 @@ void ReplayPlayout::lavf_playout(const char *file) {
     set_source(new ReplayPlayoutLavfSource(file));
 }
 
+void ReplayPlayout::lavf_playout(const char *file, int64_t seek) {
+    ReplayPlayoutLavfSource *src = new ReplayPlayoutLavfSource(file);
+    src->seek(seek);
+    set_source(src);
+}
+
 void ReplayPlayout::lavf_playout_list(const StringList &files) {
     ReplayPlayoutQueueSource::SourceQueue sources;
     for (auto i = files.begin(); i != files.end(); i++) {
