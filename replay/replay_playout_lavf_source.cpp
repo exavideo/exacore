@@ -108,7 +108,7 @@ ReplayPlayoutLavfSource::ReplayPlayoutLavfSource(const char *filename) :
         throw std::runtime_error("failed to open codec!");
     }
 
-    lavc_frame = avcodec_alloc_frame();    
+    lavc_frame = av_frame_alloc();    
 
     // try to find and open audio codec
     audio_codecctx = format_ctx->streams[audio_stream]->codec;
