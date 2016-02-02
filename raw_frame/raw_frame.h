@@ -140,6 +140,7 @@ class RawFramePacker {
         RawFramePacker(RawFrame *f_) : f(f_) {
             do_YCbCr8P422 = NULL;
             do_YCbCr8P422A = NULL;
+            do_YCbCr10P422A = NULL;
         }
 
         void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
@@ -152,6 +153,18 @@ class RawFramePacker {
             CHECK(do_YCbCr8P422A);
             do_YCbCr8P422A(
                 f->w( ), f->h( ), 
+                Ysrcpitch, Cbsrcpitch, Crsrcpitch,
+                Y, Cb, Cr, f->data( )
+            );
+        }
+
+        void YCbCr10P422(
+            uint16_t *Y, uint16_t *Cb, uint16_t *Cr,
+            size_t Ysrcpitch, size_t Cbsrcpitch, size_t Crsrcpitch) {
+
+            CHECK(do_YCbCr10P422A);
+            do_YCbCr10P422A(
+                f->w( ), f->h( ),
                 Ysrcpitch, Cbsrcpitch, Crsrcpitch,
                 Y, Cb, Cr, f->data( )
             );
@@ -181,6 +194,9 @@ class RawFramePacker {
 
         void (*do_YCbCr8P422A)(size_t, size_t, size_t, size_t, size_t,
             uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+
+        void (*do_YCbCr10P422A)(size_t, size_t, size_t, size_t, size_t,
+            uint16_t *, uint16_t *, uint16_t *, uint8_t *);
 
         void (*do_YCbCr8P420A)(size_t, size_t, size_t, size_t, size_t,
             uint8_t *, uint8_t *, uint8_t *, uint8_t *);

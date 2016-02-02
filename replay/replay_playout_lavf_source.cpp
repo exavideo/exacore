@@ -242,6 +242,17 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
                 memcpy(fr->data( ), lavc_frame->data[0], fr->size( ));
                 break;
 
+            case AV_PIX_FMT_YUV422P10LE:
+                fr->pack->YCbCr10P422(
+                    (uint16_t *)lavc_frame->data[0],
+                    (uint16_t *)lavc_frame->data[1],
+                    (uint16_t *)lavc_frame->data[2],
+                    lavc_frame->linesize[0] / 2,
+                    lavc_frame->linesize[1] / 2,
+                    lavc_frame->linesize[2] / 2
+                );
+                break;
+
             case AV_PIX_FMT_YUV420P:
                 fr->pack->YCbCr8P420(
                     lavc_frame->data[0],

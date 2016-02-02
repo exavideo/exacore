@@ -29,6 +29,9 @@ void YCbCr8P422_CbYCrY8422_default(size_t, uint8_t *, uint8_t *,
 void YCbCr8P422_CbYCrY8422_A_default(size_t, size_t, size_t, size_t, size_t, 
         uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 
+void YCbCr10P422_CbYCrY8422_A_default(size_t, size_t, size_t, size_t, size_t,
+        uint16_t *, uint16_t *, uint16_t *, uint8_t *);
+
 void YCbCr8P420_CbYCrY8422_A_default(size_t, size_t, size_t, size_t, size_t,
     uint8_t *, uint8_t *, uint8_t *, uint8_t *);
 
@@ -49,6 +52,7 @@ class CbYCrY8422Packer : public RawFramePacker {
                 do_YCbCr8P422 = YCbCr8P422_CbYCrY8422_default;
             }
             do_YCbCr8P422A = YCbCr8P422_CbYCrY8422_A_default;
+            do_YCbCr10P422A = YCbCr10P422_CbYCrY8422_A_default;
             do_YCbCr8P420A = YCbCr8P420_CbYCrY8422_A_default;
         }
 };

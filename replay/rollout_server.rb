@@ -13,11 +13,11 @@ class RolloutServer < Patchbay
     end
 
     get '/files.json' do
-        render :json => Dir.glob(@ROLLOUT_DIR + '/*.{avi,mov,mpg,mp4}').to_json
+        render :json => Dir.glob(@ROLLOUT_DIR + '/*.{avi,mov,mpg,mp4,mxf}').to_json
     end
 
     get '/fileinfo.json' do
-        filelist = Dir.glob(@ROLLOUT_DIR + '/*.{avi,mov,mpg,mp4}')
+        filelist = Dir.glob(@ROLLOUT_DIR + '/*.{avi,mov,mpg,mp4,mxf}')
         result = filelist.map do |f|
             get_file_data(f)
         end
