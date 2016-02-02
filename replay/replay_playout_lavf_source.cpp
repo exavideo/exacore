@@ -169,6 +169,26 @@ void ReplayPlayoutLavfSource::read_frame(
     n_frames++;
 }
 
+static void copy_fltp(
+    AVFrame &audio_frame, 
+    PackedAudioPacket<int16_t> &apkt
+) {
+    int16_t *d;
+    float *s;
+    int ch = apkt.channels( );
+    int ns = apkt.size_samples( );
+
+    for (int i = 0; i < ch; i++) {
+        d = apkt.data( ) + i;
+        s = (float *)(audio_frame.data[i]);
+        for (int j = 0; j < ns; j++) {
+            *d = (int16_t)(*s * 32767.0);
+            d += ch;
+            s ++;
+        }
+    }
+}
+
 int ReplayPlayoutLavfSource::run_lavc( ) {
     AVPacket packet;
     int frame_finished = 0;
@@ -233,29 +253,31 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
         pending_video_frames.push_back(fr);
         return 1;
     } else if (audio_finished) {
-        /* audio sanity checks */
-        if (audio_codecctx->sample_fmt != AV_SAMPLE_FMT_S16) {
+        PackedAudioPacket<int16_t> apkt(
+            audio_frame.nb_samples,
+            audio_codecctx->channels
+        );
+
+        if (audio_codecctx->sample_fmt == AV_SAMPLE_FMT_S16) {
+            memcpy(apkt.data( ), audio_frame.data[0], apkt.size_bytes( ));
+        } else if (audio_codecctx->sample_fmt == AV_SAMPLE_FMT_FLTP) {
+            /* convert planar float (from AAC) to signed 16-bit */
+            copy_fltp(audio_frame, apkt);
+        } else {
+            fprintf(stderr, "sample_fmt=%d\n", audio_codecctx->sample_fmt);
             throw std::runtime_error("don't understand sample format");
         }
-
         if (audio_codecctx->sample_rate != 48000) {
             throw std::runtime_error("need 48khz");
         }
 
         if (audio_codecctx->channels != 2) {
-            PackedAudioPacket<int16_t> apkt(    
-                audio_frame->nb_samples, 
-                audio_codecctx->channels
-            );    
-            memcpy(apkt.data( ), audio_frame->data[0], apkt.size_bytes( ));
+            /* mix down to 2 channels if needed */
             PackedAudioPacket<int16_t> *twoch = apkt.change_channels(2);
             pending_audio.add_packet(twoch);
             delete twoch;
         } else {
-            pending_audio.add_packed_samples(
-                (int16_t *)audio_frame->data[0],
-                audio_frame->nb_samples
-            );
+            pending_audio.add_packet(&apkt);
         }
 
         return 1;
