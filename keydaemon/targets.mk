@@ -1,5 +1,6 @@
 keydaemon_keyer_so_OBJECTS = \
 	$(common_OBJECTS) \
+	$(ipc_OBJECTS) \
 	$(raw_frame_OBJECTS) \
 	$(thread_OBJECTS) \
 	$(drivers_decklink_OBJECTS) \
