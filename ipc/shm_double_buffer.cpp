@@ -53,29 +53,51 @@ ShmDoubleBuffer::ShmDoubleBuffer(size_t object_size) {
 	init(object_size);
 }
 
-void ShmDoubleBuffer::begin_read(const void *&buf) {
-	assert(shared_state != NULL);
-	assert(fd != -1);
-
+int ShmDoubleBuffer::try_flip() {
 	/* 
 	 * in the critical section, we determine which buffer to read, and
 	 * do a page flip if possible.
 	 */
 	int bufn;
+	bool flipped = false;
+	int tries = 0;
+	while (!flipped && tries < 10) {
+		lock( );
+		assert(
+			shared_state->producer_buf == 0 || 
+			shared_state->producer_buf == 1
+		);
+		if (shared_state->ok_to_flip) {
+			bufn = shared_state->producer_buf;
+			shared_state->producer_buf = 1 - bufn;
+			shared_state->ok_to_flip = false;
+			flipped = true;
+		} else {
+			bufn = 1 - shared_state->producer_buf;
+			flipped = false;
+		}
+		unlock( );
 
-	lock( );
-	assert(
-		shared_state->producer_buf == 0 || 
-		shared_state->producer_buf == 1
-	);
-	if (shared_state->ok_to_flip) {
-		bufn = shared_state->producer_buf;
-		shared_state->producer_buf = 1 - bufn;
-		shared_state->ok_to_flip = false;
-	} else {
-		bufn = 1 - shared_state->producer_buf;
+		usleep(500);
+		tries++;
 	}
-	unlock( );
+	
+	if (tries > 1 && flipped) {
+		fprintf(stderr, "took %d tries to flip\n", tries);
+	}
+
+	if (flipped == false) {
+		fprintf(stderr, "Didn't flip\n");
+	}
+
+	return bufn;
+}
+
+void ShmDoubleBuffer::begin_read(const void *&buf) {
+	assert(shared_state != NULL);
+	assert(fd != -1);
+	
+	int bufn = try_flip();
 
 	buf = buffers[bufn];
 	assert(buf != NULL);

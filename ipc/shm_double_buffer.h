@@ -88,6 +88,7 @@ class ShmDoubleBuffer {
 		void init(size_t bufsize);
 		void map_state();
 		void map_buffers();
+		int try_flip();
 };
 
 #endif
