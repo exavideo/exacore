@@ -14,7 +14,7 @@ OUT = 2
 UP = 3
 DOWN = 4
 
-$svgdata = ''
+$data = ''
 $trans_i = 0
 $trans_nframes = 0
 $trans_state = DOWN
@@ -32,7 +32,7 @@ Thread.new do
 
             # dissolve state logic
             Thread.exclusive do
-                size = [ $svgdata.length ].pack('L')
+                size = [ $data.length ].pack('L')
                 alpha = 0
 
                 if $trans_state == UP
@@ -58,10 +58,10 @@ Thread.new do
 
                 STDOUT.write(size)
                 STDOUT.write(alphastr)
-                STDOUT.write($svgdata)
+                STDOUT.write($data)
                 STDOUT.flush
 
-                $svgdata = ''
+                $data = ''
             end
 
         end
@@ -75,7 +75,7 @@ class KeyerServer < Patchbay
     def load_key(fn)
         data = IO.read(fn, :mode => "rb")
         Thread.exclusive do
-            $svgdata = data
+            $data = data
             $lastkey_written = data
         end
     end
@@ -89,10 +89,10 @@ class KeyerServer < Patchbay
         Thread.exclusive do
             data = incoming_data
             STDERR.puts "new key was written #{data.length}"
-            File.open('/tmp/lastkey.svg', 'wb') do |f|
+            File.open('/tmp/lastkey.dat', 'wb') do |f|
                 f.write data
             end
-            $svgdata = data
+            $data = data
             $lastkey_written = data
         end
         render :json => ''
@@ -103,10 +103,10 @@ class KeyerServer < Patchbay
         Thread.exclusive do
             data = incoming_data
             STDERR.puts "new key was written #{data.length}"
-            File.open('/tmp/lastkey.svg', 'wb') do |f|
+            File.open('/tmp/lastkey.dat', 'wb') do |f|
                 f.write data
             end
-            $svgdata = data
+            $data = data
             $lastkey_written = data
         end
         render :json => ''
@@ -118,7 +118,7 @@ class KeyerServer < Patchbay
         if (md) 
             rawdata = Base64.decode64(md.post_match)
             Thread.exclusive do
-                $svgdata = rawdata
+                $data = rawdata
                 $lastkey_written = data
             end
         end
