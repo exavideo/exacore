@@ -19,31 +19,27 @@ scbd.set_y 50
 keyer.cg scbd
 
 ###### Static PNG keyer channel for 'normal' graphics ######
-graphics = PngSubprocessCharacterGenerator.new(
-    'cd ../svg_http_keyer; ruby svg_http_keyer.rb -d 1'
-)
+graphics = PngSubprocessCharacterGenerator.new('./http_keyer.rb -d 1')
 graphics.set_x 0
 graphics.set_y 0
 keyer.cg graphics
 
 ###### JavaScript-driven compositor keyer for animated graphics ######
-animated = JsCharacterGenerator.new('ruby js_keyer_server.rb')
+animated = JsCharacterGenerator.new('./js_keyer_server.rb')
 animated.set_x 0
 animated.set_y 0
 keyer.cg animated
 
 ###### CEF keyer for HTML5 graphics (needs exacore-cef binary) ######
 EXACORE_CEF="/home/armena/exacore-cef/build/exacore-cef/Release/exacore-cef"
-CEF_URL="https://dl.dropboxusercontent.com/u/50510722/grassyknoll/rpi-tv-expanding-announce-area-concept/index.html"
-cef = ShmCharacterGenerator.new("#{EXACORE_CEF} --url=#{URL}", 0)
+CEF_URL="http://example.com"
+cef = ShmCharacterGenerator.new("#{EXACORE_CEF} --url=#{CEF_URL}", 0)
 cef.set_x 0
 cef.set_y 0
 keyer.cg cef
 
 ###### Bug keyer channel for static PNG bugs ######
-bug = PngSubprocessCharacterGenerator.new(
-    'cd ../svg_http_keyer; ruby svg_http_keyer.rb -p 3005 -f /home/rpitv/bug.png'
-)
+bug = PngSubprocessCharacterGenerator.new('./http_keyer.rb -p 3005 -f /home/rpitv/bug.png')
 bug.set_x 0
 bug.set_y 0
 keyer.cg bug
