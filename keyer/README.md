@@ -174,3 +174,6 @@ You will need to download and install
 this facility. An example configuration can be found in the sample 
 configuration file `keyer_run.rb`.
 
+## Caveats
+There's some 1920x1080 hard-coding in a couple spots. Be careful of A/V sync
+issues; it's best to pass audio and video through the keyer together.
