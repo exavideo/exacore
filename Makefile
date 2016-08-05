@@ -30,7 +30,7 @@ SUBDIR_INCLUDES = \
 	-Igraphics/ \
 	-Ireplay/ \
 	-Iavspipe/ \
-	-Ikeydaemon/ \
+	-Ikeyer/ \
 	-Idisplay_surface/ \
 	-Iipc/ \
 
