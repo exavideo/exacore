@@ -5,6 +5,13 @@ libfreetype6-dev yasm libjpeg62-turbo-dev swig
 Be sure FFmpeg is installed, preferably from source.
 
 Install rvm; rvm install 1.9.2; rvm --default use 1.9.2
+gem install --pre patchbay
+gem install thin
+gem install trollop
+
+Install v8 - compile from the source: 
+https://code.google.com/p/v8-wiki/wiki/BuildingWithGYP 
+and build as a shared library
 
 Install libjpeg_turbo! libjpeg62-dev on Debian jessie is libjpeg-turbo as of 12/2/2015.
 
