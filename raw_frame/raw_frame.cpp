@@ -137,11 +137,12 @@ void RawFrame::alloc( ) {
     n_frames++;
 
     /* print scary warning if RawFrames aren't being freed */
-    if (n_frames > 1000) {
+    if (n_frames % 1000 == 0) {
         fprintf(stderr, 
-            "WARNING: More than 1000 RawFrames are currently allocated!\n"
+            "WARNING: there are now %d RawFrames allocated.\n"
             "This may be an indication of a memory leak somewhere.\n"
-            "Please check your code!\n"
+            "Please check your code!\n",
+            n_frames
         );
     }
 

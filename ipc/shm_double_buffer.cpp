@@ -21,6 +21,7 @@
  */
 
 #include "shm_double_buffer.h"
+#include "debug_fprintf.h"
 
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -83,11 +84,11 @@ int ShmDoubleBuffer::try_flip() {
 	}
 	
 	if (tries > 1 && flipped) {
-		fprintf(stderr, "took %d tries to flip\n", tries);
+		debug_fprintf(stderr, "took %d tries to flip\n", tries);
 	}
 
 	if (flipped == false) {
-		fprintf(stderr, "Didn't flip\n");
+		debug_fprintf(stderr, "Didn't flip\n");
 	}
 
 	return bufn;
