@@ -130,13 +130,13 @@ RawFrame *FreetypeFont::render_string(const char *string) {
 
         //int yd = -(slot->bitmap_top);
         int yd = _baseline - slot->bitmap_top;
-        for (int y = 0; y < slot->bitmap.rows && yd < _h; y++, yd++) {
+        for (unsigned int y = 0; y < slot->bitmap.rows && yd < _h; y++, yd++) {
             if (yd >= 0) {
                 glyph_scanline = ((uint8_t *)slot->bitmap.buffer) 
                         + slot->bitmap.pitch * y;
                 dest_scanline = ret->scanline(yd) + 4*xd;
                 int xd2 = xd;
-                for (int x = 0; x < slot->bitmap.width && xd2 < ret->w( ); 
+                for (unsigned int x = 0; x < slot->bitmap.width && xd2 < ret->w( ); 
                         x++, xd2++) {
 
                     dest_scanline[0] = (bf * glyph_scanline[x] 
