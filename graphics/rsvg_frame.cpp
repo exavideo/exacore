@@ -20,7 +20,6 @@
 #include "rsvg_frame.h"
 
 #include "librsvg/rsvg.h"
-#include "librsvg/rsvg-cairo.h"
 
 #include <string.h>
 
@@ -54,7 +53,9 @@ static RawFrame *render_from_rsvg_handle(RsvgHandle *rsvg) {
 
 static void rsvg_tryinit( ) {
     if (!rsvg_is_init) {
+        #ifndef GLIB_VERSION_2_36
         g_type_init( );
+        #endif
         rsvg_set_default_dpi_x_y(75.0, 75.0);
         rsvg_is_init = 1;
     }
