@@ -237,6 +237,46 @@ class CgFilter : public Filter<RawFrame> {
         CharacterGenerator *cg;
 };
 
+class PreviewFilter : public Filter<RawFrame> {
+    public:
+        PreviewFilter() 
+            : enc(480, 270, 80, 16*1024*1024),
+            counter(0) {
+
+        }
+
+        virtual void filter(RawFrame *thing) {
+            counter++;
+
+            if (counter == 30) {
+                counter = 0;
+                RawFrame *small = 
+                    thing->convert->CbYCrY8422_scaled(480, 270);
+                enc.encode(small);
+                delete small;
+
+                char *dest = asprintf(
+                    "/tmp/avpinput.%d.jpg", getpid()
+                );
+                char *tmp = asprintf(
+                    "/tmp/avpinput.%d.jpg.tmp", getpid()
+                );
+                int fd = open(tmp, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+                if (fd != -1) {
+                    /* deliberately ignoring errors here. */
+                    write_all(fd, enc.get_data( ), enc.get_data_size( ));
+                    close(fd);
+                    rename(tmp, dest);
+                }
+                free(tmp);
+                free(dst);
+            }
+        }
+    protected:
+        int counter;
+        Mjpeg422Encoder enc;
+};
+
 template <class T>
 class FilterChain : public Filter<T> {
     public:
@@ -387,6 +427,7 @@ void usage(const char *argv0) {
     fprintf(stderr, "-j: output M-JPEG instead of raw video\n");
     fprintf(stderr, "-q [0-100]: M-JPEG quality scale\n");
     fprintf(stderr, "-p: preview out to DeckLink\n");
+    fprintf(stderr, "-P: write preview jpegs to /tmp\n");
     fprintf(stderr, "--channels n: record n audio channels (default 2)\n");
     fprintf(stderr, "in 'command':\n");
     fprintf(stderr, "%%a = audio pipe fd\n");
@@ -425,7 +466,7 @@ int main(int argc, char * const *argv) {
     bool preview = false;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "pmjfc:b:q:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "pPmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
                 preroll = 1;
@@ -441,6 +482,10 @@ int main(int argc, char * const *argv) {
 
             case 'b':
                 filter_chain.add_filter(new BugFilter(optarg));
+                break;
+
+            case 'P':
+                filter_chain.add_filter(new PreviewFilter);
                 break;
 
             case 'C':
