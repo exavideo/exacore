@@ -72,9 +72,15 @@ class RawFrame {
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
 
-	static RawFrame *from_image_file(const char *path);
+    	static RawFrame *from_image_file(const char *path);
         static RawFrame *from_png_data(void *data, size_t size);
-	static RawFrame *from_tga_data(const void *data, size_t size);
+	    static RawFrame *from_tga_data(const void *data, size_t size);
+
+        bool preview_tally(unsigned int source);
+        bool program_tally(unsigned int source);
+
+        void set_preview_tally(unsigned int source);
+        void set_program_tally(unsigned int source);
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
@@ -129,6 +135,9 @@ class RawFrame {
         void make_converter( );
         
         FieldDominance _field_dominance;
+
+        uint64_t tally_program;
+        uint64_t tally_preview;
 
         static int n_frames;
 };

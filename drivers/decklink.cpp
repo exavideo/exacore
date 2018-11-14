@@ -22,6 +22,7 @@
 #include "DeckLinkAPI.h"
 #include "types.h"
 #include "audio_fifo.h"
+#include "hex_dump.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -108,6 +109,19 @@ static BMDPixelFormat convert_pf(RawFrame::PixelFormat in_pf) {
                 "DeckLink: pixel format unsupported"
             );
         }
+    }
+}
+
+static void unpack_10bit(uint16_t *output, void *input, size_t size) {
+    /* Unpack 10-bit SDI data packed into 32-bit words. */
+    uint32_t *data = (uint32_t *)input;
+    while (size > 0) {
+        output[0] = *data & 0x3ff;
+        output[1] = (*data >> 10) & 0x3ff;
+        output[2] = (*data >> 20) & 0x3ff;
+        size -= 4;
+        data++;
+        output += 3;
     }
 }
 
@@ -204,6 +218,42 @@ RawFrame *create_raw_frame_from_decklink(IDeckLinkVideoFrame *frame,
     return ret;
 }
 
+RawFrame *create_8bit_raw_frame_from_decklink_10bit(
+        IDeckLinkVideoFrame *frame,
+        bool rotate = false
+) {
+    size_t w = frame->GetWidth();
+    size_t h = frame->GetHeight();
+    size_t row_bytes = frame->GetRowBytes();
+    void *dp;
+    uint32_t *in;
+
+    if (frame->GetBytes(&dp) != S_OK) {
+        throw std::runtime_error("Cannot get pointer to raw data");
+    }
+
+    /* FIXME this assumes little endian */
+    in = (uint32_t *) dp;
+
+    /* we emit 3 bytes for every 4 bytes of input */
+    RawFrame *ret = new RawFrame(w, h, RawFrame::CbYCrY8422, row_bytes * 3 / 4);
+
+    /* unpack and copy data */
+    for (size_t i = 0; i < h; i++) {
+        uint8_t *out = ret->scanline(i);
+        for (size_t j = 0; j < row_bytes / 4; j++) {
+            uint32_t packed = *in++;
+            out[0] = (packed >> 2) & 0xff;
+            out[1] = (packed >> 12) & 0xff;
+            out[2] = (packed >> 22) & 0xff;
+            out += 3;
+        }
+    }
+
+    return ret;
+}
+    
+
 /* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
 class DecklinkInputRawFrame : public RawFrame {
     public:
@@ -264,7 +314,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             frame_duration = norms[norm].frame_duration;
 
             pf = pf_;
-            bpf = convert_pf(pf_); 
+            bpf = convert_pf(pf_);
 
             deckLink = find_card(card_index);
             configure_card( );
@@ -621,7 +671,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 input->unpack->CbYCrY8422((uint8_t *) data);
             } else {
                 fprintf(stderr, "DeckLink: on fire\n");
-		audio_adjust += 1;
+                audio_adjust += 1;
             }
             
             set_frame_timecode(frame);
@@ -671,6 +721,13 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             pf = pf_;
             bpf = convert_pf(pf_);
+            /* 
+             * force 10 bit capture of YUV data; we'll downsample it later 
+             * this is needed to grab VANC data
+             */
+            if (bpf == bmdFormat8BitYUV) {
+                bpf = bmdFormat10BitYUV;
+            }
 
             deckLink = find_card(card_index);
             select_input_connection(input_);
@@ -765,8 +822,14 @@ class DeckLinkInputAdapter : public InputAdapter,
                  * so if video is disabled, we just ignore the video frames...
                  */
                 if (enable_video) {
-                    out = create_raw_frame_from_decklink(in, pf, rotate);
+                    if (pf == RawFrame::CbYCrY8422 && bpf == bmdFormat10BitYUV) {
+                        out = create_8bit_raw_frame_from_decklink_10bit(in, rotate);
+                    } else {
+                        out = create_raw_frame_from_decklink(in, pf, rotate);
+                    }
                     out->set_field_dominance(dominance);
+                    
+                    process_ancillary(in, out);
                     
                     if (out_pipe.can_put( ) && started) {
                         if (enable_video) {
@@ -968,6 +1031,79 @@ class DeckLinkInputAdapter : public InputAdapter,
                 throw std::runtime_error(
                     "DeckLink input: start streams failed"
                 );
+            }
+        }
+
+        void process_ancillary(IDeckLinkVideoFrame *in, RawFrame *out) {
+            IDeckLinkVideoFrameAncillary *ancillary;
+            void *buf = NULL;
+            size_t sz;
+            size_t unpacked_size;
+            
+            if (in->GetAncillaryData(&ancillary) == S_OK) {
+                sz = in->GetRowBytes();
+                /* for now we only care about line 15 (where blackmagic tally is) */
+                if (ancillary->GetBufferForVerticalBlankingLine(15, &buf) == S_OK) {
+                    /* 16 bytes of input data become 12x 10 bit words */
+                    unpacked_size = 12 * sz / 16;
+                    uint16_t *unpacked_data = new uint16_t[unpacked_size];
+                    unpack_10bit(unpacked_data, buf, sz);
+                    process_unpacked_ancillary(out, unpacked_data, unpacked_size);
+                    delete [] unpacked_data;
+                } else {
+                    fprintf(stderr, "DeckLink: GetBufferForVerticalBlankingLine failed\n");
+                }
+                ancillary->Release();
+            } else {
+                fprintf(stderr, "DeckLink: GetAncillaryData failed\n");
+            }
+        }
+
+        void process_unpacked_ancillary(RawFrame *out, uint16_t *data, size_t size) {
+            /* strip out the chroma words */
+            size /= 2;
+            for (size_t i = 0; i < size; i++) {
+                data[i] = data[2*i+1];
+            }
+
+            /* scan for the packet start sequence in the luma channel */
+            for (size_t i = 0; i + 5 < size; i++) {
+                if (data[i] == 0x000 && data[i+1] == 0x3ff && data[i+2] == 0x3ff) {
+                    /* i points at the start of a packet */
+                    uint8_t did = data[i+3] & 0xff;
+                    uint8_t sdid = data[i+4] & 0xff;
+                    uint8_t dc = data[i+5] & 0xff;
+
+                    /* if the packet is not complete, skip it */
+                    if (i + 5 + dc >= size) {
+                        continue;
+                    }
+                    
+                    /* Blackmagic tally packet */
+                    if (did == 0x51 && sdid == 0x52) {
+                        process_blackmagic_tally(out, &data[i+6], dc);
+                    }
+                }
+            }
+        }
+
+        void process_blackmagic_tally(RawFrame *out, uint16_t *data, size_t sz) {
+            for (size_t i = 1; i < sz; i++) {
+                uint8_t dev0 = data[i] & 0x03;
+                uint8_t dev1 = (data[i] >> 4) & 0x03;
+
+                if (dev0 & 0x01) {
+                    out->set_program_tally(2 * i - 2);
+                }
+                if (dev0 & 0x02) {
+                    out->set_preview_tally(2 * i - 2);
+                }
+                if (dev1 & 0x01) {
+                    out->set_program_tally(2 * i - 1);
+                }
+                if (dev1 & 0x02) {
+                    out->set_preview_tally(2 * i - 1);
+                }
             }
         }
 };
