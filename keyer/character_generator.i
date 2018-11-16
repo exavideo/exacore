@@ -32,4 +32,5 @@ class CharacterGenerator : public Thread {
         void set_y(coord_t y);
         void set_position(coord_t x, coord_t y);
         virtual unsigned int dirty_level( );
+        virtual void inhibit_on_source(unsigned int source);
 };

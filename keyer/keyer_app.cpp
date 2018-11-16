@@ -127,10 +127,23 @@ void KeyerApp::run( ) {
                     }
 
                     /*
+                     * check if this CG is inhibited by tally data on the source
+                     * video frame. If no tally data is present this should do
+                     * nothing.
+                     */
+                    bool inhibited = false;
+                    for (unsigned int inhibit : cg->inhibited_sources( )) {
+                        if (frame->program_tally(inhibit)) {
+                            inhibited = true;
+                            break;
+                        }
+                    }
+
+                    /*
                      * If no overlay is being rendered by this CG right now, the CG
                      * will output a NULL frame. We can safely ignore those.
                      */
-                    if (cgout != NULL && cgout->global_alpha( ) != 0) {
+                    if (cgout != NULL && cgout->global_alpha( ) != 0 && !inhibited) {
                         frame->draw->alpha_key(cg->x( ), cg->y( ), 
                                 cgout, cgout->global_alpha( ));
 

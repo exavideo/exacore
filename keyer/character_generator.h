@@ -25,6 +25,8 @@
 #include "thread.h"
 #include "raw_frame.h"
 
+#include <vector>
+
 /* 
  * Something that generates drawable overlay images.
  */
@@ -41,12 +43,24 @@ class CharacterGenerator : public Thread {
         void set_position(coord_t x, coord_t y) { _x = x; _y = y; }
         virtual unsigned int dirty_level( ) { return 0; }
 
+        /*
+         * Tells the keyer to inhibit this graphic if the given source's tally
+         * is active on the input frame.
+         */
+        virtual void inhibit_on_source(unsigned int source);
+        /*
+         * Returns a list of tally sources for which we should inhibit.
+         */
+        virtual std::vector<unsigned int> inhibited_sources( );
+        
+
     protected:
         CharacterGenerator(int dummy); /* construct without starting thread */
         virtual void run_thread(void); /* override from Thread */
 
         coord_t _x, _y; 
         Pipe<RawFrame *> _output_pipe; 
+        std::vector<unsigned int> _inhibited_sources;
 };
 
 #endif

@@ -38,3 +38,11 @@ void CharacterGenerator::run_thread(void) {
         _output_pipe.put(NULL);
     }
 }
+
+void CharacterGenerator::inhibit_on_source(unsigned int source) {
+    _inhibited_sources.push_back(source);
+}
+
+std::vector<unsigned int> CharacterGenerator::inhibited_sources( ) {
+    return _inhibited_sources;
+}
