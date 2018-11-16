@@ -237,6 +237,14 @@ bool RawFrame::program_tally(unsigned int source) {
     return (bool) (tally_program & (1 << source));
 }
 
+uint64_t RawFrame::preview_tally_bits() {
+    return tally_preview;
+}
+
+uint64_t RawFrame::program_tally_bits() {
+    return tally_program;
+}
+
 #ifdef RAWFRAME_POSIX_IO
 
 #include "posix_util.h"

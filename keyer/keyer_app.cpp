@@ -54,7 +54,7 @@ void KeyerApp::cg(CharacterGenerator *cg) {
 
 void KeyerApp::run( ) {
     RawFrame *frame = NULL;
-    RawFrame *cgout = NULL;
+    CgOutputFrame cgout;
     IOAudioPacket *audio = NULL;
 
     if (iadp == NULL) {
@@ -87,7 +87,7 @@ void KeyerApp::run( ) {
             for (unsigned int j = 0; j < oadps.size( ); j++) {
                 /* get overlay from each CG */
                 for (unsigned int i = 0; i < cgs.size( ); i++) {
-                    CharacterGenerator *cg = cgs[i];
+                    CharacterGenerator *cg = cgs[i].cg;
 
                     /*
                      * dirty_level determines which outputs will
@@ -139,16 +139,49 @@ void KeyerApp::run( ) {
                         }
                     }
 
+                    /* If we're not tying anymore, reset the state. */
+                    if (!cgout.tie_to_tally) {
+                        cgs[i].was_tied = false;
+                        cgs[i].tie_inhibit = false;
+                    }
+
+                    /* 
+                     * If the key is tied, and none of the original sources are
+                     * active anymore, inhibit keying.
+                     */
+                    if (
+                        cgs[i].was_tied && cgout.tie_to_tally
+                        && (frame->program_tally_bits() & cgs[i].saved_tally_bits) == 0
+                    ) {
+                        cgs[i].tie_inhibit = true;
+                    }
+                    
+                    /*
+                     * If this is the first tied frame, save away the tally bits.
+                     */
+                    if (!cgs[i].was_tied && cgout.tie_to_tally) {
+                        cgs[i].saved_tally_bits = frame->program_tally_bits();
+                        cgs[i].was_tied = true;
+                    }
+
+                    if (cgs[i].tie_inhibit) {
+                        inhibited = true;
+                    }
+
+
                     /*
                      * If no overlay is being rendered by this CG right now, the CG
                      * will output a NULL frame. We can safely ignore those.
                      */
-                    if (cgout != NULL && cgout->global_alpha( ) != 0 && !inhibited) {
+                    if (
+                        cgout.frame != NULL && cgout.frame->global_alpha( ) != 0 
+                        && !inhibited
+                    ) {
                         frame->draw->alpha_key(cg->x( ), cg->y( ), 
-                                cgout, cgout->global_alpha( ));
+                                cgout.frame, cgout.frame->global_alpha( ));
 
                     }
-                    delete cgout;
+                    delete cgout.frame;
                     /* 
                      * mark this CG as "done" so we don't waste
                      * time later on subsequent passes 

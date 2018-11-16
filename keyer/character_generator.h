@@ -27,6 +27,21 @@
 
 #include <vector>
 
+struct CgOutputFrame {
+    RawFrame *frame;
+    bool tie_to_tally;
+
+    CgOutputFrame() {
+        frame = NULL;
+        tie_to_tally = false;
+    }
+
+    CgOutputFrame(RawFrame *f) {
+        frame = f;
+        tie_to_tally = false;
+    }
+};
+
 /* 
  * Something that generates drawable overlay images.
  */
@@ -34,7 +49,7 @@ class CharacterGenerator : public Thread {
     public:
         CharacterGenerator( );
         virtual ~CharacterGenerator( );
-        Pipe<RawFrame *> &output_pipe( ) { return _output_pipe; }
+        Pipe<CgOutputFrame> &output_pipe( ) { return _output_pipe; }
 
         coord_t x( ) { return _x; }
         coord_t y( ) { return _y; }
@@ -59,7 +74,7 @@ class CharacterGenerator : public Thread {
         virtual void run_thread(void); /* override from Thread */
 
         coord_t _x, _y; 
-        Pipe<RawFrame *> _output_pipe; 
+        Pipe<CgOutputFrame> _output_pipe; 
         std::vector<unsigned int> _inhibited_sources;
 };
 

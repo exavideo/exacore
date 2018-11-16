@@ -79,6 +79,9 @@ class RawFrame {
         bool preview_tally(unsigned int source);
         bool program_tally(unsigned int source);
 
+        uint64_t preview_tally_bits();
+        uint64_t program_tally_bits();
+
         void set_preview_tally(unsigned int source);
         void set_program_tally(unsigned int source);
 

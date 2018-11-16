@@ -23,7 +23,20 @@
 
 class KeyerApp {
     protected:
-        std::vector<CharacterGenerator *> cgs;
+        struct CgEntry {
+            CharacterGenerator *cg;
+            uint64_t saved_tally_bits;
+            bool tie_inhibit;
+            bool was_tied;
+
+            CgEntry(CharacterGenerator *cg_) {
+                cg = cg_;
+                saved_tally_bits = 0;
+                was_tied = false;
+                tie_inhibit = false;
+            }
+        };
+        std::vector<CgEntry> cgs;
         InputAdapter *iadp;
         std::vector<OutputAdapter *> oadps;
         std::vector<bool> flags;
