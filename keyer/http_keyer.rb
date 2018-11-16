@@ -33,6 +33,7 @@ Thread.new do
             # dissolve state logic
             Thread.exclusive do
                 size = [ $data.length ].pack('L')
+                flags = 0
                 alpha = 0
 
                 if $trans_state == UP
@@ -54,7 +55,7 @@ Thread.new do
                     end
                 end
 
-                alphastr = [ alpha, $dirty_level ].pack('CC')
+                alphastr = [ flags, alpha, $dirty_level ].pack('LCC')
 
                 STDOUT.write(size)
                 STDOUT.write(alphastr)

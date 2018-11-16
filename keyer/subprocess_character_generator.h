@@ -28,6 +28,8 @@ class SubprocessCharacterGenerator : public CharacterGenerator {
                 unsigned int dirty_level = 0);
         virtual ~SubprocessCharacterGenerator( );
         unsigned int dirty_level( ) { return _dirty_level; }
+
+        const uint32_t TIE_TO_SOURCE = 0x00000001;
     protected:
         virtual void run_thread( );
         void do_fork( );

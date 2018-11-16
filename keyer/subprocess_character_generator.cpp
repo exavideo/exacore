@@ -124,6 +124,7 @@ void SubprocessCharacterGenerator::run_thread( ) {
     RawFrame *frame;
     size_t size;
     uint8_t alpha;
+    uint32_t flags;
     char *data;
 
     RawFrame *cache_frame = NULL;
@@ -132,18 +133,19 @@ void SubprocessCharacterGenerator::run_thread( ) {
     do_fork( );
 
     for (;;) {
-        /* request a SVG from the subprocess */
+        /* request a frame from the subprocess */
         request( );
 
-        /* get the SVG */
+        /* get the frame data */
         size = read_item_from_fd<uint32_t>(recv_fd);
+        flags = read_item_from_fd<uint32_t>(recv_fd);
         alpha = read_item_from_fd<uint8_t>(recv_fd);
         _dirty_level = read_item_from_fd<uint8_t>(recv_fd);
 
         if (size > 0) {
             data = read_data(size);
 
-            /* render SVG to frame */
+            /* render frame */
             frame = do_render(data, size);
             if (cache_frame != NULL) {
                 delete cache_frame;
@@ -156,7 +158,7 @@ void SubprocessCharacterGenerator::run_thread( ) {
                 cache_frame = frame->copy( );
 
                 /* put frame down the pipe */
-                _output_pipe.put(frame);
+                _output_pipe.put(CgOutputFrame(frame, flags & TIE_TO_SOURCE));
             } else {
                 cache_frame = NULL;
                 _output_pipe.put(NULL);
@@ -164,7 +166,7 @@ void SubprocessCharacterGenerator::run_thread( ) {
         } else if (cache_frame != NULL) {
             frame = cache_frame->copy( );
             frame->set_global_alpha(alpha);
-            _output_pipe.put(frame);
+            _output_pipe.put(CgOutputFrame(frame, flags & TIE_TO_SOURCE));
         } else {
             _output_pipe.put(NULL);
         }

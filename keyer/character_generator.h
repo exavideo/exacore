@@ -40,6 +40,11 @@ struct CgOutputFrame {
         frame = f;
         tie_to_tally = false;
     }
+
+    CgOutputFrame(RawFrame *f, bool tie) {
+        frame = f;
+        tie_to_tally = tie;
+    }
 };
 
 /* 
