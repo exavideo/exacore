@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 
 require 'rubygems'
 require 'patchbay'
@@ -43,13 +43,13 @@ Thread.new do
                     alpha = 255
                 elsif $trans_state == DOWN
                     alpha = 0
-                elsif $trans_state == IN 
+                elsif $trans_state == IN
                     alpha = ($trans_i.to_f / $trans_nframes.to_f * 255.0).to_i
                     $trans_i += 1
                     if $trans_i >= $trans_nframes
                         $trans_state = UP
                     end
-                elsif $trans_state == OUT 
+                elsif $trans_state == OUT
                     alpha = (255.0 - ($trans_i.to_f / $trans_nframes.to_f * 255.0)).to_i
 
                     $trans_i += 1
@@ -95,7 +95,7 @@ class KeyerServer < Patchbay
     # assumes 'mutex' is held (Thread.exclusive)
     def check_tie_flag
         qs = @environment['QUERY_STRING']
-        $tie_when_up = (qs == 'tie_to_source')        
+        $tie_when_up = (qs == 'tie_to_source')
     end
 
     def process_raw_key
@@ -125,7 +125,7 @@ class KeyerServer < Patchbay
     put '/key_dataurl' do
         data = incoming_data
         md = /^data:image\/png;base64,/.match(data)
-        if (md) 
+        if (md)
             rawdata = Base64.decode64(md.post_match)
             Thread.exclusive do
                 $data = rawdata
@@ -201,10 +201,11 @@ class KeyerServer < Patchbay
         params[:incoming_data]
     end
 
-    self.files_dir = 'public_html'
+    self.files_dir = 'public_html' if File.exists? 'public_html'
 end
 
 opts = Trollop::options do
+    opt :host, "Interface to listen on", :short => 'h', :default => 'localhost'
     opt :port, "Port to listen on", :short => 'p', :default => 4567
     opt :filename, "File to load initially", :short => 'f', :type => :string
     opt :dirty, "Initial dirty level", :short => 'd', :default => 0
@@ -222,4 +223,4 @@ if opts[:dirty]
     $dirty_level = opts[:dirty]
 end
 
-app.run(:Host => 'localhost', :Port => opts[:port])
+app.run(:Host => opts[:host], :Port => opts[:port])
