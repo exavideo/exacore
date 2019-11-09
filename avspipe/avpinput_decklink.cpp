@@ -553,7 +553,6 @@ int main(int argc, char * const *argv) {
     };
 
     int card = 0;
-    int preroll = 0;
     int audio_channels = 2;
     int jpeg = 0;
     int quality = 80;
@@ -562,10 +561,6 @@ int main(int argc, char * const *argv) {
     /* argument processing */
     while ((opt = getopt_long(argc, argv, "pRmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
-            case 'f':
-                preroll = 1;
-                break;
-
             case 'm':
                 audio_filter_chain.add_filter(new MixdownFilter);
                 break;
@@ -679,15 +674,6 @@ int main(int argc, char * const *argv) {
         &audio_filter_chain,
         preview_out ? preview_out->audio_input_pipe() : NULL
     );
-
-    /* set up some preroll frames if requested */
-    if (preroll) {
-        RawFrame *preroll_frame = new RawFrame(1920, 1080, RawFrame::CbYCrY8422);
-        IOAudioPacket *preroll_audio = new IOAudioPacket(1601, audio_channels);
-
-        vsthread->set_preroll(preroll_frame, 600);
-        asthread->set_preroll(preroll_audio, 600);
-    }
 
     asthread->start( );
     vsthread->start( );
