@@ -1,12 +1,12 @@
 # Adjust these to match your CPU and compiler configuration.
-# Defaults should work well for a 64-bit build on AMD hardware. 
+# Defaults should work well for a 64-bit build on AMD hardware.
 # 32-bit is not supported for the time being!
 
 -include local.mk
 
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11 
+CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -Wno-error=cpp -Wno-error=deprecated-declarations -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
 
 # don't use -Werror for swig-generated code
 SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
@@ -55,7 +55,7 @@ endif
 # Generic rule for compiling C++ object files.
 %.o : %.cpp
 	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -MM -MF $@.d -MT $@ $<
-	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $< 
+	$(CXX) $(CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) -c -o $@ $<
 
 %.rbo: %.rbcpp
 	$(CXX) $(SWIG_CXXFLAGS) $(EXTERNAL_INCLUDES) $(SUBDIR_INCLUDES) $(RUBY_INCLUDES) -MM -MF $@.d -MT $@ -x c++ $<

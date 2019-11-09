@@ -308,8 +308,8 @@ class PreviewFilter : public Filter<RawFrame> {
             }
         }
     protected:
-        int counter;
         Mjpeg422Encoder enc;
+        int counter;
 };
 
 class AudioLevelsFilter : public Filter<IOAudioPacket> {

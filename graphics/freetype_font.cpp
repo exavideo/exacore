@@ -1,18 +1,18 @@
 /*
  * Copyright 2011 Exavideo LLC.
- * 
+ *
  * This file is part of openreplay.
- * 
+ *
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * openreplay is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -41,7 +41,7 @@ FreetypeFont::FreetypeFont(const char *font_file, FT_Long index) {
 }
 
 void FreetypeFont::set_size(unsigned int n_pixels) {
-    /* 
+    /*
      * FreeType expects the size to be in units of 1/64 points.
      * We will get it to use pixels instead by telling it that the dpi is 72.
      * Thus, 1 point = 1/72 in = 1 pixel.
@@ -87,7 +87,7 @@ RawFrame *FreetypeFont::render_string(const char *string) {
 
         if (use_kerning && previous != 0 && glyph_index != 0) {
             FT_Vector delta;
-            FT_Get_Kerning(face, previous, glyph_index, 
+            FT_Get_Kerning(face, previous, glyph_index,
                     FT_KERNING_DEFAULT, &delta);
             x += delta.x / 64;
         }
@@ -101,7 +101,7 @@ RawFrame *FreetypeFont::render_string(const char *string) {
 
     /* initialize a raw frame */
     ret = new RawFrame(x, _h, RawFrame::BGRAn8);
-    
+
     /* second pass: draw it */
     scan_ptr = string;
     int xd = 0;
@@ -130,16 +130,16 @@ RawFrame *FreetypeFont::render_string(const char *string) {
 
         //int yd = -(slot->bitmap_top);
         int yd = _baseline - slot->bitmap_top;
-        for (int y = 0; y < slot->bitmap.rows && yd < _h; y++, yd++) {
+        for (unsigned y = 0; y < slot->bitmap.rows && yd < _h; y++, yd++) {
             if (yd >= 0) {
-                glyph_scanline = ((uint8_t *)slot->bitmap.buffer) 
+                glyph_scanline = ((uint8_t *)slot->bitmap.buffer)
                         + slot->bitmap.pitch * y;
                 dest_scanline = ret->scanline(yd) + 4*xd;
                 int xd2 = xd;
-                for (int x = 0; x < slot->bitmap.width && xd2 < ret->w( ); 
+                for (unsigned x = 0; x < slot->bitmap.width && xd2 < ret->w( );
                         x++, xd2++) {
 
-                    dest_scanline[0] = (bf * glyph_scanline[x] 
+                    dest_scanline[0] = (bf * glyph_scanline[x]
                             + bb * (255 - glyph_scanline[x])) / 255;
                     dest_scanline[1] = (gf * glyph_scanline[x]
                             + gb * (255 - glyph_scanline[x])) / 255;
