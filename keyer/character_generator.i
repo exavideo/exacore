@@ -17,24 +17,20 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <vector>
-#include "adapter.h"
-#include "character_generator.h"
+%{
+    #include "character_generator.h"
+%}
 
-class KeyerApp {
-    protected:
-        std::vector<CharacterGenerator *> cgs;
-        InputAdapter *iadp;
-        std::vector<OutputAdapter *> oadps;
-        std::vector<bool> flags;
-
-        void clear_all_flags( );
+class CharacterGenerator : public Thread {
     public:
-        KeyerApp( );
-        ~KeyerApp( );
+        CharacterGenerator( );
+        virtual ~CharacterGenerator( );
 
-        void input(InputAdapter *iadp_);
-        void output(OutputAdapter *oadp_);
-        void cg(CharacterGenerator *cg);
-        void run( );
+        coord_t x( );
+        coord_t y( );
+        void set_x(coord_t x);
+        void set_y(coord_t y);
+        void set_position(coord_t x, coord_t y);
+        virtual unsigned int dirty_level( );
+        virtual void inhibit_on_source(unsigned int source);
 };

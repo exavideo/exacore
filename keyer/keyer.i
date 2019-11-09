@@ -2,4 +2,4 @@
 %include "png_subprocess_character_generator.i"
 %include "svg_subprocess_character_generator.i"
 %include "js_character_generator.i"
-
+%include "shm_character_generator.i"

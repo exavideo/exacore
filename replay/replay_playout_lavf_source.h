@@ -39,6 +39,9 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
         ReplayPlayoutLavfSource(const char *filename);
         ~ReplayPlayoutLavfSource( );
 
+        /* dirty hack job to test out seeking */
+        void seek(int64_t usec);
+
         void read_frame(ReplayPlayoutFrame &frame_data, Rational speed);
         static timecode_t get_file_duration(const char *filename);
         timecode_t position( );
@@ -60,7 +63,7 @@ class ReplayPlayoutLavfSource : public ReplayPlayoutSource {
 
         AVCodecContext *audio_codecctx;
         AVCodec *audio_codec;
-        AVFrame audio_frame;
+        AVFrame *audio_frame;
 
         timecode_t n_frames;
         AudioFIFO<int16_t> pending_audio;

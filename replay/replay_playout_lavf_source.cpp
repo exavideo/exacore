@@ -61,6 +61,11 @@ ReplayPlayoutLavfSource::ReplayPlayoutLavfSource(const char *filename) :
 {
 	ensure_registered( );
 	
+    audio_frame = av_frame_alloc();
+    if (!audio_frame) {
+        throw std::runtime_error("av_frame_alloc failed");
+    }
+
     // Try to open file
     if (avformat_open_input(&format_ctx, filename, NULL, NULL) != 0) {
         throw std::runtime_error("avformat_open_input failed");
@@ -103,7 +108,7 @@ ReplayPlayoutLavfSource::ReplayPlayoutLavfSource(const char *filename) :
         throw std::runtime_error("failed to open codec!");
     }
 
-    lavc_frame = avcodec_alloc_frame();    
+    lavc_frame = av_frame_alloc();    
 
     // try to find and open audio codec
     audio_codecctx = format_ctx->streams[audio_stream]->codec;
@@ -129,6 +134,16 @@ void ReplayPlayoutLavfSource::ensure_registered( ) {
         registered = 1;
         av_register_all( );
     }
+}
+
+void ReplayPlayoutLavfSource::seek(int64_t usec) {
+	int ret;
+
+	ret = av_seek_frame(format_ctx, -1, usec, 0);
+
+	if (ret < 0) {
+		fprintf(stderr, "av_seek_frame() failed!\n");
+	}
 }
 
 void ReplayPlayoutLavfSource::read_frame(
@@ -164,6 +179,26 @@ void ReplayPlayoutLavfSource::read_frame(
     n_frames++;
 }
 
+static void copy_fltp(
+    AVFrame *audio_frame, 
+    PackedAudioPacket<int16_t> &apkt
+) {
+    int16_t *d;
+    float *s;
+    int ch = apkt.channels( );
+    int ns = apkt.size_samples( );
+
+    for (int i = 0; i < ch; i++) {
+        d = apkt.data( ) + i;
+        s = (float *)(audio_frame->data[i]);
+        for (int j = 0; j < ns; j++) {
+            *d = (int16_t)(*s * 32767.0);
+            d += ch;
+            s ++;
+        }
+    }
+}
+
 int ReplayPlayoutLavfSource::run_lavc( ) {
     AVPacket packet;
     int frame_finished = 0;
@@ -179,7 +214,7 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
             avcodec_decode_video2(video_codecctx, lavc_frame, 
                     &frame_finished, &packet);
         } else if (packet.stream_index == audio_stream) {
-            avcodec_decode_audio4(audio_codecctx, &audio_frame, 
+            avcodec_decode_audio4(audio_codecctx, audio_frame, 
                     &audio_finished, &packet);
         }
 
@@ -207,6 +242,17 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
                 memcpy(fr->data( ), lavc_frame->data[0], fr->size( ));
                 break;
 
+            case AV_PIX_FMT_YUV422P10LE:
+                fr->pack->YCbCr10P422(
+                    (uint16_t *)lavc_frame->data[0],
+                    (uint16_t *)lavc_frame->data[1],
+                    (uint16_t *)lavc_frame->data[2],
+                    lavc_frame->linesize[0] / 2,
+                    lavc_frame->linesize[1] / 2,
+                    lavc_frame->linesize[2] / 2
+                );
+                break;
+
             case AV_PIX_FMT_YUV420P:
                 fr->pack->YCbCr8P420(
                     lavc_frame->data[0],
@@ -228,29 +274,31 @@ int ReplayPlayoutLavfSource::run_lavc( ) {
         pending_video_frames.push_back(fr);
         return 1;
     } else if (audio_finished) {
-        /* audio sanity checks */
-        if (audio_codecctx->sample_fmt != AV_SAMPLE_FMT_S16) {
+        PackedAudioPacket<int16_t> apkt(
+            audio_frame->nb_samples,
+            audio_codecctx->channels
+        );
+
+        if (audio_codecctx->sample_fmt == AV_SAMPLE_FMT_S16) {
+            memcpy(apkt.data( ), audio_frame->data[0], apkt.size_bytes( ));
+        } else if (audio_codecctx->sample_fmt == AV_SAMPLE_FMT_FLTP) {
+            /* convert planar float (from AAC) to signed 16-bit */
+            copy_fltp(audio_frame, apkt);
+        } else {
+            fprintf(stderr, "sample_fmt=%d\n", audio_codecctx->sample_fmt);
             throw std::runtime_error("don't understand sample format");
         }
-
         if (audio_codecctx->sample_rate != 48000) {
             throw std::runtime_error("need 48khz");
         }
 
         if (audio_codecctx->channels != 2) {
-            PackedAudioPacket<int16_t> apkt(    
-                audio_frame.nb_samples, 
-                audio_codecctx->channels
-            );    
-            memcpy(apkt.data( ), audio_frame.data[0], apkt.size_bytes( ));
+            /* mix down to 2 channels if needed */
             PackedAudioPacket<int16_t> *twoch = apkt.change_channels(2);
             pending_audio.add_packet(twoch);
             delete twoch;
         } else {
-            pending_audio.add_packed_samples(
-                (int16_t *)audio_frame.data[0],
-                audio_frame.nb_samples
-            );
+            pending_audio.add_packet(&apkt);
         }
 
         return 1;

@@ -17,10 +17,22 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class InputAdapter;
-class OutputAdapter;
+%{
+    #include "rollout_preview.h"
+%}
 
-%include "decklink.i"
-%include "v4l2_input.i"
-%include "h264_tcp_input.i"
+%include "typemaps.i"
+
+%rename("monitor") RolloutPreview::get_monitor( );
+
+class RolloutPreview : public Thread {
+    public:
+        RolloutPreview( );
+        ~RolloutPreview( );
+        
+        void load_file(const char *fn);
+        void seek(int64_t delta);
+        void get(std::string &OUTPUT, int64_t &OUTPUT);
+        AsyncPort<ReplayRawFrame> *get_monitor( );
+};
 

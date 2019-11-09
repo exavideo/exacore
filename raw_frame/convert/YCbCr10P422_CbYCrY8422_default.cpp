@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Andrew H. Armenia.
+ * Copyright 2011, 2016 Exavideo LLC.
  * 
  * This file is part of openreplay.
  * 
@@ -17,24 +17,33 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "character_generator.h"
+#include <stdint.h>
+#include <stdlib.h>
 
-CharacterGenerator::CharacterGenerator( ) : Thread( ), _output_pipe(2) { 
-    start_thread( );
-}
+void YCbCr10P422_CbYCrY8422_A_default(
+    size_t w, size_t h, 
+    size_t Ypitch, size_t Cbpitch, size_t Crpitch,
+    uint16_t *Y, uint16_t *Cb, uint16_t *Cr,
+    uint8_t *dst
+) {
 
-CharacterGenerator::CharacterGenerator(int dummy) : Thread( ), _output_pipe(2) {
-    /* don't start the thread */
-    UNUSED(dummy);
-}
+    Ypitch -= w;
+    Cbpitch -= w/2;
+    Crpitch -= w/2;
 
-CharacterGenerator::~CharacterGenerator( ) {
+    while (h > 0) {
+        for (size_t i = 0; i < w; i += 2) {
+            *(dst++) = *(Cb++) >> 2;
+            *(dst++) = *(Y++) >> 2;
+            *(dst++) = *(Cr++) >> 2;
+            *(dst++) = *(Y++) >> 2;
+        }
 
-}
+        /* skip extra bytes on source */
+        Y += Ypitch;
+        Cb += Cbpitch;
+        Cr += Crpitch;
 
-void CharacterGenerator::run_thread(void) {
-    for (;;) {
-        /* just dump lots of null frames */
-        _output_pipe.put(NULL);
+        h--;
     }
 }

@@ -18,18 +18,12 @@
  */
 
 %{
-    #include "character_generator.h"
+    #include "shm_character_generator.h"
 %}
 
-class CharacterGenerator : public Thread {
-    public:
-        CharacterGenerator( );
-        virtual ~CharacterGenerator( );
+%include "character_generator.i"
 
-        coord_t x( );
-        coord_t y( );
-        void set_x(coord_t x);
-        void set_y(coord_t y);
-        void set_position(coord_t x, coord_t y);
-        virtual unsigned int dirty_level( );
+class ShmCharacterGenerator : public CharacterGenerator {
+    public:
+        ShmCharacterGenerator(const char *cmd, unsigned int dirty_level = 0);
 };

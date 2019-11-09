@@ -18,7 +18,6 @@
  */
 
 #include "replay_playout.h"
-#include "replay_playout_bars_source.h"
 #include "replay_playout_buffer_source.h"
 #include "replay_playout_avspipe_source.h"
 #include "replay_playout_lavf_source.h"
@@ -54,6 +53,19 @@ void ReplayPlayout::run_thread( ) {
         /* is there a next source available? if so, we take it */
         next_source = playout_source.exchange(NULL);
         if (next_source != NULL) {
+            if (next_source == idle_source) {
+                /* 
+                 * we've been commanded to stop playout
+                 *
+                 * try to read another frame from the current source 
+                 * if we get one, use that as the idle frame
+                 */
+                active_source->read_frame(frame_data, current_speed);
+                if (frame_data.video_data != NULL) {
+                    idle_source->set_frame(frame_data.video_data);
+                }
+            }
+
             if (active_source != idle_source) {
                 delete active_source;
             }
@@ -165,6 +177,12 @@ void ReplayPlayout::avspipe_playout(const char *cmd) {
 
 void ReplayPlayout::lavf_playout(const char *file) {
     set_source(new ReplayPlayoutLavfSource(file));
+}
+
+void ReplayPlayout::lavf_playout(const char *file, int64_t seek) {
+    ReplayPlayoutLavfSource *src = new ReplayPlayoutLavfSource(file);
+    src->seek(seek);
+    set_source(src);
 }
 
 void ReplayPlayout::lavf_playout_list(const StringList &files) {

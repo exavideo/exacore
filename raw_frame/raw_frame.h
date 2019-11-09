@@ -72,9 +72,18 @@ class RawFrame {
         FieldDominance field_dominance( ) const { return _field_dominance; }
         void set_field_dominance(FieldDominance fd) { _field_dominance = fd; }
 
-	static RawFrame *from_image_file(const char *path);
+    	static RawFrame *from_image_file(const char *path);
         static RawFrame *from_png_data(void *data, size_t size);
-	static RawFrame *from_tga_data(const void *data, size_t size);
+	    static RawFrame *from_tga_data(const void *data, size_t size);
+
+        bool preview_tally(unsigned int source);
+        bool program_tally(unsigned int source);
+
+        uint64_t preview_tally_bits();
+        uint64_t program_tally_bits();
+
+        void set_preview_tally(unsigned int source);
+        void set_program_tally(unsigned int source);
 
 #ifdef RAWFRAME_POSIX_IO
         ssize_t read_from_fd(int fd);
@@ -130,6 +139,9 @@ class RawFrame {
         
         FieldDominance _field_dominance;
 
+        uint64_t tally_program;
+        uint64_t tally_preview;
+
         static int n_frames;
 };
 
@@ -140,6 +152,7 @@ class RawFramePacker {
         RawFramePacker(RawFrame *f_) : f(f_) {
             do_YCbCr8P422 = NULL;
             do_YCbCr8P422A = NULL;
+            do_YCbCr10P422A = NULL;
         }
 
         void YCbCr8P422(uint8_t *Y, uint8_t *Cb, uint8_t *Cr) {
@@ -152,6 +165,18 @@ class RawFramePacker {
             CHECK(do_YCbCr8P422A);
             do_YCbCr8P422A(
                 f->w( ), f->h( ), 
+                Ysrcpitch, Cbsrcpitch, Crsrcpitch,
+                Y, Cb, Cr, f->data( )
+            );
+        }
+
+        void YCbCr10P422(
+            uint16_t *Y, uint16_t *Cb, uint16_t *Cr,
+            size_t Ysrcpitch, size_t Cbsrcpitch, size_t Crsrcpitch) {
+
+            CHECK(do_YCbCr10P422A);
+            do_YCbCr10P422A(
+                f->w( ), f->h( ),
                 Ysrcpitch, Cbsrcpitch, Crsrcpitch,
                 Y, Cb, Cr, f->data( )
             );
@@ -181,6 +206,9 @@ class RawFramePacker {
 
         void (*do_YCbCr8P422A)(size_t, size_t, size_t, size_t, size_t,
             uint8_t *, uint8_t *, uint8_t *, uint8_t *);
+
+        void (*do_YCbCr10P422A)(size_t, size_t, size_t, size_t, size_t,
+            uint16_t *, uint16_t *, uint16_t *, uint8_t *);
 
         void (*do_YCbCr8P420A)(size_t, size_t, size_t, size_t, size_t,
             uint8_t *, uint8_t *, uint8_t *, uint8_t *);

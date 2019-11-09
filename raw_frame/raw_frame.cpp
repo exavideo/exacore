@@ -48,6 +48,8 @@ RawFrame::RawFrame( ) {
     unpack = NULL;
     draw = NULL;
     convert = NULL;
+    tally_program = 0;
+    tally_preview = 0;
 }
 
 RawFrame::RawFrame(PixelFormat pf) {
@@ -68,6 +70,8 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf) {
     _field_dominance = UNKNOWN;
     _pixel_format = pf;
     _pitch = minpitch( );
+    tally_program = 0;
+    tally_preview = 0;
     alloc( );
     make_ops( );
 }
@@ -84,6 +88,8 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
             "Scanline pitch insufficient for width and pixel format"
         );
     }
+    tally_program = 0;
+    tally_preview = 0;
     alloc( );
     make_ops( );
 }
@@ -91,6 +97,8 @@ RawFrame::RawFrame(coord_t w, coord_t h, PixelFormat pf, size_t pitch) {
 RawFrame *RawFrame::copy( ) {
     RawFrame *ret = new RawFrame(_w, _h, _pixel_format, _pitch);
     memcpy(ret->_data, _data, _pitch*_h);
+    ret->tally_program = tally_program;
+    ret->tally_preview = tally_preview;
     return ret;
 }
 
@@ -137,11 +145,12 @@ void RawFrame::alloc( ) {
     n_frames++;
 
     /* print scary warning if RawFrames aren't being freed */
-    if (n_frames > 1000) {
+    if (n_frames % 1000 == 0) {
         fprintf(stderr, 
-            "WARNING: More than 1000 RawFrames are currently allocated!\n"
+            "WARNING: there are now %d RawFrames allocated.\n"
             "This may be an indication of a memory leak somewhere.\n"
-            "Please check your code!\n"
+            "Please check your code!\n",
+            n_frames
         );
     }
 
@@ -210,6 +219,30 @@ void RawFrame::make_draw_ops(void) {
             draw = new RawFrameDrawOps(this);
             break;
     }
+}
+
+void RawFrame::set_preview_tally(unsigned int source) {
+    tally_preview |= (1 << source);
+}
+
+void RawFrame::set_program_tally(unsigned int source) {
+    tally_program |= (1 << source);
+}
+
+bool RawFrame::preview_tally(unsigned int source) {
+    return (bool) (tally_preview & (1 << source));
+}
+
+bool RawFrame::program_tally(unsigned int source) {
+    return (bool) (tally_program & (1 << source));
+}
+
+uint64_t RawFrame::preview_tally_bits() {
+    return tally_preview;
+}
+
+uint64_t RawFrame::program_tally_bits() {
+    return tally_program;
 }
 
 #ifdef RAWFRAME_POSIX_IO

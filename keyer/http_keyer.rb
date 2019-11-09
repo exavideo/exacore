@@ -14,11 +14,14 @@ OUT = 2
 UP = 3
 DOWN = 4
 
-$svgdata = ''
+TIE_TO_SOURCE = 0x00000001
+
+$data = ''
 $trans_i = 0
 $trans_nframes = 0
 $trans_state = DOWN
 $dirty_level = 0
+$tie_when_up = false
 
 # talk to stdio
 Thread.new do
@@ -32,7 +35,8 @@ Thread.new do
 
             # dissolve state logic
             Thread.exclusive do
-                size = [ $svgdata.length ].pack('L')
+                size = [ $data.length ].pack('L')
+                flags = 0
                 alpha = 0
 
                 if $trans_state == UP
@@ -54,14 +58,18 @@ Thread.new do
                     end
                 end
 
-                alphastr = [ alpha, $dirty_level ].pack('CC')
+                if $trans_state != DOWN and $tie_when_up
+                    flags |= TIE_TO_SOURCE
+                end
+
+                alphastr = [ flags, alpha, $dirty_level ].pack('LCC')
 
                 STDOUT.write(size)
                 STDOUT.write(alphastr)
-                STDOUT.write($svgdata)
+                STDOUT.write($data)
                 STDOUT.flush
 
-                $svgdata = ''
+                $data = ''
             end
 
         end
@@ -75,7 +83,7 @@ class KeyerServer < Patchbay
     def load_key(fn)
         data = IO.read(fn, :mode => "rb")
         Thread.exclusive do
-            $svgdata = data
+            $data = data
             $lastkey_written = data
         end
     end
@@ -84,32 +92,34 @@ class KeyerServer < Patchbay
         $trans_state = UP
     end
 
-    post '/key' do
+    # assumes 'mutex' is held (Thread.exclusive)
+    def check_tie_flag
+        qs = @environment['QUERY_STRING']
+        $tie_when_up = (qs == 'tie_to_source')        
+    end
+
+    def process_raw_key
         # read the postdata into template
         Thread.exclusive do
             data = incoming_data
             STDERR.puts "new key was written #{data.length}"
-            File.open('/tmp/lastkey.svg', 'wb') do |f|
+            File.open('/tmp/lastkey.dat', 'wb') do |f|
                 f.write data
             end
-            $svgdata = data
+            $data = data
             $lastkey_written = data
+            check_tie_flag
         end
+
         render :json => ''
     end
 
+    post '/key' do
+        process_raw_key
+    end
+
     put '/key' do
-        # read the postdata into template
-        Thread.exclusive do
-            data = incoming_data
-            STDERR.puts "new key was written #{data.length}"
-            File.open('/tmp/lastkey.svg', 'wb') do |f|
-                f.write data
-            end
-            $svgdata = data
-            $lastkey_written = data
-        end
-        render :json => ''
+        process_raw_key
     end
 
     put '/key_dataurl' do
@@ -118,10 +128,13 @@ class KeyerServer < Patchbay
         if (md) 
             rawdata = Base64.decode64(md.post_match)
             Thread.exclusive do
-                $svgdata = rawdata
+                $data = rawdata
                 $lastkey_written = data
+                check_tie_flag
             end
         end
+
+        render :json => ''
     end
 
     post '/dissolve_in/:frames' do

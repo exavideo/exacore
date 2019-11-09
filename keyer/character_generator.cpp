@@ -17,29 +17,32 @@
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _KEYDAEMON_SUBPROCESS_CHARACTER_GENERATOR_H
-#define _KEYDAEMON_SUBPROCESS_CHARACTER_GENERATOR_H
-
 #include "character_generator.h"
 
-class SubprocessCharacterGenerator : public CharacterGenerator {
-    public:
-        SubprocessCharacterGenerator(const char *cmd, 
-                unsigned int dirty_level = 0);
-        virtual ~SubprocessCharacterGenerator( );
-        unsigned int dirty_level( ) { return _dirty_level; }
-    protected:
-        virtual void run_thread( );
-        void do_fork( );
+CharacterGenerator::CharacterGenerator( ) : Thread( ), _output_pipe(2) { 
+    start_thread( );
+}
 
-        void request( );
-        char *read_data(size_t length);
-        virtual RawFrame *do_render(void *data, size_t size);
+CharacterGenerator::CharacterGenerator(int dummy) : Thread( ), _output_pipe(2) {
+    /* don't start the thread */
+    UNUSED(dummy);
+}
 
-        char *_cmd;
+CharacterGenerator::~CharacterGenerator( ) {
 
-        int send_fd, recv_fd;
-        unsigned int _dirty_level;
-};
+}
 
-#endif
+void CharacterGenerator::run_thread(void) {
+    for (;;) {
+        /* just dump lots of null frames */
+        _output_pipe.put(NULL);
+    }
+}
+
+void CharacterGenerator::inhibit_on_source(unsigned int source) {
+    _inhibited_sources.push_back(source);
+}
+
+std::vector<unsigned int> CharacterGenerator::inhibited_sources( ) {
+    return _inhibited_sources;
+}

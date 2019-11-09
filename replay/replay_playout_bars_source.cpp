@@ -57,6 +57,15 @@ void ReplayPlayoutBarsSource::read_frame(ReplayPlayoutFrame &frame_data,
         frame_data.audio_data->size_bytes( ));
 }
 
+void ReplayPlayoutBarsSource::set_frame(RawFrame *frame) {
+    if (bars) {
+        delete bars;
+        bars = NULL;
+    }
+
+    bars = frame;
+}
+
 void ReplayPlayoutBarsSource::oscillate(IOAudioPacket *pkt, float frequency) {
     /* 
      * convert frequency to delta phase per sample 

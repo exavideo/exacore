@@ -6,7 +6,7 @@
 
 SWIG=swig
 CXX=g++
-CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -Werror -Wno-error=cpp -Wno-error=deprecated-declarations -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
+CXXFLAGS=-g $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
 
 # don't use -Werror for swig-generated code
 SWIG_CXXFLAGS=-g -rdynamic $(LOCAL_CFLAGS) -W -Wall -DRAWFRAME_POSIX_IO -D__STDC_CONSTANT_MACROS -fPIC -std=c++11
@@ -30,8 +30,9 @@ SUBDIR_INCLUDES = \
 	-Igraphics/ \
 	-Ireplay/ \
 	-Iavspipe/ \
-	-Ikeydaemon/ \
-	-Idisplay_surface \
+	-Ikeyer/ \
+	-Idisplay_surface/ \
+	-Iipc/ \
 
 include $(shell find . -iname 'subdir.mk')
 include $(shell find . -iname 'targets.mk')
