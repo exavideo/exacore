@@ -5,10 +5,10 @@ avspipe_avpinput_decklink_OBJECTS = \
 	$(thread_OBJECTS) \
         $(graphics_OBJECTS) \
         $(mjpeg_OBJECTS) \
-    keydaemon/character_generator.o \
-    keydaemon/subprocess_character_generator.o \
-    keydaemon/svg_subprocess_character_generator.o \
-    keydaemon/png_subprocess_character_generator.o \
+	keyer/character_generator.o \
+	keyer/subprocess_character_generator.o \
+	keyer/svg_subprocess_character_generator.o \
+	keyer/png_subprocess_character_generator.o \
 	avspipe/avpinput_decklink.o
 
 avspipe/avpinput_decklink: $(avspipe_avpinput_decklink_OBJECTS)

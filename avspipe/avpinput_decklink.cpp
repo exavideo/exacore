@@ -226,7 +226,7 @@ class CgFilter : public Filter<RawFrame> {
         }
 
         virtual void filter(RawFrame *thing) {
-            RawFrame *key = cg->output_pipe( ).get( );
+            RawFrame *key = cg->output_pipe( ).get( ).frame;
 
             if (key != NULL) {
                 thing->draw->alpha_key(cg->x( ), cg->y( ),
