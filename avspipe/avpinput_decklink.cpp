@@ -1,18 +1,18 @@
 /*
  * Copyright 2011 Andrew H. Armenia.
- * 
+ *
  * This file is part of openreplay.
- * 
+ *
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * openreplay is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -40,10 +41,12 @@
 
 #include <getopt.h>
 
+#include <sstream>
+
 char *parse_command(const char *cmd, int vpfd, int apfd) {
     size_t len = strlen(cmd);
     size_t out_len = 2*len;
-    char *out = (char *)xmalloc(out_len + 1, 
+    char *out = (char *)xmalloc(out_len + 1,
             "avpinput_decklink", "command buffer");
     char *outp = out;
     char number[80];
@@ -55,18 +58,18 @@ char *parse_command(const char *cmd, int vpfd, int apfd) {
     while (*cmd) {
         /*
          * Consume one character of input.
-         * This leaves *cmd at the character after the one 
+         * This leaves *cmd at the character after the one
          * currently being acted upon.
          */
         ch = *cmd;
         cmd++;
 
         if (ch == '%') {
-            /* 
-             * A % sign introduces an escape sequence. 
+            /*
+             * A % sign introduces an escape sequence.
              * Look at the next character to decide what it means.
              */
-            if (*cmd == '%') { 
+            if (*cmd == '%') {
                 /* %%: literal % sign */
                 if (out_len > 0) {
                     *outp = '%';
@@ -75,9 +78,9 @@ char *parse_command(const char *cmd, int vpfd, int apfd) {
                 }
                 cmd++;
             } else if (*cmd == '\0') {
-                /* 
-                 * a lonely '%' sign at the end of 
-                 * the string cannot be parsed 
+                /*
+                 * a lonely '%' sign at the end of
+                 * the string cannot be parsed
                  */
                 if (out_len > 0) {
                     *outp = '%';
@@ -134,8 +137,8 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
     }
 
     if (pipe(apipe) != 0) {
-        /* 
-         * FIXME a pair of FDs leak here if there is an error. 
+        /*
+         * FIXME a pair of FDs leak here if there is an error.
          * Does not matter now.
          */
         perror("pipe(apipe)");
@@ -154,7 +157,7 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
         /* child */
         close(vpipe[1]);
         close(apipe[1]);
-        execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL); 
+        execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL);
 
         perror("execl");
         exit(1);
@@ -167,7 +170,7 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
         free(cmd_to_exec);
 
         return child;
-    } 
+    }
 }
 
 template <class Thing>
@@ -226,21 +229,62 @@ class CgFilter : public Filter<RawFrame> {
             RawFrame *key = cg->output_pipe( ).get( );
 
             if (key != NULL) {
-                thing->draw->alpha_key(cg->x( ), cg->y( ), 
+                thing->draw->alpha_key(cg->x( ), cg->y( ),
                     key, key->global_alpha( ));
 
                 delete key;
             }
-        }   
+        }
 
     protected:
         CharacterGenerator *cg;
 };
 
+class PreviewFile {
+    public:
+        PreviewFile(const char *extension) {
+            if (asprintf(&output_filename, "/tmp/avpinput_%d.%s",
+                    getpid( ), extension) == -1) {
+                fd_ = -1;
+                return;
+            }
+
+            if (asprintf(&tmp_filename, "%s.tmp", output_filename) == -1) {
+                free(output_filename);
+                fd_ = -1;
+                return;
+            }
+
+            fd_ = open(tmp_filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        }
+
+        ~PreviewFile( ) {
+            if (fd_ != -1) {
+                close(fd_);
+                rename(tmp_filename, output_filename);
+                free(output_filename);
+                free(tmp_filename);
+            }
+        }
+
+        bool ok( ) {
+            return fd_ != -1;
+        }
+
+        int fd( ) {
+            return fd_;
+        }
+
+    protected:
+        int fd_;
+        char *output_filename;
+        char *tmp_filename;
+};
+
 class PreviewFilter : public Filter<RawFrame> {
     public:
-        PreviewFilter() 
-            : enc(480, 270, 80, 16*1024*1024),
+        PreviewFilter()
+            : enc(480, 272, 80, 16*1024*1024),
             counter(0) {
 
         }
@@ -250,26 +294,17 @@ class PreviewFilter : public Filter<RawFrame> {
 
             if (counter == 30) {
                 counter = 0;
-                RawFrame *small = 
+                RawFrame *small =
                     thing->convert->CbYCrY8422_scaled(480, 270);
                 enc.encode(small);
                 delete small;
 
-                char *dest = asprintf(
-                    "/tmp/avpinput.%d.jpg", getpid()
-                );
-                char *tmp = asprintf(
-                    "/tmp/avpinput.%d.jpg.tmp", getpid()
-                );
-                int fd = open(tmp, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-                if (fd != -1) {
+                PreviewFile output("jpg");
+                if (output.ok( )) {
                     /* deliberately ignoring errors here. */
-                    write_all(fd, enc.get_data( ), enc.get_data_size( ));
-                    close(fd);
-                    rename(tmp, dest);
+                    write_all(output.fd( ), enc.get_data( ),
+                        enc.get_data_size( ));
                 }
-                free(tmp);
-                free(dst);
             }
         }
     protected:
@@ -277,15 +312,74 @@ class PreviewFilter : public Filter<RawFrame> {
         Mjpeg422Encoder enc;
 };
 
+class AudioLevelsFilter : public Filter<IOAudioPacket> {
+    public:
+        AudioLevelsFilter( ) {
+            peaks = NULL;
+            counter = 0;
+        }
+
+        void filter(IOAudioPacket *pkt) {
+            if (peaks == NULL) {
+                peaks = new int32_t[pkt->channels( )];
+                n_channels = pkt->channels( );
+                for (size_t i = 0; i < n_channels; i++) {
+                    peaks[i] = 0;
+                }
+            }
+
+            if (pkt->channels( ) != n_channels) {
+                return;
+            }
+
+            /* peak decay */
+            for (size_t i = 0; i < pkt->channels( ); i++) {
+                peaks[i] = peaks[i] * 9 / 10;
+            }
+
+            /* peak search in this packet */
+	    int16_t *sample_ptr = pkt->data( );
+            for (size_t i = 0; i < pkt->size_samples( ); i++) {
+                for (size_t j = 0; j < pkt->channels( ); j++) {
+                    if (sample_ptr[j] > peaks[j]) {
+                        peaks[j] = sample_ptr[j];
+                    }
+                }
+		sample_ptr += n_channels;
+            }
+
+            counter++;
+            if (counter == 30) {
+                counter = 0;
+                PreviewFile out("peak");
+                if (out.ok( )) {
+                    std::ostringstream outstr;
+                    for (size_t i = 0; i < n_channels; i++) {
+                        float dbfs = 20 * log10f(peaks[i] / 32768.0);
+                        outstr << dbfs << std::endl;
+                    }
+
+                    write_all(out.fd( ), outstr.str( ).c_str( ),
+                        outstr.str( ).size( ));
+                }
+            }
+        }
+
+    protected:
+        int32_t *peaks;
+        size_t n_channels;
+	int counter;
+};
+
 template <class T>
 class FilterChain : public Filter<T> {
     public:
         FilterChain() {
-            
+
         }
 
         ~FilterChain() {
-            
+
         }
 
         virtual void filter(T *thing) {
@@ -305,8 +399,8 @@ class FilterChain : public Filter<T> {
 template <class SendableThing>
 class SenderThread : public Thread {
     public:
-        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd, 
-            Filter<SendableThing> *filt = NULL, 
+        SenderThread(Pipe<SendableThing *> *fpipe, int out_fd,
+            Filter<SendableThing> *filt = NULL,
 		    Pipe<SendableThing *> *ppipe = NULL
 	    ) {
             assert(fpipe != NULL);
@@ -372,7 +466,7 @@ class SenderThread : public Thread {
 class CompressorThread : public SenderThread<RawFrame> {
     public:
         CompressorThread(Pipe<RawFrame *> *fpipe, int out_fd,
-                Filter<RawFrame> *filt = NULL, int qual = 80) 
+                Filter<RawFrame> *filt = NULL, int qual = 80)
             : SenderThread(fpipe, out_fd, filt),
             enc(1920, 1080, qual, 16*1024*1024) { }
 
@@ -400,9 +494,9 @@ class CompressorThread : public SenderThread<RawFrame> {
 class MixdownFilter : public Filter<IOAudioPacket> {
     public:
         void filter(IOAudioPacket *pkt) {
-            int32_t sum; 
+            int32_t sum;
             int16_t *sample_ptr = pkt->data( );
-        
+
             for (size_t i = 0; i < pkt->size_samples( ); i++) {
                 sum = 0;
                 for (size_t j = 0; j < pkt->channels( ); j++) {
@@ -410,11 +504,11 @@ class MixdownFilter : public Filter<IOAudioPacket> {
                 }
 
                 sum /= pkt->channels( );
-        
+
                 for (size_t j = 0; j < pkt->channels( ); j++) {
                     sample_ptr[j] = sum;
                 }
-        
+
                 sample_ptr += pkt->channels( );
             }
         }
@@ -466,7 +560,7 @@ int main(int argc, char * const *argv) {
     bool preview = false;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "pPmjfc:b:q:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "pRmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'f':
                 preroll = 1;
@@ -484,8 +578,9 @@ int main(int argc, char * const *argv) {
                 filter_chain.add_filter(new BugFilter(optarg));
                 break;
 
-            case 'P':
+            case 'R':
                 filter_chain.add_filter(new PreviewFilter);
+                audio_filter_chain.add_filter(new AudioLevelsFilter);
                 break;
 
             case 'C':
@@ -548,7 +643,7 @@ int main(int argc, char * const *argv) {
     }
 
 
-    iadp = create_decklink_input_adapter_with_audio(card, 0, 0, 
+    iadp = create_decklink_input_adapter_with_audio(card, 0, 0,
             RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
 
@@ -561,27 +656,27 @@ int main(int argc, char * const *argv) {
     /* start video and audio sender threads */
     if (jpeg) {
         vsthread = new CompressorThread(
-            &(iadp->output_pipe( )), vpfd, 
+            &(iadp->output_pipe( )), vpfd,
             &filter_chain, quality
         );
     } else {
         if (preview_out) {
             vsthread = new SenderThread<RawFrame>(
-                &(iadp->output_pipe( )), vpfd, 
-                &filter_chain, 
+                &(iadp->output_pipe( )), vpfd,
+                &filter_chain,
                 &(preview_out->input_pipe( ))
             );
         } else {
             vsthread = new SenderThread<RawFrame>(
-                &(iadp->output_pipe( )), vpfd, 
+                &(iadp->output_pipe( )), vpfd,
                 &filter_chain
             );
         }
     }
 
     asthread = new SenderThread<IOAudioPacket>(
-        apipe, apfd, 
-        &audio_filter_chain, 
+        apipe, apfd,
+        &audio_filter_chain,
         preview_out ? preview_out->audio_input_pipe() : NULL
     );
 
@@ -600,7 +695,7 @@ int main(int argc, char * const *argv) {
     iadp->start( );
 
     /* wait on child process */
-    while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ } 
+    while (waitpid(child, NULL, 0) == EINTR) { /* busy wait */ }
 
     /* done! */
 }
