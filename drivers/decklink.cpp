@@ -1,18 +1,18 @@
 /*
  * Copyright 2011, 2013, 2014 Andrew H. Armenia.
- * 
+ *
  * This file is part of openreplay.
- * 
+ *
  * openreplay is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * openreplay is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with openreplay.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -61,7 +61,7 @@ static struct decklink_norm norms[] = {
 static struct decklink_connection connections[] = {
     /* This one is, though. */
     { "SD/HD-SDI (copper)", bmdVideoConnectionSDI },
-    { "SD/HD-SDI (fiber)", bmdVideoConnectionOpticalSDI }, 
+    { "SD/HD-SDI (fiber)", bmdVideoConnectionOpticalSDI },
     { "HDMI", bmdVideoConnectionHDMI },
     { "Analog Component", bmdVideoConnectionComponent },
     { "Analog S-Video", bmdVideoConnectionSVideo },
@@ -126,7 +126,7 @@ static void unpack_10bit(uint16_t *output, void *input, size_t size) {
 }
 
 /* lookup the field dominance corresponding to this BMDDisplayMode */
-static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode, 
+static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode,
         IDeckLinkDisplayModeIterator *iterator) {
     IDeckLinkDisplayMode *imode;
 
@@ -159,7 +159,7 @@ static RawFrame::FieldDominance find_dominance(BMDDisplayMode mode,
     }
 
     /* no modes matched so we don't know dominance */
-    return RawFrame::UNKNOWN; 
+    return RawFrame::UNKNOWN;
 }
 
 static void flip_copy(RawFrame *dst, uint8_t *src) {
@@ -252,12 +252,12 @@ RawFrame *create_8bit_raw_frame_from_decklink_10bit(
 
     return ret;
 }
-    
+
 
 /* Adapter from IDeckLinkVideoFrame to RawFrame, enables zero-copy input */
 class DecklinkInputRawFrame : public RawFrame {
     public:
-        DecklinkInputRawFrame(IDeckLinkVideoFrame *frame, 
+        DecklinkInputRawFrame(IDeckLinkVideoFrame *frame,
                 RawFrame::PixelFormat pf) : RawFrame(pf) {
 
             void *dp;
@@ -266,7 +266,7 @@ class DecklinkInputRawFrame : public RawFrame {
 
             _frame = frame;
 
-            _frame->AddRef( ); 
+            _frame->AddRef( );
 
             if (_frame->GetBytes(&dp) != S_OK) {
                 throw std::runtime_error("Cannot get pointer to raw data");
@@ -275,7 +275,7 @@ class DecklinkInputRawFrame : public RawFrame {
             _data = (uint8_t *) dp;
             _w = _frame->GetWidth( );
             _h = _frame->GetHeight( );
-            _pitch = _frame->GetRowBytes( );            
+            _pitch = _frame->GetRowBytes( );
         }
 
         virtual ~DecklinkInputRawFrame( ) {
@@ -293,16 +293,16 @@ class DecklinkInputRawFrame : public RawFrame {
         }
 };
 
-class DeckLinkOutputAdapter : public OutputAdapter, 
+class DeckLinkOutputAdapter : public OutputAdapter,
         public IDeckLinkVideoOutputCallback,
         public IDeckLinkAudioOutputCallback {
 
     public:
-        DeckLinkOutputAdapter(unsigned int card_index = 0, 
-                unsigned int norm_ = 0, 
+        DeckLinkOutputAdapter(unsigned int card_index = 0,
+                unsigned int norm_ = 0,
                 RawFrame::PixelFormat pf_ = RawFrame::CbYCrY8422,
-                bool enable_audio = false, unsigned int n_channels = 2) 
-                : deckLink(NULL), 
+                bool enable_audio = false, unsigned int n_channels = 2)
+                : deckLink(NULL),
                 deckLinkOutput(NULL), frame_counter(0),
                 last_frame(NULL), in_pipe(OUT_PIPE_SIZE), audio_in_pipe(NULL) {
 
@@ -332,11 +332,11 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             //thread_priority_hack( );
 
-            fprintf(stderr, "DeckLink: initialized using norm %s\n", 
+            fprintf(stderr, "DeckLink: initialized using norm %s\n",
                     norms[norm].name);
         }
 
-        void thread_priority_hack( ) {            
+        void thread_priority_hack( ) {
             /* abuse the crap out of the DeckLink API pointers... */
             struct sched_param param;
             param.sched_priority = 20;
@@ -352,7 +352,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 perror("pthread_setschedparam");
                 fprintf(stderr, "cannot set FIFO scheduler for DL-A thread");
             }
-            
+
             if (pthread_setschedparam(thread_b, SCHED_FIFO, &param) != 0) {
                 perror("pthread_setschedparam");
                 fprintf(stderr, "cannot set RR scheduler for DL-B thread");
@@ -413,8 +413,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                     /* maybe include a high-water mark to stop loop? */
 
                     if (audio_adjust > 0) {
-                        /* 
-                         * insert dummy audio as needed to compensate for 
+                        /*
+                         * insert dummy audio as needed to compensate for
                          * dropped video frames
                          */
                         audio = new IOAudioPacket(1601, n_channels);
@@ -429,7 +429,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             }
 
             if (audio_fifo->fill_samples( ) > 0) {
-                deckLinkOutput->ScheduleAudioSamples(audio_fifo->data( ), 
+                deckLinkOutput->ScheduleAudioSamples(audio_fifo->data( ),
                         audio_fifo->fill_samples( ), 0, 0, &n_consumed);
                 audio_fifo->pop_samples(n_consumed);
             } else if (preroll) {
@@ -444,11 +444,11 @@ class DeckLinkOutputAdapter : public OutputAdapter,
         AudioFIFO<int16_t> *audio_fifo;
 
         RawFrame::FieldDominance output_dominance( ) { return dominance; }
-    
-    protected:        
+
+    protected:
         IDeckLink *deckLink;
         IDeckLinkOutput *deckLinkOutput;
-        
+
         BMDTimeScale time_base;
         BMDTimeValue frame_duration;
         unsigned int frame_counter;
@@ -476,15 +476,15 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             IDeckLinkDisplayModeIterator *it;
 
             /* get the DeckLinkOutput interface */
-            if (deckLink->QueryInterface(IID_IDeckLinkOutput, 
+            if (deckLink->QueryInterface(IID_IDeckLinkOutput,
                     (void **)&deckLinkOutput) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "Failed to get DeckLink output interface handle"
                 );
             }
-            
-            if (deckLinkOutput->SetScheduledFrameCompletionCallback(this) 
+
+            if (deckLinkOutput->SetScheduledFrameCompletionCallback(this)
                    != S_OK) {
 
                 throw std::runtime_error(
@@ -498,7 +498,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                     "DeckLink output: failed to get display mode iterator"
                 );
             }
-            
+
             dominance = find_dominance(norms[norm].mode, it);
 
             it->Release( );
@@ -506,7 +506,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             /* and we're off to the races */
             if (deckLinkOutput->EnableVideoOutput(norms[norm].mode,
                     bmdVideoOutputFlagDefault) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "Failed to enable DeckLink video output"
                 );
@@ -529,8 +529,8 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
-            if (deckLinkOutput->EnableAudioOutput( 
-                    bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger, 
+            if (deckLinkOutput->EnableAudioOutput(
+                    bmdAudioSampleRate48kHz, bmdAudioSampleType16bitInteger,
                     n_channels, bmdAudioOutputStreamContinuous) != S_OK) {
                 throw std::runtime_error(
                     "Failed to enable DeckLink audio output"
@@ -545,7 +545,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 );
             }
 
-            while (audio_preroll_done == 0) { 
+            while (audio_preroll_done == 0) {
                 /* FIXME: busy wait */
             }
 
@@ -561,9 +561,9 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             assert(deckLink != NULL);
 
-            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration, 
+            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration,
                     (void**) &config) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "DeckLink output: get IDeckLinkConfiguration failed"
                 );
@@ -588,7 +588,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                         "cannot deactivate card bypass relay\n"
                 );
             }
-                    
+
             /* throw outputs at wall, see what sticks :) */
             #if 0
             config->SetInt(bmdDeckLinkConfigVideoOutputConnection,
@@ -611,11 +611,11 @@ class DeckLinkOutputAdapter : public OutputAdapter,
             IDeckLinkMutableVideoFrame *frame;
             IDeckLinkVideoFrameAncillary *anc;
             for (unsigned int i = 0; i < n_frames; i++) {
-                if (deckLinkOutput->CreateVideoFrame(norms[norm].w, 
+                if (deckLinkOutput->CreateVideoFrame(norms[norm].w,
                         norms[norm].h, 2*norms[norm].w, bpf,
                         bmdFrameFlagDefault, &frame) != S_OK) {
 
-                    throw std::runtime_error("Failed to create frame"); 
+                    throw std::runtime_error("Failed to create frame");
                 }
 
                 if (deckLinkOutput->CreateAncillaryData(bpf, &anc) != S_OK) {
@@ -644,9 +644,9 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
             uint8_t hr = frames;
 
-            frame->SetTimecodeFromComponents(bmdTimecodeVITC, hr, min, 
+            frame->SetTimecodeFromComponents(bmdTimecodeVITC, hr, min,
                 sec, fr, bmdTimecodeFlagDefault);
-        
+
             frames_written++;
         }
 
@@ -665,7 +665,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 /* this should likewise be a black frame */
                 input = NULL;
             }
-            
+
             if (input != NULL) {
                 frame->GetBytes(&data);
                 input->unpack->CbYCrY8422((uint8_t *) data);
@@ -673,10 +673,10 @@ class DeckLinkOutputAdapter : public OutputAdapter,
                 fprintf(stderr, "DeckLink: on fire\n");
                 audio_adjust += 1;
             }
-            
+
             set_frame_timecode(frame);
 
-            deckLinkOutput->ScheduleVideoFrame(frame, 
+            deckLinkOutput->ScheduleVideoFrame(frame,
                 frame_counter * frame_duration, frame_duration, time_base);
 
             frame_counter++;
@@ -697,7 +697,7 @@ class DeckLinkOutputAdapter : public OutputAdapter,
 
 };
 
-class DeckLinkInputAdapter : public InputAdapter, 
+class DeckLinkInputAdapter : public InputAdapter,
         public IDeckLinkInputCallback {
 
     public:
@@ -721,8 +721,8 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             pf = pf_;
             bpf = convert_pf(pf_);
-            /* 
-             * force 10 bit capture of YUV data; we'll downsample it later 
+            /*
+             * force 10 bit capture of YUV data; we'll downsample it later
              * this is needed to grab VANC data
              */
             if (bpf == bmdFormat8BitYUV) {
@@ -764,10 +764,10 @@ class DeckLinkInputAdapter : public InputAdapter,
             rotate = true;
         }
 
-        virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv) { 
+        virtual HRESULT QueryInterface(REFIID iid, LPVOID *ppv) {
             UNUSED(iid);
             UNUSED(ppv);
-            return E_NOINTERFACE; 
+            return E_NOINTERFACE;
         }
 
         virtual ULONG AddRef(void) {
@@ -793,7 +793,7 @@ class DeckLinkInputAdapter : public InputAdapter,
 
         virtual HRESULT VideoInputFrameArrived(IDeckLinkVideoInputFrame *in,
                 IDeckLinkAudioInputPacket *audio_in) {
-            
+
             RawFrame *out;
             IOAudioPacket *audio_out;
 
@@ -817,7 +817,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                     }
                 }
 
-                /* 
+                /*
                  * we can't actually tell the card to just not send video,
                  * so if video is disabled, we just ignore the video frames...
                  */
@@ -828,9 +828,9 @@ class DeckLinkInputAdapter : public InputAdapter,
                         out = create_raw_frame_from_decklink(in, pf, rotate);
                     }
                     out->set_field_dominance(dominance);
-                    
+
                     process_ancillary(in, out);
-                    
+
                     if (out_pipe.can_put( ) && started) {
                         if (enable_video) {
                             out_pipe.put(out);
@@ -842,7 +842,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                         delete out;
                     }
                 }
-            } 
+            }
 
             /* Process audio, if available. */
             if (audio_in != NULL && audio_pipe != NULL) {
@@ -868,12 +868,12 @@ class DeckLinkInputAdapter : public InputAdapter,
                     fprintf(stderr, "DeckLink: dropping input AudioPacket\n");
                     delete audio_out;
                 }
-            } 
+            }
 
 
             if (
-                    (avsync > 10 || avsync < -10) 
-                    && audio_pipe != NULL 
+                    (avsync > 10 || avsync < -10)
+                    && audio_pipe != NULL
                     && enable_video
             ) {
                 fprintf(stderr, "DeckLink warning: avsync drift = %d\n", avsync);
@@ -886,7 +886,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             return out_pipe;
         }
 
-        virtual Pipe<IOAudioPacket *> *audio_output_pipe( ) { 
+        virtual Pipe<IOAudioPacket *> *audio_output_pipe( ) {
             return audio_pipe;
         }
 
@@ -925,7 +925,7 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             if (deckLink->QueryInterface(IID_IDeckLinkInput,
                     (void **) &deckLinkInput) != S_OK) {
-                        
+
                 throw std::runtime_error(
                     "DeckLink input: failed to get IDeckLinkInput"
                 );
@@ -936,14 +936,14 @@ class DeckLinkInputAdapter : public InputAdapter,
                     "DeckLink input: failed to get display mode iterator"
                 );
             }
-            
+
             dominance = find_dominance(norms[norm].mode, it);
 
             it->Release( );
 
             if (deckLinkInput->EnableVideoInput(norms[norm].mode,
                     bpf, 0) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "DeckLink input: failed to enable video input"
                 );
@@ -957,12 +957,12 @@ class DeckLinkInputAdapter : public InputAdapter,
             IDeckLinkConfiguration *config;
 
             assert(deckLink != NULL);
-            assert(input < sizeof(connections) 
+            assert(input < sizeof(connections)
                     / sizeof(struct decklink_connection));
 
-            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration, 
+            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration,
                     (void**) &config) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "DeckLink input: get IDeckLinkConfiguration failed"
                 );
@@ -980,7 +980,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                     connections[input].name);
 
             config->Release( );
-        }   
+        }
 
         void open_audio_input( ) {
             assert(deckLink != NULL);
@@ -1001,9 +1001,9 @@ class DeckLinkInputAdapter : public InputAdapter,
 
             assert(deckLink != NULL);
 
-            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration, 
+            if (deckLink->QueryInterface(IID_IDeckLinkConfiguration,
                     (void**) &config) != S_OK) {
-                
+
                 throw std::runtime_error(
                     "DeckLink input: get IDeckLinkConfiguration failed"
                 );
@@ -1039,7 +1039,7 @@ class DeckLinkInputAdapter : public InputAdapter,
             void *buf = NULL;
             size_t sz;
             size_t unpacked_size;
-            
+
             if (in->GetAncillaryData(&ancillary) == S_OK) {
                 sz = in->GetRowBytes();
                 /* for now we only care about line 15 (where blackmagic tally is) */
@@ -1050,8 +1050,6 @@ class DeckLinkInputAdapter : public InputAdapter,
                     unpack_10bit(unpacked_data, buf, sz);
                     process_unpacked_ancillary(out, unpacked_data, unpacked_size);
                     delete [] unpacked_data;
-                } else {
-                    fprintf(stderr, "DeckLink: GetBufferForVerticalBlankingLine failed\n");
                 }
                 ancillary->Release();
             } else {
@@ -1078,7 +1076,7 @@ class DeckLinkInputAdapter : public InputAdapter,
                     if (i + 5 + dc >= size) {
                         continue;
                     }
-                    
+
                     /* Blackmagic tally packet */
                     if (did == 0x51 && sdid == 0x52) {
                         process_blackmagic_tally(out, &data[i+6], dc);
@@ -1118,23 +1116,23 @@ OutputAdapter *create_decklink_output_adapter(unsigned int card_index,
 OutputAdapter *create_decklink_output_adapter_with_audio(
         unsigned int card_index, unsigned int decklink_norm,
         RawFrame::PixelFormat pf, unsigned int n_channels) {
-    return new DeckLinkOutputAdapter(card_index, decklink_norm, pf, 
+    return new DeckLinkOutputAdapter(card_index, decklink_norm, pf,
             true, n_channels);
 }
 
 InputAdapter *create_decklink_input_adapter(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,
         RawFrame::PixelFormat pf) {
-    
-    return new DeckLinkInputAdapter(card_index, 
+
+    return new DeckLinkInputAdapter(card_index,
             decklink_norm, decklink_input, pf);
 }
 
 InputAdapter *create_decklink_input_adapter_with_audio(unsigned int card_index,
         unsigned int decklink_norm, unsigned int decklink_input,
         RawFrame::PixelFormat pf, unsigned int n_channels) {
-    
-    return new DeckLinkInputAdapter(card_index, 
+
+    return new DeckLinkInputAdapter(card_index,
             decklink_norm, decklink_input, pf, true, n_channels);
 }
 
@@ -1143,7 +1141,7 @@ InputAdapter *create_decklink_audio_input_adapter(
         unsigned int decklink_input, unsigned int n_channels
 ) {
     return new DeckLinkInputAdapter(
-        card_index, decklink_norm, decklink_input, 
+        card_index, decklink_norm, decklink_input,
         RawFrame::CbYCrY8422, true, n_channels, false
     );
 }

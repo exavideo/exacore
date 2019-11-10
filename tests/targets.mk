@@ -8,9 +8,9 @@ test_mjpeg_422_encode_OBJECTS = \
 	tests/mjpeg_422_encode.o
 
 tests/mjpeg_422_encode: $(test_mjpeg_422_encode_OBJECTS)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(mjpeg_LIBS) $(common_LIBS) $(raw_frame_LIBS) 
+	$(CXX) $(LDFLAGS) -o $@ $^ $(mjpeg_LIBS) $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/mjpeg_422_encode    
+all_TARGETS += tests/mjpeg_422_encode
 
 test_mjpeg_422_encode_bench_OBJECTS = \
 	$(common_OBJECTS) \
@@ -32,7 +32,7 @@ test_mjpeg_422_decode_OBJECTS = \
 tests/mjpeg_422_decode: $(test_mjpeg_422_decode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(mjpeg_LIBS) $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/mjpeg_422_decode_scaled    
+all_TARGETS += tests/mjpeg_422_decode_scaled
 
 test_mjpeg_422_decode_scaled_OBJECTS = \
 	$(common_OBJECTS) \
@@ -43,7 +43,7 @@ test_mjpeg_422_decode_scaled_OBJECTS = \
 tests/mjpeg_422_decode_scaled: $(test_mjpeg_422_decode_scaled_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(mjpeg_LIBS) $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/mjpeg_422_decode_scaled    
+all_TARGETS += tests/mjpeg_422_decode_scaled
 
 test_mjpeg_422_decode_bench_OBJECTS = \
 	$(common_OBJECTS) \
@@ -64,7 +64,7 @@ test_CbYCrY8422_scan_double_OBJECTS = \
 tests/CbYCrY8422_scan_double: $(test_CbYCrY8422_scan_double_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/CbYCrY8422_scan_double    
+all_TARGETS += tests/CbYCrY8422_scan_double
 
 test_CbYCrY8422_alpha_BGRAn8_OBJECTS = \
 	$(common_OBJECTS) \
@@ -74,7 +74,7 @@ test_CbYCrY8422_alpha_BGRAn8_OBJECTS = \
 tests/CbYCrY8422_alpha_BGRAn8: $(test_CbYCrY8422_alpha_BGRAn8_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/CbYCrY8422_alpha_BGRAn8    
+all_TARGETS += tests/CbYCrY8422_alpha_BGRAn8
 
 test_CbYCrY8422_BGRAn8_OBJECTS = \
 	$(common_OBJECTS) \
@@ -114,7 +114,7 @@ test_stretch_OBJECTS = \
 tests/stretch: $(test_stretch_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/stretch    
+all_TARGETS += tests/stretch
 
 test_scan_triple_OBJECTS = \
 	$(common_OBJECTS) \
@@ -124,7 +124,7 @@ test_scan_triple_OBJECTS = \
 tests/scan_triple: $(test_scan_triple_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS)
 
-all_TARGETS += tests/scan_triple    
+all_TARGETS += tests/scan_triple
 
 test_decklink_output_random_OBJECTS = \
 	$(common_OBJECTS) \
@@ -157,6 +157,26 @@ test_decklink_audio_only_OBJECTS = \
 tests/decklink_audio_only: $(test_decklink_audio_only_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(drivers_decklink_LIBS) $(raw_frame_LIBS) $(thread_LIBS)
 
+
+test_decklink_audio_dropouts_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_audio_dropouts.o
+
+tests/decklink_audio_dropouts: $(test_decklink_audio_dropouts_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(drivers_decklink_LIBS) $(raw_frame_LIBS) $(thread_LIBS) -pthread
+
+test_decklink_audio_dropouts_multi_OBJECTS = \
+	$(common_OBJECTS) \
+	$(raw_frame_OBJECTS) \
+	$(drivers_decklink_OBJECTS) \
+	$(thread_OBJECTS) \
+	tests/decklink_audio_dropouts_multi.o
+
+tests/decklink_audio_dropouts_multi: $(test_decklink_audio_dropouts_multi_OBJECTS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(drivers_decklink_LIBS) $(raw_frame_LIBS) $(thread_LIBS) -pthread
 all_TARGETS += tests/decklink_multi_capture
 
 test_v4l2_input_OBJECTS = \
@@ -170,7 +190,7 @@ test_v4l2_input_OBJECTS = \
 tests/v4l2_input: $(test_v4l2_input_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS) $(drivers_v4l2_LIBS) $(thread_LIBS) $(mjpeg_LIBS)
 
-all_TARGETS += tests/v4l2_input    
+all_TARGETS += tests/v4l2_input
 
 test_decklink_output_random_audio_OBJECTS = \
 	$(common_OBJECTS) \
@@ -205,7 +225,7 @@ tests/decklink_audio: $(test_decklink_audio_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS) $(drivers_decklink_LIBS) $(thread_LIBS)
 
 
-all_TARGETS += tests/decklink_copy    
+all_TARGETS += tests/decklink_copy
 
 test_decklink_key_OBJECTS = \
 	$(common_OBJECTS) \
@@ -218,7 +238,7 @@ tests/decklink_key: $(test_decklink_key_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS) $(drivers_decklink_LIBS) $(thread_LIBS)
 
 
-all_TARGETS += tests/decklink_key    
+all_TARGETS += tests/decklink_key
 
 test_rsvg_frame_OBJECTS = \
 	$(common_OBJECTS) \
@@ -230,7 +250,7 @@ tests/test_rsvg_frame: $(test_rsvg_frame_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(graphics_LIBS) $(common_LIBS) $(raw_frame_LIBS) $(drivers_decklink_LIBS) $(thread_LIBS)
 
 
-all_TARGETS += tests/test_rsvg_frame    
+all_TARGETS += tests/test_rsvg_frame
 
 test_svg_key_OBJECTS = \
 	$(common_OBJECTS) \
@@ -244,7 +264,7 @@ tests/svg_key: $(test_svg_key_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(graphics_LIBS) $(common_LIBS) $(raw_frame_LIBS) $(drivers_decklink_LIBS) $(thread_LIBS)
 
 
-all_TARGETS += tests/svg_key    
+all_TARGETS += tests/svg_key
 
 test_fbdev_OBJECTS = \
 	$(common_OBJECTS) \
@@ -254,7 +274,7 @@ tests/fbdev: $(test_fbdev_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS)
 
 
-all_TARGETS += tests/fbdev    
+all_TARGETS += tests/fbdev
 
 test_freetype_test_OBJECTS = \
 	$(common_OBJECTS) \
@@ -266,7 +286,7 @@ test_freetype_test_OBJECTS = \
 tests/freetype_test: $(test_freetype_test_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(graphics_LIBS) $(raw_frame_LIBS) $(common_LIBS) $(thread_LIBS)
 
-all_TARGETS += tests/freetype_test    
+all_TARGETS += tests/freetype_test
 
 test_png_decode_OBJECTS = \
 	$(common_OBJECTS) \
@@ -278,7 +298,7 @@ test_png_decode_OBJECTS = \
 tests/png_decode: $(test_png_decode_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(raw_frame_LIBS) $(graphics_LIBS) $(thread_LIBS)
 
-all_TARGETS += tests/png_decode    
+all_TARGETS += tests/png_decode
 
 test_clock_monotonic_OBJECTS = \
 	$(common_OBJECTS) \
@@ -288,7 +308,7 @@ test_clock_monotonic_OBJECTS = \
 tests/clock_monotonic: $(test_clock_monotonic_OBJECTS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(common_LIBS) $(thread_LIBS)
 
-all_TARGETS += tests/clock_monotonic    
+all_TARGETS += tests/clock_monotonic
 
 test_js_cg_script_OBJECTS = \
 	$(common_OBJECTS) \
