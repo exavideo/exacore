@@ -5,8 +5,8 @@ graphics_OBJECTS = \
 
 EXTERNAL_INCLUDES += $(shell pkg-config librsvg-2.0 --cflags)
 EXTERNAL_INCLUDES += $(shell pkg-config cairo --cflags)
-EXTERNAL_INCLUDES += $(shell freetype-config --cflags)
+EXTERNAL_INCLUDES += $(shell pkg-config freetype2 --cflags)
 
 graphics_LIBS  = $(shell pkg-config librsvg-2.0 --libs)
 graphics_LIBS += $(shell pkg-config cairo --libs) 
-graphics_LIBS += $(shell freetype-config --libs)
+graphics_LIBS += $(shell pkg-config freetype2 --libs)

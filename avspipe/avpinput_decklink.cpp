@@ -338,14 +338,14 @@ class AudioLevelsFilter : public Filter<IOAudioPacket> {
             }
 
             /* peak search in this packet */
-	    int16_t *sample_ptr = pkt->data( );
+            int16_t *sample_ptr = pkt->data( );
             for (size_t i = 0; i < pkt->size_samples( ); i++) {
                 for (size_t j = 0; j < pkt->channels( ); j++) {
                     if (sample_ptr[j] > peaks[j]) {
                         peaks[j] = sample_ptr[j];
                     }
                 }
-		sample_ptr += n_channels;
+                sample_ptr += n_channels;
             }
 
             counter++;
@@ -368,7 +368,21 @@ class AudioLevelsFilter : public Filter<IOAudioPacket> {
     protected:
         int32_t *peaks;
         size_t n_channels;
-	int counter;
+        int counter;
+};
+
+class DeckLinkOutputFilter : public Filter<RawFrame> {
+    public:
+        DeckLinkOutputFilter(int card) {
+            oadp = create_decklink_output_adapter(card, 0, RawFrame::CbYCrY8422);
+        }
+
+        void filter(RawFrame *f) {
+            oadp->input_pipe().put(f->copy());
+        }
+
+    private:
+        OutputAdapter *oadp;
 };
 
 template <class T>
@@ -400,39 +414,23 @@ template <class SendableThing>
 class SenderThread : public Thread {
     public:
         SenderThread(Pipe<SendableThing *> *fpipe, int out_fd,
-            Filter<SendableThing> *filt = NULL,
-		    Pipe<SendableThing *> *ppipe = NULL
-	    ) {
+            Filter<SendableThing> *filt = NULL
+        ) {
             assert(fpipe != NULL);
             assert(out_fd >= 0);
 
             _fpipe = fpipe;
-            _ppipe = ppipe;
             _out_fd = out_fd;
             _filter = filt;
-
-            _preroll_obj = NULL;
-            _preroll_frames = 0;
         }
 
         void start( ) {
             start_thread( );
         }
 
-        void set_preroll(SendableThing *preroll_obj, int preroll_frames) {
-            _preroll_obj = preroll_obj;
-            _preroll_frames = preroll_frames;
-        }
-
     protected:
         void run_thread(void) {
             SendableThing *thing;
-
-            while (_preroll_frames > 0) {
-                fprintf(stderr, "preroll: %d\n", _preroll_frames);
-                _preroll_obj->write_to_fd(_out_fd);
-                _preroll_frames--;
-            }
 
             for (;;) {
                 thing = _fpipe->get( );
@@ -441,25 +439,18 @@ class SenderThread : public Thread {
                     _filter->filter(thing);
                 }
 
-
                 if (thing->write_to_fd(_out_fd) <= 0) {
                     fprintf(stderr, "write failed or pipe broken\n");
                     break;
                 }
 
-		if (_ppipe) {
-			_ppipe->put(thing);
-		} else {
-			delete thing;
-		}
+                delete thing;
             }
         }
 
         Pipe<SendableThing *> *_fpipe;
-        Pipe<SendableThing *> *_ppipe;
         int _out_fd;
         Filter<SendableThing> *_filter;
-        SendableThing *_preroll_obj;
         int _preroll_frames;
 };
 
@@ -520,7 +511,7 @@ void usage(const char *argv0) {
     fprintf(stderr, "-f: enable ffmpeg streaming hack\n");
     fprintf(stderr, "-j: output M-JPEG instead of raw video\n");
     fprintf(stderr, "-q [0-100]: M-JPEG quality scale\n");
-    fprintf(stderr, "-p: preview out to DeckLink\n");
+    fprintf(stderr, "-o n: output to DeckLink device 'n'\n");
     fprintf(stderr, "-P: write preview jpegs to /tmp\n");
     fprintf(stderr, "--channels n: record n audio channels (default 2)\n");
     fprintf(stderr, "in 'command':\n");
@@ -530,7 +521,6 @@ void usage(const char *argv0) {
 
 int main(int argc, char * const *argv) {
     InputAdapter *iadp;
-    OutputAdapter *preview_out = NULL;
 
     int vpfd, apfd, opt;
     pid_t child;
@@ -556,10 +546,10 @@ int main(int argc, char * const *argv) {
     int audio_channels = 2;
     int jpeg = 0;
     int quality = 80;
-    bool preview = false;
+    int output_card;
 
     /* argument processing */
-    while ((opt = getopt_long(argc, argv, "pRmjfc:b:q:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "o:Rmjfc:b:q:", options, NULL)) != -1) {
         switch (opt) {
             case 'm':
                 audio_filter_chain.add_filter(new MixdownFilter);
@@ -616,8 +606,11 @@ int main(int argc, char * const *argv) {
                 y = atoi(optarg);
                 break;
 
-            case 'p':
-                preview = true;
+            case 'o':
+                // note annoyance: this preview output doesn't support audio
+                // (this will eventually, maybe, be solved by avipc)
+                output_card = atoi(optarg);
+                filter_chain.add_filter(new DeckLinkOutputFilter(output_card));
                 break;
 
             default:
@@ -642,10 +635,6 @@ int main(int argc, char * const *argv) {
             RawFrame::CbYCrY8422, audio_channels);
     apipe = iadp->audio_output_pipe( );
 
-    if (preview) {
-        preview_out = create_decklink_output_adapter_with_audio(2, 0, RawFrame::CbYCrY8422, audio_channels);
-    }
-
     SenderThread<RawFrame> *vsthread;
     SenderThread<IOAudioPacket> *asthread;
     /* start video and audio sender threads */
@@ -655,24 +644,15 @@ int main(int argc, char * const *argv) {
             &filter_chain, quality
         );
     } else {
-        if (preview_out) {
-            vsthread = new SenderThread<RawFrame>(
-                &(iadp->output_pipe( )), vpfd,
-                &filter_chain,
-                &(preview_out->input_pipe( ))
-            );
-        } else {
-            vsthread = new SenderThread<RawFrame>(
-                &(iadp->output_pipe( )), vpfd,
-                &filter_chain
-            );
-        }
+        vsthread = new SenderThread<RawFrame>(
+            &(iadp->output_pipe( )), vpfd,
+            &filter_chain
+        );
     }
 
     asthread = new SenderThread<IOAudioPacket>(
         apipe, apfd,
-        &audio_filter_chain,
-        preview_out ? preview_out->audio_input_pipe() : NULL
+        &audio_filter_chain
     );
 
     asthread->start( );
