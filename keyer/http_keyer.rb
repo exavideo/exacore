@@ -30,7 +30,7 @@ Thread.new do
             # await request
             dummy = STDIN.read(1)
             if dummy.nil?
-                break
+                exit
             end
 
             # dissolve state logic

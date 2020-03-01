@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 
 SubprocessCharacterGenerator::SubprocessCharacterGenerator(
     const char *cmd, unsigned int dirty_level
@@ -84,16 +85,15 @@ void SubprocessCharacterGenerator::do_fork( ) {
     int send_pipe[2];
     int recv_pipe[2];
 
-    if (pipe(send_pipe) < 0) {
+    if (pipe2(send_pipe, O_CLOEXEC) < 0) {
         throw std::runtime_error("pipe send_pipe failed");
     }
 
-    if (pipe(recv_pipe) < 0) {
+    if (pipe2(recv_pipe, O_CLOEXEC) < 0) {
         throw std::runtime_error("pipe recv_pipe failed");
     }
 
     child = fork( );
-
     if (child == -1) {
         throw std::runtime_error("fork failed");
     } else if (child == 0) {
@@ -101,20 +101,12 @@ void SubprocessCharacterGenerator::do_fork( ) {
         /* make the send pipe stdin and the receive pipe stdout */
         dup2(send_pipe[0], STDIN_FILENO);
         dup2(recv_pipe[1], STDOUT_FILENO);
-        /* close the unused ends of the pipes */
-        close(send_pipe[1]);
-        close(recv_pipe[0]);
-
         execlp("/bin/sh", "/bin/sh", "-c", _cmd, (char *) NULL);
-
-        /* if we fall through the exec an error has occurred, so die */
         perror("execlp");
         exit(1);
     } else {
-        /* close unused pipe ends */
         close(recv_pipe[1]);
         close(send_pipe[0]);
-
         send_fd = send_pipe[1];
         recv_fd = recv_pipe[0];
     }

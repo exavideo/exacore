@@ -48,4 +48,6 @@ class POSIXError : public std::runtime_error {
 
 void xioctl(int fd, int req, void *param);
 
+void set_cloexec(int fd);
+
 #endif

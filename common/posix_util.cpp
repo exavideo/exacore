@@ -18,6 +18,7 @@
  */
 #include "posix_util.h"
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -123,5 +124,15 @@ void POSIXError::format_message(const char *msg, int en) noexcept(true) {
 void xioctl(int fd, int req, void *param) {
     if (ioctl(fd, req, param) == -1) {
         throw POSIXError("ioctl");
+    }
+}
+
+void set_cloexec(int fd) {
+    int flags = fcntl(fd, F_GETFD);
+    if (flags == -1) {
+        throw POSIXError("fcntl F_GETFD");
+    }
+    if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1) {
+        throw POSIXError("fcntl set FD_CLOEXEC");
     }
 }

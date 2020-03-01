@@ -131,12 +131,12 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
 
     int vpipe[2], apipe[2];
 
-    if (pipe(vpipe) != 0) {
+    if (pipe2(vpipe, O_CLOEXEC) != 0) {
         perror("pipe(vpipe)");
         return -1;
     }
 
-    if (pipe(apipe) != 0) {
+    if (pipe2(apipe, O_CLOEXEC) != 0) {
         /*
          * FIXME a pair of FDs leak here if there is an error.
          * Does not matter now.
@@ -154,11 +154,10 @@ pid_t start_subprocess(const char *cmd, int &vpfd, int &apfd) {
         perror("fork");
         return -1;
     } else if (child == 0) {
-        /* child */
-        close(vpipe[1]);
-        close(apipe[1]);
+        // let these two FDs be inherited
+        fcntl(vpipe[0], F_SETFD, 0);
+        fcntl(apipe[0], F_SETFD, 0);
         execl("/bin/sh", "/bin/sh", "-c", cmd_to_exec, NULL);
-
         perror("execl");
         exit(1);
     } else {
