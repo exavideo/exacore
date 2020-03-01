@@ -19,7 +19,7 @@
 
 bits 64
 
-section text align=16
+section .text align=16
 global YCbCr8P422_CbYCrY8422_vector:function
 YCbCr8P422_CbYCrY8422_vector:
     ; argument summary...

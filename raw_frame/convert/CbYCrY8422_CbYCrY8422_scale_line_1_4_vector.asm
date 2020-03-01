@@ -17,7 +17,7 @@
 
 bits 64
 
-section text align=16
+section .text align=16
 global CbYCrY8422_CbYCrY8422_scale_line_1_4_vector:function
 
 CbYCrY8422_CbYCrY8422_scale_line_1_4_vector:
