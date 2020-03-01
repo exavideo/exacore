@@ -23,6 +23,8 @@ $trans_state = DOWN
 $dirty_level = 0
 $tie_when_up = false
 
+$mtx = Mutex.new
+
 # talk to stdio
 Thread.new do
     begin
@@ -34,7 +36,7 @@ Thread.new do
             end
 
             # dissolve state logic
-            Thread.exclusive do
+            $mtx.synchronize do
                 size = [ $data.length ].pack('L')
                 flags = 0
                 alpha = 0
@@ -71,7 +73,6 @@ Thread.new do
 
                 $data = ''
             end
-
         end
     rescue Exception, e
         STDERR.puts "exception in IO thread"
@@ -82,7 +83,7 @@ end
 class KeyerServer < Patchbay
     def load_key(fn)
         data = IO.read(fn, :mode => "rb")
-        Thread.exclusive do
+        $mtx.synchronize do
             $data = data
             $lastkey_written = data
         end
@@ -92,7 +93,7 @@ class KeyerServer < Patchbay
         $trans_state = UP
     end
 
-    # assumes 'mutex' is held (Thread.exclusive)
+    # assumes $mtx is held
     def check_tie_flag
         qs = @environment['QUERY_STRING']
         $tie_when_up = (qs == 'tie_to_source')
@@ -100,7 +101,7 @@ class KeyerServer < Patchbay
 
     def process_raw_key
         # read the postdata into template
-        Thread.exclusive do
+        $mtx.synchronize do
             data = incoming_data
             STDERR.puts "new key was written #{data.length}"
             File.open('/tmp/lastkey.dat', 'wb') do |f|
@@ -127,7 +128,7 @@ class KeyerServer < Patchbay
         md = /^data:image\/png;base64,/.match(data)
         if (md)
             rawdata = Base64.decode64(md.post_match)
-            Thread.exclusive do
+            $mtx.synchronize do
                 $data = rawdata
                 $lastkey_written = data
                 check_tie_flag
@@ -138,7 +139,7 @@ class KeyerServer < Patchbay
     end
 
     post '/dissolve_in/:frames' do
-        Thread.exclusive do
+        $mtx.synchronize do
             if $trans_state == DOWN
                 $trans_nframes = params[:frames].to_i
                 $trans_i = 0
@@ -151,20 +152,20 @@ class KeyerServer < Patchbay
     end
 
     post '/cut_in' do
-        Thread.exclusive do
+        $mtx.synchronize do
             $trans_state = UP
         end
     end
 
     post '/dirty_level/:n' do
-        Thread.exclusive do
+        $mtx.synchronize do
             $dirty_level = params[:n].to_i
         end
         render :json => ''
     end
 
     post '/dissolve_out/:frames' do
-        Thread.exclusive do
+        $mtx.synchronize do
             if $trans_state == UP
                 $trans_nframes = params[:frames].to_i
                 $trans_i = 0
@@ -185,7 +186,7 @@ class KeyerServer < Patchbay
     end
 
     get '/key' do
-        Thread.exclusive do
+        $mtx.synchronize do
             STDERR.puts "SVG data length: #{$lastkey_written.length}"
             render :png => $lastkey_written
         end
