@@ -55,6 +55,8 @@ static struct decklink_norm norms[] = {
     { "1080/59.94i", 30000, 1001, bmdModeHD1080i5994, 1920, 1080 },
     { "NTSC", 30000, 1001, bmdModeNTSC, 720, 486 },
     { "1080/30p", 30000, 1000, bmdModeHD1080p30, 1920, 1080 },
+    { "1080/60i", 30000, 1000, bmdModeHD1080i6000, 1920, 1080 },
+    { "1080/60p", 30000, 1000, bmdModeHD1080p6000, 1920, 1080 }, // Time may not sync properly for video in this format
 };
 
 static struct decklink_connection connections[] = {

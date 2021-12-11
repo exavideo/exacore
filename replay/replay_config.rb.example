@@ -6,6 +6,8 @@ configure do |app|
 	# 0 = 1080i 59.94
 	# 1 = 480i NTSC
 	# 2 = 1080p 30.00
+	# 3 = 1080i 60.00
+	# 4 = 1080p 60.00 - Caution using this format -- Time may appear 2x as fast, at the moment.
 	#
 	# valid inputs:
 	#
